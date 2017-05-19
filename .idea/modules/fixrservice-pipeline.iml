@@ -22,5 +22,14 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="SBT: org.scala-lang:scala-library:2.12.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.slf4j:slf4j-api:1.6.0:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:mongo-java-driver:3.2.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:casbah-query_2.12:3.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:casbah-gridfs_2.12:3.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:casbah-core_2.12:3.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.mongodb:casbah-commons_2.12:3.1.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.joda:joda-convert:1.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: joda-time:joda-time:2.9.4:jar" level="project" />
+    <orderEntry type="library" name="SBT: com.github.nscala-time:nscala-time_2.12:2.14.0:jar" level="project" />
   </component>
 </module>

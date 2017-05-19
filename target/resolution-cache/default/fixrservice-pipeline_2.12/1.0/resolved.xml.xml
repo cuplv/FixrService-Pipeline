@@ -4,7 +4,7 @@
 		module="fixrservice-pipeline_2.12"
 		revision="1.0"
 		status="integration"
-		publication="20170518142332"
+		publication="20170519101927"
 	>
 		<description>
 		FixrService-Pipeline
@@ -34,5 +34,6 @@
 	<dependencies>
 		<dependency org="org.scala-lang" name="scala-compiler" rev="2.12.2" conf="scala-tool->default,optional(default)"/>
 		<dependency org="org.scala-lang" name="scala-library" rev="2.12.2" conf="scala-tool->default,optional(default);compile->default(compile)"/>
+		<dependency org="org.mongodb" name="casbah_2.12" rev="3.1.1" conf="compile->default(compile)"/>
 	</dependencies>
 </ivy-module>
