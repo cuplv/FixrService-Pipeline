@@ -7,6 +7,7 @@ import com.mongodb.casbah.Imports._
 abstract class DataMap[K,V](val databaseName: String, val tableName: String, val username: String, val password: String, val IP: String, val port: Int) {
   def get(k: K) : Option[V]
 
+
   def getM(k: K) : V = get(k) match{
     case Some(x) => x
     case None => throw new Exception
@@ -15,7 +16,7 @@ abstract class DataMap[K,V](val databaseName: String, val tableName: String, val
   def put(k: K, v: V) : Unit
 }
 
-class MongoDB[K](val dName: String, val tName: String, val uName: String = "", val pssWord: String = "", val ip: String = "localhost", val prt: Int = 27017) extends DataMap[K,DBObject](dName, tName, uName, pssWord, ip, prt) {
+class MongoDB[K, V](val dName: String, val tName: String, val uName: String = "", val pssWord: String = "", val ip: String = "localhost", val prt: Int = 27017) extends DataMap[K,V](dName, tName, uName, pssWord, ip, prt) {
   val client = MongoClient(MongoClientURI{
     val startingPoint = "mongodb://"
     val addUserPass = (username, password) match{
@@ -27,13 +28,21 @@ class MongoDB[K](val dName: String, val tName: String, val uName: String = "", v
   private val database = client(databaseName)
   private val coll = database(tableName)
 
-  def get(k: K) : Option[DBObject] = {
-    coll.findOne(MongoDBObject("_id" -> k))
+  def get(k: K) : Option[V] = {
+    coll.findOne(MongoDBObject("key" -> k)) match{
+      case Some(x) => try {
+        Some(x.get("value").asInstanceOf[V])
+      } catch {
+        case _ : Throwable => None
+      }
+      case None => None
+    }
+
   }
 
-  def put(k: K, v: DBObject) : Unit = {
-    v.put("_id", k)
-    coll.insert(v)
+
+  def put(k: K, v: V) : Unit = {
+    coll.update(MongoDBObject("key" -> k), MongoDBObject("key" -> k, "value" -> v), upsert = true)
     ()
   }
 }
