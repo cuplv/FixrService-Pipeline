@@ -7,124 +7,291 @@
 		revision="1.0"
 		conf="compile-internal"
 		confs="compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
-		date="20170519101927"/>
+		date="20170522163504"/>
 	<dependencies>
+		<module organisation="com.typesafe.akka" name="akka-http-spray-json_2.12">
+			<revision name="10.0.4" status="release" pubdate="20170223100201" resolver="public" artresolver="public" homepage="http://akka.io" downloaded="true" searched="true" default="false" conf="default, compile, runtime, default(compile), master" position="21">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="successful" details="" size="2401" time="117" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http-spray-json_2.12/ivy-10.0.4.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http-spray-json_2.12/ivy-10.0.4.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-spray-json_2.12/10.0.4/akka-http-spray-json_2.12-10.0.4.pom"/>
+				<caller organisation="default" name="fixrservice-pipeline_2.12" conf="compile-internal, compile, provided, optional" rev="10.0.4" rev-constraint-default="10.0.4" rev-constraint-dynamic="10.0.4" callerrev="1.0"/>
+				<artifacts>
+					<artifact name="akka-http-spray-json_2.12" type="jar" ext="jar" status="successful" details="" size="17139" time="118" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http-spray-json_2.12/jars/akka-http-spray-json_2.12-10.0.4.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-spray-json_2.12/10.0.4/akka-http-spray-json_2.12-10.0.4.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-http_2.12">
+			<revision name="10.0.6" status="release" pubdate="20170503072753" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master, runtime(*), master(compile), compile(*)" position="14">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="2791" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http_2.12/ivy-10.0.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http_2.12/10.0.6/akka-http_2.12-10.0.6.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-spray-json_2.12" conf="default, compile, runtime, master" rev="10.0.4" rev-constraint-default="10.0.4" rev-constraint-dynamic="10.0.4" callerrev="10.0.4"/>
+				<caller organisation="default" name="fixrservice-pipeline_2.12" conf="compile-internal, compile, provided, optional" rev="10.0.6" rev-constraint-default="10.0.6" rev-constraint-dynamic="10.0.6" callerrev="1.0"/>
+				<artifacts>
+					<artifact name="akka-http_2.12" type="jar" ext="jar" status="no" details="" size="1645374" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http_2.12/jars/akka-http_2.12-10.0.6.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http_2.12/10.0.6/akka-http_2.12-10.0.6.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+			<revision name="10.0.4" evicted="latest-revision" evicted-reason="" downloaded="false" searched="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="-1">
+				<evicted-by rev="10.0.6"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-spray-json_2.12" conf="default, compile, runtime, master" rev="10.0.4" rev-constraint-default="10.0.4" rev-constraint-dynamic="10.0.4" callerrev="10.0.4"/>
+				<artifacts>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-http-core_2.12">
+			<revision name="10.0.6" status="release" pubdate="20170503072737" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="15">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="3568" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http-core_2.12/ivy-10.0.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-core_2.12/10.0.6/akka-http-core_2.12-10.0.6.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-http_2.12" conf="default, compile, runtime, master" rev="10.0.6" rev-constraint-default="10.0.6" rev-constraint-dynamic="10.0.6" callerrev="10.0.6"/>
+				<artifacts>
+					<artifact name="akka-http-core_2.12" type="jar" ext="jar" status="no" details="" size="3097531" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-http-core_2.12/jars/akka-http-core_2.12-10.0.6.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-http-core_2.12/10.0.6/akka-http-core_2.12-10.0.6.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-stream_2.12">
+			<revision name="2.4.17" status="release" pubdate="20170210084356" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" extra-info.apiURL="http://doc.akka.io/api/akka/2.4.17" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="17">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3506" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-stream_2.12/ivy-2.4.17.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream_2.12/2.4.17/akka-stream_2.12-2.4.17.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-core_2.12" conf="compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="10.0.6"/>
+				<artifacts>
+					<artifact name="akka-stream_2.12" type="jar" ext="jar" status="no" details="" size="3527412" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-stream_2.12/jars/akka-stream_2.12-2.4.17.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-stream_2.12/2.4.17/akka-stream_2.12-2.4.17.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe" name="ssl-config-core_2.12">
+			<revision name="0.2.1" status="release" pubdate="20161102073833" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typesafehub/ssl-config" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="19">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="3613" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe/ssl-config-core_2.12/ivy-0.2.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.12/0.2.1/ssl-config-core_2.12-0.2.1.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-stream_2.12" conf="compile, runtime" rev="0.2.1" rev-constraint-default="0.2.1" rev-constraint-dynamic="0.2.1" callerrev="2.4.17"/>
+				<artifacts>
+					<artifact name="ssl-config-core_2.12" type="bundle" ext="jar" status="no" details="" size="243527" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe/ssl-config-core_2.12/bundles/ssl-config-core_2.12-0.2.1.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/ssl-config-core_2.12/0.2.1/ssl-config-core_2.12-0.2.1.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang.modules" name="scala-parser-combinators_2.12">
+			<revision name="1.0.4" status="release" pubdate="20161028171045" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="20">
+				<license name="BSD 3-clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="2929" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.12/ivy-1.0.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.12/1.0.4/scala-parser-combinators_2.12-1.0.4.pom"/>
+				<caller organisation="com.typesafe" name="ssl-config-core_2.12" conf="compile, runtime" rev="1.0.4" rev-constraint-default="1.0.4" rev-constraint-dynamic="1.0.4" callerrev="0.2.1"/>
+				<artifacts>
+					<artifact name="scala-parser-combinators_2.12" type="bundle" ext="jar" status="no" details="" size="204313" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.12/bundles/scala-parser-combinators_2.12-1.0.4.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-parser-combinators_2.12/1.0.4/scala-parser-combinators_2.12-1.0.4.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.reactivestreams" name="reactive-streams">
+			<revision name="1.0.0" status="release" pubdate="20150429101454" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.reactive-streams.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="18">
+				<license name="CC0" url="http://creativecommons.org/publicdomain/zero/1.0/"/>
+				<metadata-artifact status="no" details="" size="2523" time="0" location="/Users/chanceroberts/.ivy2/cache/org.reactivestreams/reactive-streams/ivy-1.0.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.0/reactive-streams-1.0.0.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-stream_2.12" conf="compile, runtime" rev="1.0.0" rev-constraint-default="1.0.0" rev-constraint-dynamic="1.0.0" callerrev="2.4.17"/>
+				<artifacts>
+					<artifact name="reactive-streams" type="jar" ext="jar" status="no" details="" size="2042" time="0" location="/Users/chanceroberts/.ivy2/cache/org.reactivestreams/reactive-streams/jars/reactive-streams-1.0.0.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.0/reactive-streams-1.0.0.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="io.spray" name="spray-json_2.12">
+			<revision name="1.3.3" status="release" pubdate="20161229030833" resolver="public" artresolver="public" homepage="https://github.com/spray/spray-json" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="22">
+				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
+				<metadata-artifact status="successful" details="" size="2223" time="91" location="/Users/chanceroberts/.ivy2/cache/io.spray/spray-json_2.12/ivy-1.3.3.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/io.spray/spray-json_2.12/ivy-1.3.3.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/io/spray/spray-json_2.12/1.3.3/spray-json_2.12-1.3.3.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-spray-json_2.12" conf="default, compile, runtime, master" rev="1.3.3" rev-constraint-default="1.3.3" rev-constraint-dynamic="1.3.3" callerrev="10.0.4"/>
+				<artifacts>
+					<artifact name="spray-json_2.12" type="bundle" ext="jar" status="successful" details="" size="278425" time="180" location="/Users/chanceroberts/.ivy2/cache/io.spray/spray-json_2.12/bundles/spray-json_2.12-1.3.3.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/io/spray/spray-json_2.12/1.3.3/spray-json_2.12-1.3.3.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-parsing_2.12">
+			<revision name="10.0.6" status="release" pubdate="20170503072734" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="16">
+				<license name="Apache-2.0" url="https://opensource.org/licenses/Apache-2.0"/>
+				<metadata-artifact status="no" details="" size="2947" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-parsing_2.12/ivy-10.0.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-parsing_2.12/10.0.6/akka-parsing_2.12-10.0.6.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-core_2.12" conf="compile, runtime" rev="10.0.6" rev-constraint-default="10.0.6" rev-constraint-dynamic="10.0.6" callerrev="10.0.6"/>
+				<artifacts>
+					<artifact name="akka-parsing_2.12" type="jar" ext="jar" status="no" details="" size="969065" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-parsing_2.12/jars/akka-parsing_2.12-10.0.6.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-parsing_2.12/10.0.6/akka-parsing_2.12-10.0.6.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe.akka" name="akka-actor_2.12">
+			<revision name="2.5.1" status="release" pubdate="20170502034123" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://akka.io/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master, runtime(*), master(compile), compile(*)" position="11">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2956" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-actor_2.12/ivy-2.5.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-actor_2.12/2.5.1/akka-actor_2.12-2.5.1.pom"/>
+				<caller organisation="default" name="fixrservice-pipeline_2.12" conf="compile-internal, compile, provided, optional" rev="2.5.1" rev-constraint-default="2.5.1" rev-constraint-dynamic="2.5.1" callerrev="1.0"/>
+				<caller organisation="com.typesafe.akka" name="akka-stream_2.12" conf="compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="2.4.17"/>
+				<caller organisation="com.typesafe.akka" name="akka-parsing_2.12" conf="compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="10.0.6"/>
+				<artifacts>
+					<artifact name="akka-actor_2.12" type="jar" ext="jar" status="no" details="" size="3101497" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe.akka/akka-actor_2.12/jars/akka-actor_2.12-2.5.1.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/akka/akka-actor_2.12/2.5.1/akka-actor_2.12-2.5.1.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+			<revision name="2.4.17" evicted="latest-revision" evicted-reason="" downloaded="false" searched="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="-1">
+				<evicted-by rev="2.5.1"/>
+				<caller organisation="com.typesafe.akka" name="akka-stream_2.12" conf="compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="2.4.17"/>
+				<caller organisation="com.typesafe.akka" name="akka-parsing_2.12" conf="compile, runtime" rev="2.4.17" rev-constraint-default="2.4.17" rev-constraint-dynamic="2.4.17" callerrev="10.0.6"/>
+				<artifacts>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="org.scala-lang.modules" name="scala-java8-compat_2.12">
+			<revision name="0.8.0" status="release" pubdate="20161029161227" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="13">
+				<license name="BSD 3-clause" url="http://opensource.org/licenses/BSD-3-Clause"/>
+				<metadata-artifact status="no" details="" size="3036" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang.modules/scala-java8-compat_2.12/ivy-0.8.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-java8-compat_2.12/0.8.0/scala-java8-compat_2.12-0.8.0.pom"/>
+				<caller organisation="com.typesafe.akka" name="akka-actor_2.12" conf="default, compile, runtime, master" rev="0.8.0" rev-constraint-default="0.8.0" rev-constraint-dynamic="0.8.0" callerrev="2.5.1"/>
+				<artifacts>
+					<artifact name="scala-java8-compat_2.12" type="bundle" ext="jar" status="no" details="" size="1165728" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang.modules/scala-java8-compat_2.12/bundles/scala-java8-compat_2.12-0.8.0.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/modules/scala-java8-compat_2.12/0.8.0/scala-java8-compat_2.12-0.8.0.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+		<module organisation="com.typesafe" name="config">
+			<revision name="1.3.1" status="release" pubdate="20160924065320" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/typesafehub/config" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="12">
+				<license name="Apache License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0"/>
+				<metadata-artifact status="no" details="" size="2875" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe/config/ivy-1.3.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/typesafe/config/1.3.1/config-1.3.1.pom"/>
+				<caller organisation="com.typesafe" name="ssl-config-core_2.12" conf="compile, runtime" rev="1.2.0" rev-constraint-default="1.2.0" rev-constraint-dynamic="1.2.0" callerrev="0.2.1"/>
+				<caller organisation="com.typesafe.akka" name="akka-actor_2.12" conf="default, compile, runtime, master" rev="1.3.1" rev-constraint-default="1.3.1" rev-constraint-dynamic="1.3.1" callerrev="2.5.1"/>
+				<artifacts>
+					<artifact name="config" type="bundle" ext="jar" status="no" details="" size="282549" time="0" location="/Users/chanceroberts/.ivy2/cache/com.typesafe/config/bundles/config-1.3.1.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/typesafe/config/1.3.1/config-1.3.1.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+			<revision name="1.2.0" evicted="latest-revision" evicted-reason="" downloaded="false" searched="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="-1">
+				<evicted-by rev="1.3.1"/>
+				<caller organisation="com.typesafe" name="ssl-config-core_2.12" conf="compile, runtime" rev="1.2.0" rev-constraint-default="1.2.0" rev-constraint-dynamic="1.2.0" callerrev="0.2.1"/>
+				<artifacts>
+				</artifacts>
+			</revision>
+		</module>
 		<module organisation="org.mongodb" name="casbah_2.12">
-			<revision name="3.1.1" status="release" pubdate="20161206033854" resolver="public" artresolver="public" homepage="http://github.com/mongodb/casbah" downloaded="true" searched="true" default="false" conf="default, compile, runtime, default(compile), master" position="1">
+			<revision name="3.1.1" status="release" pubdate="20161206033854" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mongodb/casbah" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="1">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
-				<metadata-artifact status="successful" details="" size="2306" time="109" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah_2.12/ivy-3.1.1.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah_2.12/ivy-3.1.1.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah_2.12/3.1.1/casbah_2.12-3.1.1.pom"/>
+				<metadata-artifact status="no" details="" size="3162" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah_2.12/ivy-3.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah_2.12/3.1.1/casbah_2.12-3.1.1.pom"/>
 				<caller organisation="default" name="fixrservice-pipeline_2.12" conf="compile-internal, compile, provided, optional" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="1.0"/>
 				<artifacts>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.mongodb" name="casbah-gridfs_2.12">
-			<revision name="3.1.1" status="release" pubdate="20161206033938" resolver="public" artresolver="public" homepage="http://github.com/mongodb/casbah" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="10">
+			<revision name="3.1.1" status="release" pubdate="20161206033938" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mongodb/casbah" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="10">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
-				<metadata-artifact status="successful" details="" size="2002" time="96" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-gridfs_2.12/ivy-3.1.1.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-gridfs_2.12/ivy-3.1.1.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-gridfs_2.12/3.1.1/casbah-gridfs_2.12-3.1.1.pom"/>
+				<metadata-artifact status="no" details="" size="2933" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-gridfs_2.12/ivy-3.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-gridfs_2.12/3.1.1/casbah-gridfs_2.12-3.1.1.pom"/>
 				<caller organisation="org.mongodb" name="casbah_2.12" conf="default, compile, runtime, master" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="casbah-gridfs_2.12" type="jar" ext="jar" status="successful" details="" size="72840" time="102" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-gridfs_2.12/jars/casbah-gridfs_2.12-3.1.1.jar">
+					<artifact name="casbah-gridfs_2.12" type="jar" ext="jar" status="no" details="" size="72840" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-gridfs_2.12/jars/casbah-gridfs_2.12-3.1.1.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mongodb/casbah-gridfs_2.12/3.1.1/casbah-gridfs_2.12-3.1.1.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.mongodb" name="casbah-core_2.12">
-			<revision name="3.1.1" status="release" pubdate="20161206033923" resolver="public" artresolver="public" homepage="http://github.com/mongodb/casbah" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="8">
+			<revision name="3.1.1" status="release" pubdate="20161206033923" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mongodb/casbah" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="8">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
-				<metadata-artifact status="successful" details="" size="1965" time="99" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-core_2.12/ivy-3.1.1.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-core_2.12/ivy-3.1.1.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-core_2.12/3.1.1/casbah-core_2.12-3.1.1.pom"/>
+				<metadata-artifact status="no" details="" size="2951" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-core_2.12/ivy-3.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-core_2.12/3.1.1/casbah-core_2.12-3.1.1.pom"/>
 				<caller organisation="org.mongodb" name="casbah-gridfs_2.12" conf="compile, runtime" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<caller organisation="org.mongodb" name="casbah_2.12" conf="default, compile, runtime, master" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="casbah-core_2.12" type="jar" ext="jar" status="successful" details="" size="284905" time="142" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-core_2.12/jars/casbah-core_2.12-3.1.1.jar">
+					<artifact name="casbah-core_2.12" type="jar" ext="jar" status="no" details="" size="284905" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-core_2.12/jars/casbah-core_2.12-3.1.1.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mongodb/casbah-core_2.12/3.1.1/casbah-core_2.12-3.1.1.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.mongodb" name="casbah-query_2.12">
-			<revision name="3.1.1" status="release" pubdate="20161206033920" resolver="public" artresolver="public" homepage="http://github.com/mongodb/casbah" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="9">
+			<revision name="3.1.1" status="release" pubdate="20161206033920" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mongodb/casbah" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="9">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
-				<metadata-artifact status="successful" details="" size="1790" time="100" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-query_2.12/ivy-3.1.1.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-query_2.12/ivy-3.1.1.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-query_2.12/3.1.1/casbah-query_2.12-3.1.1.pom"/>
+				<metadata-artifact status="no" details="" size="2807" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-query_2.12/ivy-3.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-query_2.12/3.1.1/casbah-query_2.12-3.1.1.pom"/>
 				<caller organisation="org.mongodb" name="casbah-core_2.12" conf="compile, runtime" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<caller organisation="org.mongodb" name="casbah_2.12" conf="default, compile, runtime, master" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="casbah-query_2.12" type="jar" ext="jar" status="successful" details="" size="188413" time="120" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-query_2.12/jars/casbah-query_2.12-3.1.1.jar">
+					<artifact name="casbah-query_2.12" type="jar" ext="jar" status="no" details="" size="188413" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-query_2.12/jars/casbah-query_2.12-3.1.1.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mongodb/casbah-query_2.12/3.1.1/casbah-query_2.12-3.1.1.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.mongodb" name="casbah-commons_2.12">
-			<revision name="3.1.1" status="release" pubdate="20161206033932" resolver="public" artresolver="public" homepage="http://github.com/mongodb/casbah" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="2">
+			<revision name="3.1.1" status="release" pubdate="20161206033932" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://github.com/mongodb/casbah" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="2">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.html"/>
-				<metadata-artifact status="successful" details="" size="2977" time="97" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-commons_2.12/ivy-3.1.1.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-commons_2.12/ivy-3.1.1.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-commons_2.12/3.1.1/casbah-commons_2.12-3.1.1.pom"/>
+				<metadata-artifact status="no" details="" size="3588" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-commons_2.12/ivy-3.1.1.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/casbah-commons_2.12/3.1.1/casbah-commons_2.12-3.1.1.pom"/>
 				<caller organisation="org.mongodb" name="casbah-core_2.12" conf="compile, runtime" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<caller organisation="org.mongodb" name="casbah-query_2.12" conf="compile, runtime" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<caller organisation="org.mongodb" name="casbah_2.12" conf="default, compile, runtime, master" rev="3.1.1" rev-constraint-default="3.1.1" rev-constraint-dynamic="3.1.1" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="casbah-commons_2.12" type="jar" ext="jar" status="successful" details="" size="132016" time="135" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-commons_2.12/jars/casbah-commons_2.12-3.1.1.jar">
+					<artifact name="casbah-commons_2.12" type="jar" ext="jar" status="no" details="" size="132016" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/casbah-commons_2.12/jars/casbah-commons_2.12-3.1.1.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mongodb/casbah-commons_2.12/3.1.1/casbah-commons_2.12-3.1.1.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.slf4j" name="slf4j-api">
-			<revision name="1.6.0" status="release" pubdate="20100508044529" resolver="public" artresolver="public" homepage="http://www.slf4j.org" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="7">
+			<revision name="1.6.0" status="release" pubdate="20100508044529" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.slf4j.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="7">
 				<license name="MIT License" url="http://www.opensource.org/licenses/mit-license.php"/>
-				<metadata-artifact status="successful" details="" size="2994" time="103" location="/Users/chanceroberts/.ivy2/cache/org.slf4j/slf4j-api/ivy-1.6.0.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.slf4j/slf4j-api/ivy-1.6.0.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.6.0/slf4j-api-1.6.0.pom"/>
+				<metadata-artifact status="no" details="" size="3979" time="0" location="/Users/chanceroberts/.ivy2/cache/org.slf4j/slf4j-api/ivy-1.6.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.6.0/slf4j-api-1.6.0.pom"/>
 				<caller organisation="org.mongodb" name="casbah-commons_2.12" conf="compile, runtime" rev="1.6.0" rev-constraint-default="1.6.0" rev-constraint-dynamic="1.6.0" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="slf4j-api" type="jar" ext="jar" status="successful" details="" size="25496" time="111" location="/Users/chanceroberts/.ivy2/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.6.0.jar">
+					<artifact name="slf4j-api" type="jar" ext="jar" status="no" details="" size="25496" time="0" location="/Users/chanceroberts/.ivy2/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.6.0.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.6.0/slf4j-api-1.6.0.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.mongodb" name="mongo-java-driver">
-			<revision name="3.2.2" status="release" pubdate="20160215092032" resolver="public" artresolver="public" homepage="http://www.mongodb.org" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="6">
+			<revision name="3.2.2" status="release" pubdate="20160215092032" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.mongodb.org" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="6">
 				<license name="The Apache Software License, Version 2.0" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
-				<metadata-artifact status="successful" details="" size="2084" time="97" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/mongo-java-driver/ivy-3.2.2.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.mongodb/mongo-java-driver/ivy-3.2.2.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/mongo-java-driver/3.2.2/mongo-java-driver-3.2.2.pom"/>
+				<metadata-artifact status="no" details="" size="3118" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/mongo-java-driver/ivy-3.2.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mongodb/mongo-java-driver/3.2.2/mongo-java-driver-3.2.2.pom"/>
 				<caller organisation="org.mongodb" name="casbah-commons_2.12" conf="compile, runtime" rev="3.2.2" rev-constraint-default="3.2.2" rev-constraint-dynamic="3.2.2" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="mongo-java-driver" type="jar" ext="jar" status="successful" details="" size="1484724" time="311" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/mongo-java-driver/jars/mongo-java-driver-3.2.2.jar">
+					<artifact name="mongo-java-driver" type="jar" ext="jar" status="no" details="" size="1484724" time="0" location="/Users/chanceroberts/.ivy2/cache/org.mongodb/mongo-java-driver/jars/mongo-java-driver-3.2.2.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mongodb/mongo-java-driver/3.2.2/mongo-java-driver-3.2.2.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="com.github.nscala-time" name="nscala-time_2.12">
-			<revision name="2.14.0" status="release" pubdate="20161028175426" resolver="public" artresolver="public" homepage="https://github.com/nscala-time/nscala-time" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="3">
+			<revision name="2.14.0" status="release" pubdate="20161028175426" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://github.com/nscala-time/nscala-time" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="3">
 				<license name="Apache" url="http://www.opensource.org/licenses/Apache-2.0"/>
-				<metadata-artifact status="successful" details="" size="1785" time="97" location="/Users/chanceroberts/.ivy2/cache/com.github.nscala-time/nscala-time_2.12/ivy-2.14.0.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/com.github.nscala-time/nscala-time_2.12/ivy-2.14.0.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/nscala-time/nscala-time_2.12/2.14.0/nscala-time_2.12-2.14.0.pom"/>
+				<metadata-artifact status="no" details="" size="2947" time="0" location="/Users/chanceroberts/.ivy2/cache/com.github.nscala-time/nscala-time_2.12/ivy-2.14.0.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/com/github/nscala-time/nscala-time_2.12/2.14.0/nscala-time_2.12-2.14.0.pom"/>
 				<caller organisation="org.mongodb" name="casbah-commons_2.12" conf="compile, runtime" rev="2.14.0" rev-constraint-default="2.14.0" rev-constraint-dynamic="2.14.0" callerrev="3.1.1"/>
 				<artifacts>
-					<artifact name="nscala-time_2.12" type="jar" ext="jar" status="successful" details="" size="201401" time="126" location="/Users/chanceroberts/.ivy2/cache/com.github.nscala-time/nscala-time_2.12/jars/nscala-time_2.12-2.14.0.jar">
+					<artifact name="nscala-time_2.12" type="jar" ext="jar" status="no" details="" size="201401" time="0" location="/Users/chanceroberts/.ivy2/cache/com.github.nscala-time/nscala-time_2.12/jars/nscala-time_2.12-2.14.0.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/com/github/nscala-time/nscala-time_2.12/2.14.0/nscala-time_2.12-2.14.0.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="joda-time" name="joda-time">
-			<revision name="2.9.4" status="release" pubdate="20160527032535" resolver="public" artresolver="public" homepage="http://www.joda.org/joda-time/" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="4">
+			<revision name="2.9.4" status="release" pubdate="20160527032535" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.joda.org/joda-time/" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="4">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
-				<metadata-artifact status="successful" details="" size="30145" time="127" location="/Users/chanceroberts/.ivy2/cache/joda-time/joda-time/ivy-2.9.4.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/joda-time/joda-time/ivy-2.9.4.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/joda-time/joda-time/2.9.4/joda-time-2.9.4.pom"/>
+				<metadata-artifact status="no" details="" size="6595" time="0" location="/Users/chanceroberts/.ivy2/cache/joda-time/joda-time/ivy-2.9.4.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/joda-time/joda-time/2.9.4/joda-time-2.9.4.pom"/>
 				<caller organisation="com.github.nscala-time" name="nscala-time_2.12" conf="compile, runtime" rev="2.9.4" rev-constraint-default="2.9.4" rev-constraint-dynamic="2.9.4" callerrev="2.14.0"/>
 				<artifacts>
-					<artifact name="joda-time" type="jar" ext="jar" status="successful" details="" size="629506" time="184" location="/Users/chanceroberts/.ivy2/cache/joda-time/joda-time/jars/joda-time-2.9.4.jar">
+					<artifact name="joda-time" type="jar" ext="jar" status="no" details="" size="629506" time="0" location="/Users/chanceroberts/.ivy2/cache/joda-time/joda-time/jars/joda-time-2.9.4.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/joda-time/joda-time/2.9.4/joda-time-2.9.4.jar"/>
 					</artifact>
 				</artifacts>
 			</revision>
 		</module>
 		<module organisation="org.joda" name="joda-convert">
-			<revision name="1.2" status="release" pubdate="20111027135117" resolver="public" artresolver="public" homepage="http://joda-convert.sourceforge.net" downloaded="true" searched="true" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="5">
+			<revision name="1.2" status="release" pubdate="20111027135117" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://joda-convert.sourceforge.net" downloaded="false" searched="false" default="false" conf="compile, runtime(*), master(compile), runtime, compile(*), master" position="5">
 				<license name="Apache 2" url="http://www.apache.org/licenses/LICENSE-2.0.txt"/>
-				<metadata-artifact status="successful" details="" size="10629" time="101" location="/Users/chanceroberts/.ivy2/cache/org.joda/joda-convert/ivy-1.2.xml" searched="true" original-local-location="/Users/chanceroberts/.ivy2/cache/org.joda/joda-convert/ivy-1.2.xml.original" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/joda/joda-convert/1.2/joda-convert-1.2.pom"/>
+				<metadata-artifact status="no" details="" size="3246" time="0" location="/Users/chanceroberts/.ivy2/cache/org.joda/joda-convert/ivy-1.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/joda/joda-convert/1.2/joda-convert-1.2.pom"/>
 				<caller organisation="com.github.nscala-time" name="nscala-time_2.12" conf="compile, runtime" rev="1.2" rev-constraint-default="1.2" rev-constraint-dynamic="1.2" callerrev="2.14.0"/>
 				<artifacts>
-					<artifact name="joda-convert" type="jar" ext="jar" status="successful" details="" size="38460" time="102" location="/Users/chanceroberts/.ivy2/cache/org.joda/joda-convert/jars/joda-convert-1.2.jar">
+					<artifact name="joda-convert" type="jar" ext="jar" status="no" details="" size="38460" time="0" location="/Users/chanceroberts/.ivy2/cache/org.joda/joda-convert/jars/joda-convert-1.2.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/joda/joda-convert/1.2/joda-convert-1.2.jar"/>
 					</artifact>
 				</artifacts>
@@ -135,12 +302,22 @@
 				<license name="BSD 3-Clause" url="http://www.scala-lang.org/license.html"/>
 				<metadata-artifact status="no" details="" size="2653" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang/scala-library/ivy-2.12.2.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.12.2/scala-library-2.12.2.pom"/>
 				<caller organisation="org.mongodb" name="casbah-core_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
-				<caller organisation="org.mongodb" name="casbah-query_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
+				<caller organisation="com.typesafe" name="ssl-config-core_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="0.2.1"/>
 				<caller organisation="com.github.nscala-time" name="nscala-time_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="2.14.0"/>
-				<caller organisation="org.mongodb" name="casbah-gridfs_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
+				<caller organisation="org.scala-lang.modules" name="scala-java8-compat_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="0.8.0"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-core_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="10.0.6"/>
 				<caller organisation="default" name="fixrservice-pipeline_2.12" conf="compile-internal, compile, provided, optional" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="1.0"/>
 				<caller organisation="org.mongodb" name="casbah_2.12" conf="default, compile, runtime, master" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
 				<caller organisation="org.mongodb" name="casbah-commons_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
+				<caller organisation="com.typesafe.akka" name="akka-stream_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="2.4.17"/>
+				<caller organisation="com.typesafe.akka" name="akka-parsing_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="10.0.6"/>
+				<caller organisation="com.typesafe.akka" name="akka-http_2.12" conf="default, compile, runtime, master" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="10.0.6"/>
+				<caller organisation="org.mongodb" name="casbah-query_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
+				<caller organisation="com.typesafe.akka" name="akka-http-spray-json_2.12" conf="default, compile, runtime, master" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="10.0.4"/>
+				<caller organisation="org.scala-lang.modules" name="scala-parser-combinators_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="1.0.4"/>
+				<caller organisation="org.mongodb" name="casbah-gridfs_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="3.1.1"/>
+				<caller organisation="io.spray" name="spray-json_2.12" conf="compile, runtime" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="1.3.3"/>
+				<caller organisation="com.typesafe.akka" name="akka-actor_2.12" conf="default, compile, runtime, master" rev="2.12.2" rev-constraint-default="2.12.2" rev-constraint-dynamic="2.12.2" callerrev="2.5.1"/>
 				<artifacts>
 					<artifact name="scala-library" type="jar" ext="jar" status="no" details="" size="5278660" time="0" location="/Users/chanceroberts/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.2.jar">
 						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.12.2/scala-library-2.12.2.jar"/>

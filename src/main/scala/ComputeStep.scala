@@ -1,12 +1,14 @@
 /**
   * Created by chanceroberts on 5/18/17.
   */
-class ComputeStep[A,B](func: (A => B)) {
-  def IncrementalCompute(): Unit = {
-    ???
-  }
+package edu.colorado.plv.fixr.pipeline
 
-  def ProvenanceTracker(): Unit = {
+import akka.actor.{Actor, Props}
+
+class ComputeStep[A,B](func: (A => B)) {
+
+  def IncrementalCompute(): Unit = {
+
     ???
   }
 
