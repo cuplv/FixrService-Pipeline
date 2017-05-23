@@ -33,7 +33,8 @@ class DataMapTest extends FlatSpec {
 
   //Need to add MongoDB Tests (Somehow...)
   /*"MongoDBMap" should "get nothing if nothing is in it" in {
-    val mDBMap = new MongoDBMap[String, String]("dataBase","collection")
+
+    val mDBMap = new MongoDBMap[String, String]("test","collection")
     val getVal = mDBMap.get("Testing")
     assert(getVal.isEmpty)
   }*/

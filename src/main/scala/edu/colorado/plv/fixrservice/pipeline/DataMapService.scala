@@ -9,13 +9,13 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.{Http, server}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import org.joda.time.Seconds
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.io.StdIn
 import scala.util.Success
 import scala.util.parsing.json.JSON
+import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 
 
 class DataMapService {
@@ -41,7 +41,7 @@ class DataMapService {
                 } else {
                   complete("{ \"succ\": false }")
                 }//key is first thing in list, value is second thing in list
-              case _ => complete("{ \"succ\": false }") //{'succ': false}
+              case _ => complete("{ \"succ\": false }")
             }
         }
       }
@@ -80,6 +80,14 @@ class DataMapService {
     def possibly(args: Array[String], index: Int, default: String): String = {
       if (args.length > index) args(index) else default
     }
+    def possiblyConfig(config: Config, field: String, default: String): String = {
+      try{
+        config.getString(field)
+      } catch{
+        case conf: ConfigException.Missing => default
+        case conf: ConfigException.WrongType => default
+      }
+    }
     val dMap = {
       if (args.length == 0){
         new HeapMap[String, String]
@@ -97,6 +105,20 @@ class DataMapService {
           }
         case "Heap" => new HeapMap[String, String]
         case "Null" => new NullMap[String, String]
+        case confFile =>
+          val config = ConfigFactory.load(confFile)
+          possiblyConfig(config, "DatabaseType", "Heap") match{
+            case "MongoDB" =>
+              val dBaseName = possiblyConfig(config, "Database", "test")
+              val collName = possiblyConfig(config, "Collection", "coll")
+              val ip = possiblyConfig(config, "IP", "localhost")
+              val port = possiblyConfig(config, "Port", "27017")
+              val userName = possiblyConfig(config, "Username", "")
+              val password = possiblyConfig(config, "Password", "")
+              new MongoDBMap[String, String](dBaseName, collName, ip, port, userName, password)
+            case "Heap" => new HeapMap[String, String]
+            case "Null" => new NullMap[String, String]
+          }
       }
     }
     val dMapActor = system.actorOf(Props(new DataMapActor(dMap)), "dMapActor")
