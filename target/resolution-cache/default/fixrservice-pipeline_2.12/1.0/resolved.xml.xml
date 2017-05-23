@@ -4,7 +4,7 @@
 		module="fixrservice-pipeline_2.12"
 		revision="1.0"
 		status="integration"
-		publication="20170522163504"
+		publication="20170523094759"
 	>
 		<description>
 		FixrService-Pipeline
@@ -38,5 +38,7 @@
 		<dependency org="com.typesafe.akka" name="akka-actor_2.12" rev="2.5.1" conf="compile->default(compile)"/>
 		<dependency org="com.typesafe.akka" name="akka-http_2.12" rev="10.0.6" conf="compile->default(compile)"/>
 		<dependency org="com.typesafe.akka" name="akka-http-spray-json_2.12" rev="10.0.4" conf="compile->default(compile)"/>
+		<dependency org="org.scalactic" name="scalactic_2.12" rev="3.0.1" conf="compile->default(compile)"/>
+		<dependency org="org.scalatest" name="scalatest_2.12" rev="3.0.1" conf="test->default(compile)"/>
 	</dependencies>
 </ivy-module>

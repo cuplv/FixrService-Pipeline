@@ -1,0 +1,21 @@
+[0m[[0minfo[0m] [0m[32mDataMapTest:[0m[0m
+[0m[[0minfo[0m] [0m[32mNullMap[0m[0m
+[0m[[0minfo[0m] [0m[32m- should return its own input when getting stuff[0m[0m
+[0m[[0minfo[0m] [0m[32m- should not do anything on put[0m[0m
+[0m[[0minfo[0m] [0m[32mHeapMap[0m[0m
+[0m[[0minfo[0m] [0m[32m- should get nothing if nothing is in it[0m[0m
+[0m[[0minfo[0m] [0m[32m- should be able to put something in the DataMap and get it out[0m[0m
+[0m[[0minfo[0m] [0m[32mMongoDBMap[0m[0m
+[0m[[0minfo[0m] [0m[31m- should get nothing if nothing is in it *** FAILED ***[0m[0m
+[0m[[0minfo[0m] [0m[31m  com.mongodb.MongoTimeoutException: Timed out after 30000 ms while waiting for a server that matches ReadPreferenceServerSelector{readPreference=primary}. Client view of cluster state is {type=UNKNOWN, servers=[{address=localhost:27017, type=UNKNOWN, state=CONNECTING, exception={com.mongodb.MongoSocketOpenException: Exception opening socket}, caused by {java.net.ConnectException: Connection refused}}][0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.connection.BaseCluster.createTimeoutException(BaseCluster.java:369)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.connection.BaseCluster.selectServer(BaseCluster.java:101)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.binding.ClusterBinding$ClusterBindingConnectionSource.<init>(ClusterBinding.java:75)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.binding.ClusterBinding$ClusterBindingConnectionSource.<init>(ClusterBinding.java:71)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.binding.ClusterBinding.getReadConnectionSource(ClusterBinding.java:63)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.operation.OperationHelper.withConnection(OperationHelper.java:210)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.operation.FindOperation.execute(FindOperation.java:482)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.operation.FindOperation.execute(FindOperation.java:79)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.Mongo.execute(Mongo.java:772)[0m[0m
+[0m[[0minfo[0m] [0m[31m  at com.mongodb.Mongo$2.execute(Mongo.java:759)[0m[0m
+[0m[[0minfo[0m] [0m[31m  ...[0m[0m
