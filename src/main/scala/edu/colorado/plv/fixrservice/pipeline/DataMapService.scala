@@ -84,8 +84,8 @@ class DataMapService {
       try{
         config.getString(field)
       } catch{
-        case conf: ConfigException.Missing => default
-        case conf: ConfigException.WrongType => default
+        case ceM: ConfigException.Missing => default
+        case ceWT: ConfigException.WrongType => default
       }
     }
     val dMap = {
