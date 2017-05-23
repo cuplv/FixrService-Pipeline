@@ -5,7 +5,7 @@ import com.mongodb.casbah.Imports.{MongoClient, MongoClientURI, MongoDBObject}
 /**
   * Created by chanceroberts on 5/23/17.
   */
-class MongoDBMap[K, V](val dName: String, val tName: String, val uName: String = "", val pssWord: String = "", val ip: String = "localhost", val prt: Int = 27017) extends DataMap[K,V](dName, tName, uName, pssWord, ip, prt) {
+class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "localhost", val prt: String = "27017", val uName: String = "", val pssWord: String = "") extends DataMap[K,V](dName, tName, ip, prt, uName, pssWord) {
   val client = MongoClient(MongoClientURI{
     val startingPoint = "mongodb://"
     val addUserPass = (username, password) match{
