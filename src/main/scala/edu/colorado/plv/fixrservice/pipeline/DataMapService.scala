@@ -27,34 +27,34 @@ class DataMapService {
   def getCommand(aRef: ActorRef): server.Route = {
 
     post {
-      path("put") {
-        parameters("key", "value") { (key, value) =>
-          aRef ! (key, value)
-          complete("")
-        }
-        /*
-        /*formFields("key", "value") { (key, value) =>
+      /*path("put") {
+        formField("key", "value") { (key, value) =>
           aRef ! (key, value)
           complete("")
         }*/
-        /*entity(as[String]) {
-          queryStr =>
-            JSON.parseFull(queryStr) match{
-              case Some(map: Map[String, Any]) =>
+        /*parameters("key", "value") { (key, value) =>
+          aRef ! (key, value)
+          complete("")
+        }*/
+      entity(as[String]) {
+        queryStr =>
+          JSON.parseFull(queryStr) match{
+            case Some(map: Map[String, Any]) =>
+              val res = aRef ? map
+              onComplete(res){
+                case Success(x: String) => complete(x)
+                case _ => complete("{ \"succ\": false }")
+              }
+            case Some(list: List[Any]) =>
+              if (list.length > 1){
+                val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
                 aRef ! map
                 complete("")
-              case Some(list: List[Any]) =>
-                if (list.length > 1){
-                  val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
-                  aRef ! map
-                  complete("")
-                } else {
-                  complete("{ \"succ\": false }")
-                }//key is first thing in list, value is second thing in list
-              case _ => complete("{ \"succ\": false }")
-            }
-        }*/
-        */
+              } else {
+                complete("{ \"succ\": false }")
+              }//key is first thing in list, value is second thing in list
+            case _ => complete("{ \"succ\": false }")
+          }
       }
     } ~
     get {
@@ -64,6 +64,12 @@ class DataMapService {
           onComplete(res){
             case Success(msg: String) => complete(msg)
             case _ => complete("{ \"succ\": false, \"key\": \"" + key + "\" }")
+          }
+        } ~
+        path("put") {
+          parameters("key", "value") { (key, value) =>
+            aRef ! (key, value)
+            complete("")
           }
         }
         /*entity(as[String]) {
@@ -156,16 +162,19 @@ class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
   val dMap: DataMap[String, String] = dataMap
 
   def receive = {
-    /*case msg: Map[String, Any] => msg("key") match{
-      case Some(key) => msg("value") match{
-        case Some(value) => dMap.put(key.toString, value.toString)
-        case None => dMap.get(key.toString) match{
-          case Some(value) => sender() ! "{ \"succ\": true, \"key\": \""  + key.toString + "\", \"value\": \"" + value + "\" }"
-          case None => sender() ! "{ \"succ\": false, \"key\": \"" + key.toString + "\" }"
+    case msg: Map[String, Any] => try {
+      msg("key") match {
+        case key: String => msg("value") match {
+          case value: String =>
+            dMap.put(key.toString, value.toString)
+            sender() ! ""
+          case _ => sender() ! "{ \"succ\": false, \"key\": \"" + key.toString + "\" }"
         }
+        case _ => sender() ! """{ "succ": false }"""
       }
-      case _ => sender() ! """{ "succ": false, "key": "" }"""
-    }*/
+    } catch {
+      case nsee: NoSuchElementException => sender() ! """{ "succ": false, "key": "" }"""
+    }
     case key: String => dMap.get(key) match{
       case Some(value) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + value + "\" }"
       case None => sender() ! "{ \"succ\": false, \"key\": \"" + key + "\" }"

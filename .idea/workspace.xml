@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="41a08c10-d757-44f6-aa12-bc1d08d9a7e8" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMap.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMap.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/DataMapTest.scala" afterPath="$PROJECT_DIR$/src/test/scala/DataMapTest.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" afterPath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -69,17 +69,17 @@
       <file leaf-file-name="DataMap.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMap.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="537">
+            <state relative-caret-position="433">
               <caret line="56" column="5" lean-forward="true" selection-start-line="56" selection-start-column="5" selection-end-line="56" selection-end-column="5" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DataMapTest.scala" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DataMapTest.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapTest.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="357">
+            <state relative-caret-position="1020">
               <caret line="68" column="49" lean-forward="false" selection-start-line="68" selection-start-column="49" selection-end-line="68" selection-end-column="49" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
@@ -92,8 +92,8 @@
       <file leaf-file-name="DataMapService.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="85">
-              <caret line="35" column="10" lean-forward="true" selection-start-line="35" selection-start-column="10" selection-end-line="35" selection-end-column="10" />
+            <state relative-caret-position="427">
+              <caret line="172" column="48" lean-forward="false" selection-start-line="172" selection-start-column="48" selection-end-line="172" selection-end-column="48" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#97#152#0" expanded="true" />
@@ -102,11 +102,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DataMapServiceTest.scala" pinned="false" current-in-tab="false">
+      <file leaf-file-name="DataMapServiceTest.scala" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="165">
-              <caret line="11" column="57" lean-forward="false" selection-start-line="11" selection-start-column="57" selection-end-line="11" selection-end-column="57" />
+            <state relative-caret-position="310">
+              <caret line="44" column="5" lean-forward="false" selection-start-line="44" selection-start-column="5" selection-end-line="44" selection-end-column="5" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#50#85#0" expanded="true" />
@@ -157,10 +157,10 @@
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/NullMap.scala" />
         <option value="$PROJECT_DIR$/build.sbt" />
         <option value="$PROJECT_DIR$/src/test/scala/NotDoneYet.scala" />
-        <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala" />
-        <option value="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMap.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/DataMapTest.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
       </list>
     </option>
   </component>
@@ -711,34 +711,34 @@
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 11h 18m 55s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 06m 50s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 11h 20m 05s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 07m 07s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 11h 21m 52s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 07m 52s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 11h 22m 11s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 08m 25s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 24m 23s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 08m 59s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 26m 50s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 09m 04s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 28m 27s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 09m 45s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 29m 48s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 11m 13s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 30m 29s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 14m 00s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 13h 30m 43s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.05.24 at 14h 14m 11s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
   </component>
@@ -1078,6 +1078,14 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/.travis.yml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/ComputeStep.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
@@ -1090,8 +1098,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="85">
-          <caret line="35" column="10" lean-forward="true" selection-start-line="35" selection-start-column="10" selection-end-line="35" selection-end-column="10" />
+        <state relative-caret-position="427">
+          <caret line="172" column="48" lean-forward="false" selection-start-line="172" selection-start-column="48" selection-end-line="172" selection-end-column="48" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#97#152#0" expanded="true" />
@@ -1099,40 +1107,32 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/.travis.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="15">
-          <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMap.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="537">
+        <state relative-caret-position="433">
           <caret line="56" column="5" lean-forward="true" selection-start-line="56" selection-start-column="5" selection-end-line="56" selection-end-column="5" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="165">
-          <caret line="11" column="57" lean-forward="false" selection-start-line="11" selection-start-column="57" selection-end-line="11" selection-end-column="57" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#50#85#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapTest.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="357">
+        <state relative-caret-position="1020">
           <caret line="68" column="49" lean-forward="false" selection-start-line="68" selection-start-column="49" selection-end-line="68" selection-end-column="49" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#50#72#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="310">
+          <caret line="44" column="5" lean-forward="false" selection-start-line="44" selection-start-column="5" selection-end-line="44" selection-end-column="5" />
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#50#85#0" expanded="true" />
           </folding>
         </state>
       </provider>

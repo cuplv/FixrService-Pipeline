@@ -14,11 +14,9 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
     val testMap: HeapMap[String, String] = new HeapMap[String, String]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
-    //Post("/put?{\"key\":\"test\",\"value\":\"hello,world!\"}") ~> testRoute
-    Post("/put?key=test&value=hello,world!") ~> testRoute
-    //Get("/get?{\"key\":\"test\"}") ~> testRoute ~> check {
+    Post("/put", "{ \"key\": \"test\", \"value\": \"Hello, world!\" }") ~> testRoute
     Get("/get?key=test") ~> testRoute ~> check {
-      responseAs[String] shouldEqual "{ \"succ\": true, \"key\": \"test\", \"value\": \"hello,world!\" }"
+      responseAs[String] shouldEqual "{ \"succ\": true, \"key\": \"test\", \"value\": \"Hello, world!\" }"
     }
     system.stop(testDMapActor)
   }
@@ -34,17 +32,17 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
     system.stop(testDMapActor)
   }
 
-  it should "work with \"spaces\" (+ or %20)" in {
+  /*it should "get a list of values when asked" in {
     val dMapService = new DataMapService
     val testMap: HeapMap[String, String] = new HeapMap[String, String]
-    val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor3")
+    val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
-    Post("/put?key=test%20field&value=Hello,+world!") ~> testRoute
-    Get("/get?key=test%20field") ~> testRoute ~> check {
-      responseAs[String] shouldEqual "{ \"succ\": true, \"key\": \"test field\", \"value\": \"Hello, world!\" }"
+    //Post("/put", FormData("key" -> "test", "value" -> "Hello.")) ~> testRoute
+    Get("/getFields") ~> testRoute ~> check {
+
     }
     system.stop(testDMapActor)
-  }
+  }*/
 
 }
 
