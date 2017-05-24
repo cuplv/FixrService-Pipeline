@@ -31,6 +31,14 @@ class DataMapTest extends FlatSpec {
     assert(getVal.contains("value"))
   }
 
+  it should "be able to overwrite something that was already in the DataMap" in {
+    val hMap = new HeapMap[String, String]
+    hMap.put("key", "value1")
+    hMap.put("key", "value2")
+    val getVal = hMap.get("key")
+    assert(getVal.contains("value2"))
+  }
+
   //Need to add MongoDB Tests (Somehow...)
   /*"MongoDBMap" should "get nothing if nothing is in it" in {
 
