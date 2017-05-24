@@ -25,9 +25,19 @@ class DataMapService {
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(5 seconds)
   def getCommand(aRef: ActorRef): server.Route = {
+
     post {
       path("put") {
-        entity(as[String]) {
+        parameters("key", "value") { (key, value) =>
+          aRef ! (key, value)
+          complete("")
+        }
+        /*
+        /*formFields("key", "value") { (key, value) =>
+          aRef ! (key, value)
+          complete("")
+        }*/
+        /*entity(as[String]) {
           queryStr =>
             JSON.parseFull(queryStr) match{
               case Some(map: Map[String, Any]) =>
@@ -43,12 +53,20 @@ class DataMapService {
                 }//key is first thing in list, value is second thing in list
               case _ => complete("{ \"succ\": false }")
             }
-        }
+        }*/
+        */
       }
-    }
+    } ~
     get {
       path("get") {
-        entity(as[String]) {
+        parameter("key") { key =>
+          val res: Future[Any] = aRef ? key
+          onComplete(res){
+            case Success(msg: String) => complete(msg)
+            case _ => complete("{ \"succ\": false, \"key\": \"" + key + "\" }")
+          }
+        }
+        /*entity(as[String]) {
           queryStr =>
             JSON.parseFull(queryStr) match {
               case Some(map: Map[String, Any]) =>
@@ -71,7 +89,10 @@ class DataMapService {
                 } //key is first list value
               case _ => complete("{ \"succ\": false }") //{'succ': false}
             }
+            complete(queryStr)
+
         }
+        */
       }
     }
   }
@@ -135,7 +156,7 @@ class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
   val dMap: DataMap[String, String] = dataMap
 
   def receive = {
-    case msg: Map[String, Any] => msg("key") match{
+    /*case msg: Map[String, Any] => msg("key") match{
       case Some(key) => msg("value") match{
         case Some(value) => dMap.put(key.toString, value.toString)
         case None => dMap.get(key.toString) match{
@@ -144,6 +165,12 @@ class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
         }
       }
       case _ => sender() ! """{ "succ": false, "key": "" }"""
+    }*/
+    case key: String => dMap.get(key) match{
+      case Some(value) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + value + "\" }"
+      case None => sender() ! "{ \"succ\": false, \"key\": \"" + key + "\" }"
     }
+    case (key: String, value: String) =>
+      dMap.put(key, value)
   }
 }
