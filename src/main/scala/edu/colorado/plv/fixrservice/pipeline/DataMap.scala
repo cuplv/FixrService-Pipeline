@@ -15,6 +15,8 @@ abstract class DataMap[K,V](val databaseName: String, val tableName: String, val
   }
 
   def put(k: K, v: V) : Unit
+
+  def getAllKeys : List[K]
 }
 
 class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "localhost", val prt: String = "27017", val uName: String = "", val pssWord: String = "") extends DataMap[K,V](dName, tName, ip, prt, uName, pssWord) {
@@ -46,6 +48,14 @@ class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "l
     coll.update(MongoDBObject("key" -> k), MongoDBObject("key" -> k, "value" -> v), upsert = true)
     ()
   }
+
+  def getAllKeys: List[K] = {
+    val documents = coll.find()
+    documents.toList.foldRight(List.empty[K]) {
+      case (dbObj, l) =>
+        dbObj.get("key").asInstanceOf[K] :: l //If you're playing nice and doing put like you should, the asInstanceOf[K] should do nothing.
+    }
+  }
 }
 
 //class HeapMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
@@ -58,6 +68,10 @@ class HeapMap[K,V] extends DataMap[K,V]("","","","","","") {
     map = map + (k -> v)
     ()
   }
+
+  def getAllKeys: List[K] = {
+    map.foldRight(List.empty[K]){case ((k,v), l) => k :: l}
+  }
 }
 
 //class NullMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
@@ -65,4 +79,6 @@ class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
   def get(k: K) : Option[V] = Some(k.asInstanceOf[V])
 
   def put(k: K, v: V) : Unit = ()
+
+  def getAllKeys: List[K] = List.empty[K]
 }
