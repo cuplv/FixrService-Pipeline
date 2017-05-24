@@ -58,6 +58,24 @@ class DataMapService {
       }
     } ~
     get {
+      path("getKeys") {
+        val res: Future[Any] = aRef ? List.empty[String]
+        onComplete(res){
+          case Success(fields: List[String]) =>
+            val fullString = {
+              if (fields.nonEmpty) {
+                val mostOfString = fields.foldLeft("{ \"succ\": true, \"keys\": [ ") {
+                  case (str, key) => str + "\"" + key + "\", "
+                }
+                mostOfString.substring(0,mostOfString.length-2) + " ] }"
+              } else {
+                "{ \"succ\": true, \"keys\": [] }"
+              }
+            }
+            complete(fullString)
+          case _ => complete("{ \"succ\": false }")
+        }
+      } ~
       path("get") {
         parameter("key") { key =>
           val res: Future[Any] = aRef ? key
@@ -65,40 +83,7 @@ class DataMapService {
             case Success(msg: String) => complete(msg)
             case _ => complete("{ \"succ\": false, \"key\": \"" + key + "\" }")
           }
-        } ~
-        path("put") {
-          parameters("key", "value") { (key, value) =>
-            aRef ! (key, value)
-            complete("")
-          }
         }
-        /*entity(as[String]) {
-          queryStr =>
-            JSON.parseFull(queryStr) match {
-              case Some(map: Map[String, Any]) =>
-                val res: Future[Any] = aRef ? map
-                onComplete(res) {
-                  case Success(msg: String) => complete(msg)
-                  case _ => complete("{ \"succ\": false }")
-                }
-
-              case Some(list: List[Any]) =>
-                if (list.nonEmpty){
-                  val map = Map.empty[String, Any] + ("key" -> list.head)
-                  val res: Future[Any] = aRef ? map
-                  onComplete(res) {
-                    case Success(msg: String) => complete(msg)
-                    case _ => complete("{ \"succ\": false }")
-                  }
-                } else {
-                  complete("{ \"succ\": false }")
-                } //key is first list value
-              case _ => complete("{ \"succ\": false }") //{'succ': false}
-            }
-            complete(queryStr)
-
-        }
-        */
       }
     }
   }
@@ -181,5 +166,7 @@ class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
     }
     case (key: String, value: String) =>
       dMap.put(key, value)
+    case _: List[String] =>
+      sender() ! dMap.getAllKeys
   }
 }

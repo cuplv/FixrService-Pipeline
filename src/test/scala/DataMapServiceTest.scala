@@ -32,17 +32,19 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
     system.stop(testDMapActor)
   }
 
-  /*it should "get a list of values when asked" in {
+  it should "get a list of values when asked" in {
     val dMapService = new DataMapService
     val testMap: HeapMap[String, String] = new HeapMap[String, String]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
-    //Post("/put", FormData("key" -> "test", "value" -> "Hello.")) ~> testRoute
-    Get("/getFields") ~> testRoute ~> check {
-
+    Post("/put", "{ \"key\": \"test\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test2\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test3\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test\", \"value\": \"?\" }") ~> testRoute
+    Get("/getKeys") ~> testRoute ~> check {
+      responseAs[String] shouldEqual "{ \"succ\": true, \"keys\": [ \"test\", \"test2\", \"test3\" ] }"
     }
     system.stop(testDMapActor)
-  }*/
-
+  }
 }
 
