@@ -28,11 +28,6 @@ class DataMapService {
 
     post {
       path("put") {
-        /*path("put") {
-        formField("key", "value") { (key, value) =>
-          aRef ! (key, value)
-          complete("")
-        }*/
         /*parameters("key", "value") { (key, value) =>
           aRef ! (key, value)
           complete("")
