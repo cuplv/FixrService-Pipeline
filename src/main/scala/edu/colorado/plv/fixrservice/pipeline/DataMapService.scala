@@ -27,7 +27,8 @@ class DataMapService {
   def getCommand(aRef: ActorRef): server.Route = {
 
     post {
-      /*path("put") {
+      path("put") {
+        /*path("put") {
         formField("key", "value") { (key, value) =>
           aRef ! (key, value)
           complete("")
@@ -36,25 +37,26 @@ class DataMapService {
           aRef ! (key, value)
           complete("")
         }*/
-      entity(as[String]) {
-        queryStr =>
-          JSON.parseFull(queryStr) match{
-            case Some(map: Map[String, Any]) =>
-              val res = aRef ? map
-              onComplete(res){
-                case Success(x: String) => complete(x)
-                case _ => complete("{ \"succ\": false }")
-              }
-            case Some(list: List[Any]) =>
-              if (list.length > 1){
-                val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
-                aRef ! map
-                complete("")
-              } else {
-                complete("{ \"succ\": false }")
-              }//key is first thing in list, value is second thing in list
-            case _ => complete("{ \"succ\": false }")
-          }
+        entity(as[String]) {
+          queryStr =>
+            JSON.parseFull(queryStr) match {
+              case Some(map: Map[String, Any]) =>
+                val res = aRef ? map
+                onComplete(res) {
+                  case Success(x: String) => complete(x)
+                  case _ => complete("{ \"succ\": false }")
+                }
+              case Some(list: List[Any]) =>
+                if (list.length > 1) {
+                  val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
+                  aRef ! map
+                  complete("")
+                } else {
+                  complete("{ \"succ\": false }")
+                } //key is first thing in list, value is second thing in list
+              case _ => complete("{ \"succ\": false }")
+            }
+        }
       }
     } ~
     get {
