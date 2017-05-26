@@ -69,11 +69,42 @@ class DataMapTest extends FlatSpec {
     assert(allKeys == List("key", "Key2", "Key3"))
   }
 
-  //Need to add MongoDB Tests (Somehow...)
-  /*"MongoDBMap" should "get nothing if nothing is in it" in {
-
+  //WARNING: THESE TESTS ONLY WORK IF YOU HAVE AN INSTANCE OF MONGODB RUNNING ON YOUR COMPUTER.
+  //DO NOT UNCOMMENT THESE TESTS IF YOU DON'T HAVE AN INSTANCE OF MONGODB RUNNING ON YOUR COMPUTER.
+  /*
+  "MongoDBMap" should "get nothing if nothing is in it" in {
     val mDBMap = new MongoDBMap[String, String]("test","collection")
     val getVal = mDBMap.get("Testing")
     assert(getVal.isEmpty)
-  }*/
+  }
+
+  it should "be able to put multiple stuff in it" in {
+    val mDBMap = new MongoDBMap[String, String]("test", "addition")
+    mDBMap.put("id_1", "Test_1")
+    mDBMap.put("id_2", "Test_2")
+    mDBMap.put("id_3", "Test_3")
+    assert(mDBMap.get("id_1").contains("Test_1"))
+    assert(mDBMap.get("id_2").contains("Test_2"))
+    assert(mDBMap.get("id_3").contains("Test_3"))
+  }
+
+  it should "be able to replace stuff put in it" in {
+    val mDBMap = new MongoDBMap[String, String]("test", "replacement")
+    mDBMap.put("id_1", "10101010")
+    mDBMap.put("id_1", "This is a test")
+    mDBMap.put("id_2", "?")
+    assert(mDBMap.get("id_1").contains("This is a test"))
+    assert(mDBMap.get("id_2").contains("?"))
+  }
+
+  it should "be able to return all of the keys in a collection" in {
+    val mDBMap = new MongoDBMap[String, String]("test", "list")
+    mDBMap.put("id_1", "!")
+    mDBMap.put("id_2", ">")
+    mDBMap.put("id_1", "?")
+    mDBMap.put("id_3", "$")
+    mDBMap.put("id_4", ")=)")
+    assert(mDBMap.getAllKeys.equals(List("id_1", "id_2", "id_3", "id_4")))
+  }
+  */
 }
