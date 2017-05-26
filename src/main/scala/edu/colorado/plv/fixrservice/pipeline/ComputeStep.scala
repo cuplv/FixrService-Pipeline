@@ -20,6 +20,7 @@ class ComputeStep[A,B](func: (A => B), config: String) {
   val idToBMap: DataMap[String, B] = setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
   val errMap: DataMap[String, Exception] = setUpDatabase(c, "ErrorMap", "Database", "Error")
   val provMap: DataMap[B, List[String]] = setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
+  val AToBMap: DataMap[A, B] = setUpDatabase(c, "AToBMap", "Database", "AToB")
   implicit val timeout = Timeout(10 hours)
 
   def setUpDatabase[C,D](c: Config, name: String, defDataName: String, defCollName: String): DataMap[C,D] = possiblyInConfig(c, name+"Type", "Heap") match {
@@ -45,8 +46,7 @@ class ComputeStep[A,B](func: (A => B), config: String) {
     }
   }
 
-  def IncrementalCompute(statMap: DataMap[String, String] = statMap, idToAMap: DataMap[String, A] = idToAMap,
-                        errMap: DataMap[String, Exception] = errMap, provMap: DataMap[B, List[String]] = provMap, includeExceptions: List[Exception] = List.empty): Unit = {
+  def IncrementalCompute(includeExceptions: List[Exception] = List.empty): Unit = {
     //Start by getting every single key available. (Can probably do this through the Status Map.
     val statusKeys: List[String] = statMap.getAllKeys
     //Iterate through all of the statusKeys
@@ -104,6 +104,7 @@ class ComputeStep[A,B](func: (A => B), config: String) {
                 case None => List(key)
               }
               provMap.put(b, l)
+              AToBMap.put(idToAMap.getM(key), b)
               statMap.put(key, "Done")
               curr
             case Some(Success("")) => curr
