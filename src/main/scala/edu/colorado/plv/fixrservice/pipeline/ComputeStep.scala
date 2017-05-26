@@ -12,9 +12,15 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 
-class ComputeStep[A,B](func: (A => B)) {
+class ComputeStep[A,B](func: (A => B), config: String) {
   val system: ActorSystem = ActorSystem("IncrementalComputation")
-  implicit val timeout = Timeout(5 seconds)
+  val c: Config =  ConfigFactory.load(config)
+  val statMap: DataMap[String, String] = setUpDatabase(c, "StatusMap", "Database", "Status")
+  val idToAMap: DataMap[String, A] = setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
+  val idToBMap: DataMap[String, B] = setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
+  val errMap: DataMap[String, Exception] = setUpDatabase(c, "ErrorMap", "Database", "Error")
+  val provMap: DataMap[B, List[String]] = setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
+  implicit val timeout = Timeout(10 hours)
 
   def setUpDatabase[C,D](c: Config, name: String, defDataName: String, defCollName: String): DataMap[C,D] = possiblyInConfig(c, name+"Type", "Heap") match {
     case "Null" => new NullMap[C,D]
@@ -39,8 +45,8 @@ class ComputeStep[A,B](func: (A => B)) {
     }
   }
 
-  def IncrementalCompute(statMap: DataMap[String, String], idToAMap: DataMap[String, A],
-                        errMap: DataMap[String, Exception], provMap: DataMap[B, String], includeExceptions: List[Exception] = List.empty): Unit = {
+  def IncrementalCompute(statMap: DataMap[String, String] = statMap, idToAMap: DataMap[String, A] = idToAMap,
+                        errMap: DataMap[String, Exception] = errMap, provMap: DataMap[B, List[String]] = provMap, includeExceptions: List[Exception] = List.empty): Unit = {
     //Start by getting every single key available. (Can probably do this through the Status Map.
     val statusKeys: List[String] = statMap.getAllKeys
     //Iterate through all of the statusKeys
@@ -54,7 +60,9 @@ class ComputeStep[A,B](func: (A => B)) {
         case Some("Error") =>
           val canRedo: Boolean = errMap.get(key) match {
             case Some(e) => includeExceptions.foldLeft(false) {
-              case (false, checkE) => e.isInstanceOf[checkE.type]
+              case (false, checkE) =>
+                e.toString.equals(checkE.toString)
+
               case _ => true
             }
             case None => true
@@ -62,6 +70,7 @@ class ComputeStep[A,B](func: (A => B)) {
           if (canRedo) {
             val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
             val res: Future[Any] = actor ? idToAMap.get(key)
+            statMap.put(key, "Not Done")
             (key, actor, res) :: list
             /*res onComplete{
               case Success(b: B) =>
@@ -83,37 +92,36 @@ class ComputeStep[A,B](func: (A => B)) {
     }
     while(futures.foldRight(false){
       case ((key, actor, future), curr) =>
-        future.value match{
-          case Some(Success(e: Exception)) =>
-            errMap.put(key, e)
-            statMap.put(key, "Error")
-            curr
-          case Some(Success(b: B)) =>
-            provMap.put(b, key)
-            statMap.put(key, "Done")
-            curr
-          case Some(Success("")) => curr
-            curr
-          case Some(_) => curr
-            errMap.put(key, new UnexpectedException)
-            statMap.put(key, "Error")
-            curr
-          case None => true
-      }
+        if (statMap.get(key).contains("Not Done")) {
+          future.value match {
+            case Some(Success(e: Exception)) =>
+              errMap.put(key, e)
+              statMap.put(key, "Error")
+              curr
+            case Some(Success(b: B)) =>
+              val l = provMap.get(b) match {
+                case Some(list) => key :: list
+                case None => List(key)
+              }
+              provMap.put(b, l)
+              statMap.put(key, "Done")
+              curr
+            case Some(Success("")) => curr
+              curr
+            case Some(_) => curr
+              errMap.put(key, new UnexpectedException)
+              statMap.put(key, "Error")
+              curr
+            case None => true
+          }
+        } else curr
     }){}
   }
-
-  def main(args: Array[String]) = {
-    val c: Config = {
-      if (args.length > 0) ConfigFactory.load(args(0)) else ConfigFactory.load("")
-    }
-    val statMap: DataMap[String, String] = setUpDatabase(c, "StatusMap", "Database", "Status")
-    val idToAMap: DataMap[String, A] = setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
-    val errMap: DataMap[String, Exception] = setUpDatabase(c, "ErrorMap", "Database", "Error")
-    val provMap: DataMap[B, String] = setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
-    IncrementalCompute(statMap, idToAMap, errMap, provMap)
+  /*
+  def main(args: Array[String]) = { //If for whatever reason you want to use this...
+    IncrementalCompute()
   }
-
+  */
 }
 
 class FunctionActor[A,B](func: A => B) extends Actor{
