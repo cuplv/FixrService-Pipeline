@@ -11,7 +11,7 @@ import edu.colorado.plv.fixrservice.pipeline._
 class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest {
   "DataMapService" should " work with post /put and get /get with basic query" in {
     val dMapService = new DataMapService
-    val testMap: HeapMap[String, String] = new HeapMap[String, String]
+    val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
     Post("/put", "{ \"key\": \"test\", \"value\": \"Hello, world!\" }") ~> testRoute
@@ -23,7 +23,7 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
 
   it should "fail if get fails, and give the key of failure" in {
     val dMapService = new DataMapService
-    val testMap: HeapMap[String, String] = new HeapMap[String, String]
+    val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
     Get("/get?key=failure") ~> testRoute ~> check {
@@ -34,7 +34,7 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
 
   it should "get a list of values when asked" in {
     val dMapService = new DataMapService
-    val testMap: HeapMap[String, String] = new HeapMap[String, String]
+    val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
     Post("/put", "{ \"key\": \"test\", \"value\": \"test\" }") ~> testRoute
@@ -45,6 +45,21 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
       responseAs[String] shouldEqual "{ \"succ\": true, \"keys\": [ \"test\", \"test2\", \"test3\" ] }"
     }
     system.stop(testDMapActor)
+  }
+
+  it should "allow non-string values" in {
+    val dMapService = new DataMapService
+    val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
+    val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
+    val testRoute: server.Route = dMapService.getCommand(testDMapActor)
+    Post("/put", "{ \"key\": \"test\", \"value\": 9 }") ~> testRoute
+    Post("/put", "{ \"key\": \"test2\", \"value\": [ \"a\", \"b\", \"c\" ] }") ~> testRoute
+    Get("/get?key=test") ~> testRoute ~> check{
+      responseAs[String] shouldEqual "{ \"succ\": true, \"key\": \"test\", \"value\": 9.0 }"
+    }
+    Get("/get?key=test2") ~> testRoute ~> check{
+      responseAs[String] shouldEqual "{ \"succ\": true, \"key\": \"test2\", \"value\": [ \"a\", \"b\", \"c\" ] }"
+    }
   }
 }
 

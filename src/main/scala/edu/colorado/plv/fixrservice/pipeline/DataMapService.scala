@@ -99,21 +99,21 @@ class DataMapService {
     }
     val dMap = {
       if (args.length == 0){
-        new HeapMap[String, String]
+        new HeapMap[String, Any]
       } else args(0) match{
         case "MongoDB" =>
           if (args.length > 2){
             val dBaseName = args(1)
             val collName = args(2)
             //To do: Add username, password, location, port.
-            new MongoDBMap[String, String](dBaseName, collName,
+            new MongoDBMap[String, Any](dBaseName, collName,
               possibly(args, 3, "localhost"), possibly(args, 4, "27017"),
               possibly(args, 5, ""), possibly(args, 6, ""))
           } else {
-            new HeapMap[String, String]
+            new HeapMap[String, Any]
           }
-        case "Heap" => new HeapMap[String, String]
-        case "Null" => new NullMap[String, String]
+        case "Heap" => new HeapMap[String, Any]
+        case "Null" => new NullMap[String, Any]
         case confFile =>
           val config = ConfigFactory.load(confFile)
           possiblyConfig(config, "DatabaseType", "Heap") match{
@@ -124,9 +124,9 @@ class DataMapService {
               val port = possiblyConfig(config, "Port", "27017")
               val userName = possiblyConfig(config, "Username", "")
               val password = possiblyConfig(config, "Password", "")
-              new MongoDBMap[String, String](dBaseName, collName, ip, port, userName, password)
-            case "Heap" => new HeapMap[String, String]
-            case "Null" => new NullMap[String, String]
+              new MongoDBMap[String, Any](dBaseName, collName, ip, port, userName, password)
+            case "Heap" => new HeapMap[String, Any]
+            case "Null" => new NullMap[String, Any]
           }
       }
     }
@@ -140,15 +140,15 @@ class DataMapService {
   }
 }
 
-class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
-  val dMap: DataMap[String, String] = dataMap
+class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
+  val dMap: DataMap[String, Any] = dataMap
 
   def receive = {
     case msg: Map[String, Any] => try {
       msg("key") match {
         case key: String => msg("value") match {
-          case value: String =>
-            dMap.put(key.toString, value.toString)
+          case value: Any =>
+            dMap.put(key.toString, value)
             sender() ! ""
           case _ => sender() ! "{ \"succ\": false, \"key\": \"" + key.toString + "\" }"
         }
@@ -158,7 +158,15 @@ class DataMapActor(dataMap: DataMap[String, String]) extends Actor{
       case nsee: NoSuchElementException => sender() ! """{ "succ": false, "key": "" }"""
     }
     case key: String => dMap.get(key) match{
-      case Some(value) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + value + "\" }"
+      case Some(s: String) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + s + "\" }"
+      case Some(l: List[Any]) =>
+        val start = l.foldLeft("{ \"succ\": true, \"key\": \"" + key + "\", \"value\": [ "){
+          case (str, s: String) => str + "\"" + s.toString + "\", "
+          case (str, v: Any) => str + v.toString + ", "
+        }
+        val string = start.substring(0,start.length-2) + " ] }"
+        sender() ! string
+      case Some(a: Any) => sender() ! "{ \"succ\": true, \"key\": \"" + key + "\", \"value\": " + a.toString + " }"
       case None => sender() ! "{ \"succ\": false, \"key\": \"" + key + "\" }"
     }
     case (key: String, value: String) =>
