@@ -1,5 +1,6 @@
 package edu.colorado.plv.fixrservice.pipeline
 
+
 import com.mongodb.casbah.Imports.{MongoClient, MongoClientURI, MongoDBObject}
 
 import scala.util.parsing.json.JSON
@@ -22,11 +23,14 @@ abstract class DataMap[K,V](val databaseName: String, val tableName: String, val
   def getAllKeys : List[K]
 }
 
-class SolrMap[K, V](val cName: String, val ip: String = "localhost", val prt: String = "8983") extends DataMap[K,V](cName, "", ip, prt, "", "") {
+class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: String = "localhost", val prt: String = "8983") extends DataMap[K,V](cName, fName, ip, prt, "", "") {
   val startingURL: String = "http://"+ip+":"+port+"/solr/"+cName+"/"
   def get(k: K): Option[V]  = {
     val queryURL = startingURL+"select?wt=json&q=key:"+k
-    val json = ??? //Query the Database Using the URL
+    val json = {
+
+      ???
+    } //Query the Database Using the URL
     JSON.parseFull(json) match{
       case Some(parsed: Map[String, Any]) =>
         parsed.get("response") match{
@@ -34,7 +38,7 @@ class SolrMap[K, V](val cName: String, val ip: String = "localhost", val prt: St
             resp.get("docs") match{
               case Some(resp2:  List[Map[String, Any]]) => resp2 match{
                 case first :: list =>
-                  first.get("value") match{
+                  first.get(fName) match{
                     case Some(x) => Some(x.asInstanceOf[V])
                     case None => None
                   }
@@ -49,12 +53,102 @@ class SolrMap[K, V](val cName: String, val ip: String = "localhost", val prt: St
     }
   }
 
+  def getObject(k: K): List[(String, Any)] = {
+    val queryURL = startingURL+"select?wt=json&q=key:"+k
+    val json = ??? //Query the Database Using the URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String, Any]) =>
+        parsed.get("response") match{
+          case Some(resp: Map[String, Any]) =>
+            resp.get("docs") match{
+              case Some((first: Map[String, Any]) :: list) =>
+                first.foldRight(List.empty[(String, Any)]){
+                  case ((key, value), l) =>
+                    (key, value) :: l
+                }
+              case _ => List.empty[(String, V)]
+            }
+          case _ => List.empty[(String, V)]
+        }
+      case _ => List.empty[(String, V)]
+    }
+  }
+
   def put(k: K, v: V): Unit = {
+    val queryURL = startingURL+"update"
+    val jsonValue: String = getObject(k) match{
+      case l if l.isEmpty =>
+        """{
+          | "add": {
+          |   "doc": {
+          |     "key": """.stripMargin + (k match {
+          case s: String => "\"" + k + "\""
+          case _ => k.toString
+        }) +
+        """,
+          |     """.stripMargin + "\"" + fName + "\": " + (v match{
+          case s: String => "\"" + v + "\""
+          case _ => v.toString
+        }) +
+        """,
+          |   }
+          | }
+          |}
+        """.stripMargin
+      case l =>
+        val mostOfString = l.foldLeft(
+        """{
+          | "add": {
+          |   "doc": {""".stripMargin
+        ) {
+          case (json, (key, value)) => if (key.equals(fName)){
+            """
+              |     """.stripMargin + "\"" + fName + "\": " + (v match{
+              case s: String => "\"" + v + "\""
+              case _ => v.toString
+            }) + ","
+          } else {
+            """
+              |     """.stripMargin + "\"" + key + "\": " + (value match {
+              case s: String => "\"" + value + "\""
+              case _ => value.toString
+            }) + ","
+          }
+        }
+        mostOfString.substring(0, mostOfString.length-1) +
+        """
+          |   }
+          | }
+          |}
+        """.stripMargin
+    }
+    //Find a way to POST Request this into Solr
     ???
   }
 
   def getAllKeys: List[K] = {
-    ???
+    val queryURL = startingURL+"select?wt=json&rows=1000000&q=*:*"
+    val json: String = {
+      ???
+    } //Find a way to Query the Database using a URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String, Any]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String, Any]) =>
+            resp.get("docs") match {
+              case Some(resp2: List[Map[String, Any]]) =>
+                resp2.foldRight(List.empty[K]){
+                  case (map, l) => map.get("key") match{
+                    case Some(v) => v.asInstanceOf[K] :: l
+                    case None => l
+                  }
+                }
+              case _ => List.empty[K]
+            }
+          case _ => List.empty[K]
+        }
+      case _ => List.empty[K]
+    }
   }
 }
 

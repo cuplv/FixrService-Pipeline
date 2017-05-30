@@ -16,7 +16,7 @@ class ComputeStepTest extends FlatSpec {
     cStep.idToAMap.put("id_2", 5)
     cStep.idToAMap.put("id_3", 3)
     cStep.idToAMap.put("id_4", 10)
-    cStep.IncrementalCompute()
+    cStep.IncrementalCompute(blocking = true)
     assert(cStep.statMap.getAllKeys.foldLeft(true){
       case (true, key) => cStep.statMap.get(key).contains("Done")
       case (false, key) => false
@@ -33,7 +33,7 @@ class ComputeStepTest extends FlatSpec {
     cStep.statMap.put("id_2", "Not Done")
     cStep.idToAMap.put("id_1", 100)
     cStep.idToAMap.put("id_2", 1)
-    cStep.IncrementalCompute()
+    cStep.IncrementalCompute(blocking = true)
     assert(cStep.statMap.get("id_1").contains("Error"))
     assert(cStep.statMap.get("id_2").contains("Done"))
     assert(cStep.errMap.get("id_1") match{
@@ -48,7 +48,7 @@ class ComputeStepTest extends FlatSpec {
     cStep.statMap.put("id_1", "Error")
     cStep.idToAMap.put("id_1", 10)
     cStep.errMap.put("id_1", new ArrayIndexOutOfBoundsException)
-    cStep.IncrementalCompute()
+    cStep.IncrementalCompute(blocking = true)
     assert(cStep.statMap.get("id_1").contains("Error"))
   }
 
@@ -57,7 +57,7 @@ class ComputeStepTest extends FlatSpec {
     cStep.statMap.put("id_1", "Error")
     cStep.errMap.put("id_1", new ArrayIndexOutOfBoundsException)
     cStep.idToAMap.put("id_1", 12)
-    cStep.IncrementalCompute(List(new ArrayIndexOutOfBoundsException))
+    cStep.IncrementalCompute(blocking = true, List(new ArrayIndexOutOfBoundsException))
     assert(cStep.statMap.get("id_1").contains("Done"))
     assert(cStep.provMap.get(13).contains(List("id_1")))
   }

@@ -22,6 +22,7 @@ class ComputeStep[A,B](func: (A => B), config: String) {
   val provMap: DataMap[B, List[String]] = setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
   val AToBMap: DataMap[A, B] = setUpDatabase(c, "AToBMap", "Database", "AToB")
   implicit val timeout = Timeout(10 hours)
+  implicit val executionContext = system.dispatcher
 
   def setUpDatabase[C,D](c: Config, name: String, defDataName: String, defCollName: String): DataMap[C,D] = possiblyInConfig(c, name+"Type", "Heap") match {
     case "Null" => new NullMap[C,D]
@@ -46,16 +47,38 @@ class ComputeStep[A,B](func: (A => B), config: String) {
     }
   }
 
-  def IncrementalCompute(includeExceptions: List[Exception] = List.empty): Unit = {
+  def IncrementalComputeHelper(key: String): Unit = {
+    val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
+    val res = actor ? idToAMap.get(key)
+    res.onComplete{
+      case Success(e: Exception) =>
+        errMap.put(key, e)
+        statMap.put(key, "Error")
+      case Success(b: B) =>
+        val l = provMap.get(b) match {
+          case Some(list) => key :: list
+          case None => List(key)
+        }
+        provMap.put(b, l)
+        AToBMap.put(idToAMap.getM(key), b)
+        statMap.put(key, "Done")
+
+      case Success("") => ()
+      case _ =>
+        errMap.put(key, new UnexpectedException)
+        statMap.put(key, "Error")
+    }
+  }
+
+  def IncrementalCompute(blocking: Boolean = false, includeExceptions: List[Exception] = List.empty): Unit = {
     //Start by getting every single key available. (Can probably do this through the Status Map.
     val statusKeys: List[String] = statMap.getAllKeys
     //Iterate through all of the statusKeys
-    val futures = statusKeys.foldRight(List.empty[(String, ActorRef, Future[Any])]){
+    val futures = statusKeys.foldRight(List.empty[String]){
       case (key, list) => statMap.get(key) match {
         case Some("Not Done") =>
-          val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
-          val res = actor ? idToAMap.get(key)
-          (key, actor, res) :: list
+          IncrementalComputeHelper(key)
+          key :: list
 
         case Some("Error") =>
           val canRedo: Boolean = errMap.get(key) match {
@@ -68,21 +91,9 @@ class ComputeStep[A,B](func: (A => B), config: String) {
             case None => true
           }
           if (canRedo) {
-            val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
-            val res: Future[Any] = actor ? idToAMap.get(key)
             statMap.put(key, "Not Done")
-            (key, actor, res) :: list
-            /*res onComplete{
-              case Success(b: B) =>
-                provMap.put(b, key)
-                statMap.put(key, "Done")
-              case Success("") => ()
-              case Success(e: Exception) =>
-                errMap.put(key, e)
-                statMap.put(key, "Error")
-              case _ =>
-                errMap.put(key, new UnexpectedException)
-            }*/
+            IncrementalComputeHelper(key)
+            key :: list
           } else list
         case Some("Done") => list
         case _ =>
@@ -90,32 +101,10 @@ class ComputeStep[A,B](func: (A => B), config: String) {
           list
       }
     }
-    while(futures.foldRight(false){
-      case ((key, actor, future), curr) =>
-        if (statMap.get(key).contains("Not Done")) {
-          future.value match {
-            case Some(Success(e: Exception)) =>
-              errMap.put(key, e)
-              statMap.put(key, "Error")
-              curr
-            case Some(Success(b: B)) =>
-              val l = provMap.get(b) match {
-                case Some(list) => key :: list
-                case None => List(key)
-              }
-              provMap.put(b, l)
-              AToBMap.put(idToAMap.getM(key), b)
-              statMap.put(key, "Done")
-              curr
-            case Some(Success("")) => curr
-              curr
-            case Some(_) => curr
-              errMap.put(key, new UnexpectedException)
-              statMap.put(key, "Error")
-              curr
-            case None => true
-          }
-        } else curr
+    while(blocking && futures.foldRight(false){
+      case (key, curr) =>
+        if (statMap.get(key).contains("Not Done")) true
+         else curr
     }){}
   }
   /*

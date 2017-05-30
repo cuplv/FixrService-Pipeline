@@ -4,7 +4,7 @@
 		module="fixrservice-pipeline$sources_2.12"
 		revision="1.0"
 		status="integration"
-		publication="20170523163726"
+		publication="20170530125453"
 	/>
 	<configurations>
 		<conf name="compile" visibility="public" description=""/>
