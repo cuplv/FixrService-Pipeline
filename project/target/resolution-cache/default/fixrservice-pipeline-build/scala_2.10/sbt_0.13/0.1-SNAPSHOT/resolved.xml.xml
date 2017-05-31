@@ -4,7 +4,7 @@
 		module="fixrservice-pipeline-build"
 		revision="0.1-SNAPSHOT"
 		status="integration"
-		publication="20170523160234"
+		publication="20170530141527"
 		e:sbtVersion="0.13" e:scalaVersion="2.10"
 	>
 		<description>

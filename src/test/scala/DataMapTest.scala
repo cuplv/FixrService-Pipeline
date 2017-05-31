@@ -1,8 +1,8 @@
 /**
   * Created by chanceroberts on 5/23/17.
   */
+import edu.colorado.plv.fixr.fixrservice.pipeline.{HeapMap, MongoDBMap, NullMap, SolrMap}
 import org.scalatest._
-import edu.colorado.plv.fixrservice.pipeline._
 
 class DataMapTest extends FlatSpec {
   "NullMap" should "return its own input when getting stuff" in {
@@ -105,6 +105,42 @@ class DataMapTest extends FlatSpec {
     mDBMap.put("id_3", "$")
     mDBMap.put("id_4", ")=)")
     assert(mDBMap.getAllKeys.equals(List("id_1", "id_2", "id_3", "id_4")))
+  }
+  */
+
+  //WARNING: THESE TESTS ONLY WORK IF YOU HAVE AN INSTANCE OF SOLR RUNNING ON YOUR COMPUTER.
+  //DO NOT UNCOMMENT THESE TESTS IF YOU DON'T HAVE AN INSTANCE OF SOLR RUNNING ON YOUR COMPUTER.
+  /*
+  "SolrDBMap" should "get nothing if nothing is in it" in {
+    val sMap = new SolrMap[String, String]("gettingstarted","collection")
+    val getVal = sMap.get("Testing")
+    assert(getVal.isEmpty)
+  }
+
+  it should "be able to put, get, and getAllKeys with the specified fields" in {
+    val sMap = new SolrMap[String, String]("gettingstarted", "addition")
+    val sMap2 = new SolrMap[String, String]("gettingstarted", "replacement")
+    val sMap3 = new SolrMap[String, String]("gettingstarted", "listKeyValues")
+    sMap.put("id_1", "Test_1")
+    sMap.put("id_2", "Test_2")
+    sMap.put("id_3", "Test_3")
+    Thread.sleep(100)
+    assert(sMap.get("id_1").contains("Test_1"))
+    assert(sMap.get("id_2").contains("Test_2"))
+    assert(sMap.get("id_3").contains("Test_3"))
+    sMap2.put("id_1", "ReplaceThis")
+    sMap2.put("id_1", "1001001001")
+    Thread.sleep(100)
+    assert(sMap2.get("id_1").contains("1001001001"))
+    sMap3.put("id_1", ":)")
+    sMap3.put("id_2", "?")
+    sMap3.put("id_3", "(!)")
+    sMap3.put("id_4", "...")
+    Thread.sleep(100)
+    assert(sMap3.getAllKeys.contains("id_1"))
+    assert(sMap3.getAllKeys.contains("id_2"))
+    assert(sMap3.getAllKeys.contains("id_3"))
+    assert(sMap3.getAllKeys.contains("id_4"))
   }
   */
 }

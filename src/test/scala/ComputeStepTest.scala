@@ -1,4 +1,4 @@
-import edu.colorado.plv.fixrservice.pipeline.{ComputeStep, HeapMap}
+import edu.colorado.plv.fixr.fixrservice.pipeline.ComputeStep
 import org.scalatest.FlatSpec
 
 /**

@@ -6,11 +6,11 @@ import akka.http.scaladsl.model.FormData
 import akka.http.scaladsl.server
 import org.scalatest._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import edu.colorado.plv.fixrservice.pipeline._
+import edu.colorado.plv.fixr.fixrservice.pipeline.{DataMapActor, DataMapService, HeapMap}
 
 class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest {
   "DataMapService" should " work with post /put and get /get with basic query" in {
-    val dMapService = new DataMapService
+    val dMapService = DataMapService
     val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
@@ -22,7 +22,7 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
   }
 
   it should "fail if get fails, and give the key of failure" in {
-    val dMapService = new DataMapService
+    val dMapService = DataMapService
     val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
@@ -33,7 +33,7 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
   }
 
   it should "get a list of values when asked" in {
-    val dMapService = new DataMapService
+    val dMapService = DataMapService
     val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
@@ -48,7 +48,7 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
   }
 
   it should "allow non-string values" in {
-    val dMapService = new DataMapService
+    val dMapService = DataMapService
     val testMap: HeapMap[String, Any] = new HeapMap[String, Any]
     val testDMapActor: ActorRef = system.actorOf(Props(new DataMapActor(testMap)), "testMapActor2")
     val testRoute: server.Route = dMapService.getCommand(testDMapActor)
