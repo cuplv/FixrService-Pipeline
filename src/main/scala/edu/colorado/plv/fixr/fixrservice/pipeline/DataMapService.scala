@@ -35,7 +35,7 @@ object DataMapService {
         entity(as[String]) {
           queryStr =>
             JSON.parseFull(queryStr) match {
-              case Some(map: Map[String, Any]) =>
+              case Some(map: Map[String @ unchecked, Any @ unchecked]) =>
                 val res = aRef ? map
                 onComplete(res) {
                   case Success(x: String) => complete(x)
@@ -144,7 +144,7 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
   val dMap: DataMap[String, Any] = dataMap
 
   def receive = {
-    case msg: Map[String, Any] => try {
+    case msg: Map[String @ unchecked, Any @ unchecked] => try {
       msg("key") match {
         case key: String => msg("value") match {
           case value: Any =>
@@ -171,7 +171,7 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
     }
     case (key: String, value: String) =>
       dMap.put(key, value)
-    case _: List[String] =>
+    case _: List[_] =>
       sender() ! dMap.getAllKeys
   }
 }
