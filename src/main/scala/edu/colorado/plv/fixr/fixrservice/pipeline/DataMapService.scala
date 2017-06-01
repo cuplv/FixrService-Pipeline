@@ -37,7 +37,7 @@ object DataMapService {
             JSON.parseFull(queryStr) match {
               case Some(map: Map[String @ unchecked, Any @ unchecked]) => map("dataMap") match {
                 case Some(x) =>
-                  val dataMap = map("dataMap").toString
+                  val dataMap = x.toString
                   aMapRef.get(dataMap) match{
                     case Some(a: ActorRef) =>
                       val res = a ? map
@@ -120,8 +120,8 @@ object DataMapService {
           case _ => default
         }
       } catch{
-        case ceM: ConfigException.Missing => default
-        case ceWT: ConfigException.WrongType => default
+        case _: ConfigException.Missing => default
+        case _: ConfigException.WrongType => default
       }
     }
 
@@ -132,21 +132,20 @@ object DataMapService {
       }
     }
 
-    val (dataMapMap: DataMap[String, DataMap[String, Any]], actorMap: DataMap[String, ActorRef]) = {
+    val actorMap: DataMap[String, ActorRef] = {
       if (args.length == 0){
         val hMap = new HeapMap[String, HeapMap[String, Any]]
         val aMap = new HeapMap[String, ActorRef]
         val hMap1 = new HeapMap[String, Any]
         hMap.put("Default", hMap1)
         aMap.put("Default", system.actorOf(Props(new DataMapActor(hMap1)), "DefaultDMapActor"))
-        (hMap, aMap)
+        aMap
       } else args(0) match{
         case confFile =>
           val config = ConfigFactory.load(confFile)
           val numOfDataMaps = possiblyConfig(config, "NumOfDatabases", 1)
-          def addADatabase(dataMapNumber: Int, currMap: DataMap[String, DataMap[String, Any]], actorMap: DataMap[String, ActorRef]):
-            (DataMap[String, DataMap[String, Any]], DataMap[String, ActorRef]) = dataMapNumber match{
-            case x if x > numOfDataMaps => (currMap, actorMap)
+          def addADatabase(dataMapNumber: Int, actorMap: DataMap[String, ActorRef]): DataMap[String, ActorRef] = dataMapNumber match{
+            case x if x > numOfDataMaps => actorMap
             case x =>
               val dataNumberString = dataMapNumber.toString
               val dataMapID = "Datamap"+dataNumberString
@@ -169,23 +168,19 @@ object DataMapService {
                 case "Heap" => new HeapMap[String, Any]
                 case "Null" => new NullMap[String, Any]
               }
-              currMap.put(dataMapName, newDataMap)
               actorMap.put(dataMapName, system.actorOf(Props(new DataMapActor(newDataMap)), dataMapName+"DMapActor"))
-              (currMap, actorMap)
+              addADatabase(x+1, actorMap)
           }
-          addADatabase(1, new HeapMap[String, DataMap[String, Any]], new HeapMap[String, ActorRef])
+          addADatabase(1, new HeapMap[String, ActorRef])
       }
     }
-
-    /*
-    val dMapActor = system.actorOf(Props(new DataMapActor(dMap)), "dMapActor")
-    val route = getCommand(dMapActor)
+    val route = getCommand(actorMap)
     val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
     StdIn.readLine() // let it run until user presses return
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ => system.terminate()) // and shutdown when done
-      */
+
   }
 }
 
@@ -204,7 +199,7 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
         case _ => sender() ! """{ "succ": false }"""
       }
     } catch {
-      case nsee: NoSuchElementException => sender() ! """{ "succ": false, "key": "" }"""
+      case _: NoSuchElementException => sender() ! """{ "succ": false, "key": "" }"""
     }
     case key: String => dMap.get(key) match{
       case Some(s: String) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + s + "\" }"
