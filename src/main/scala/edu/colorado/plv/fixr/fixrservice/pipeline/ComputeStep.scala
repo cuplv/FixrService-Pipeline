@@ -35,6 +35,16 @@ class ComputeStep[A,B](func: (A => B), config: String) {
       val IP = possiblyInConfig(c, name+"IP", "localhost")
       val port = possiblyInConfig(c, name+"Port", "27017")
       new MongoDBMap[C, D](databaseName, collectionName, IP, port, username, password)
+    case "Solr" =>
+      val collectionName = possiblyInConfig(c, name+"Collection", defDataName)
+      val fieldName = possiblyInConfig(c, name+"Field", defDataName)
+      val IP = possiblyInConfig(c, name+"IP", "localhost")
+      val port = possiblyInConfig(c, name+"Port", "8983")
+      new SolrMap[C,D](collectionName, fieldName, IP, port)
+    case "WebService" =>
+      val IP = possiblyInConfig(c, name+"IP", "localhost")
+      val port = possiblyInConfig(c, name+"Port", "8080")
+      new WebServiceClient[C,D](IP, port)
   }
 
   def possiblyInConfig(config: Config, checkVal: String, defaultVal: String): String = {
@@ -114,11 +124,11 @@ class ComputeStep[A,B](func: (A => B), config: String) {
   */
 }
 
-object ComputeAStep{
+/*object ComputeAStep{
   def main(args: Array[String]) = {
 
   }
-}
+}*/
 
 class FunctionActor[A,B](func: A => B) extends Actor{
   def receive = {

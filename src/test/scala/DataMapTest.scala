@@ -124,23 +124,56 @@ class DataMapTest extends FlatSpec {
     sMap.put("id_1", "Test_1")
     sMap.put("id_2", "Test_2")
     sMap.put("id_3", "Test_3")
-    Thread.sleep(100)
-    assert(sMap.get("id_1").contains("Test_1"))
-    assert(sMap.get("id_2").contains("Test_2"))
-    assert(sMap.get("id_3").contains("Test_3"))
     sMap2.put("id_1", "ReplaceThis")
     sMap2.put("id_1", "1001001001")
-    Thread.sleep(100)
-    assert(sMap2.get("id_1").contains("1001001001"))
     sMap3.put("id_1", ":)")
     sMap3.put("id_2", "?")
     sMap3.put("id_3", "(!)")
-    sMap3.put("id_4", "...")
-    Thread.sleep(100)
+    sMap3.put("id_4", "...?")
+    sMap3.put("id_1", "):)")
+    assert(sMap.get("id_1").contains("Test_1"))
+    assert(sMap.get("id_2").contains("Test_2"))
+    assert(sMap.get("id_3").contains("Test_3"))
+    assert(sMap2.get("id_1").contains("1001001001"))
     assert(sMap3.getAllKeys.contains("id_1"))
     assert(sMap3.getAllKeys.contains("id_2"))
     assert(sMap3.getAllKeys.contains("id_3"))
     assert(sMap3.getAllKeys.contains("id_4"))
+  }
+
+  it should "be able to put multiple stuff in it" in {
+    val sMap = new SolrMap[String, String]("gettingstarted", "addition")
+    sMap.put("id_1", "Test_1")
+    sMap.put("id_2", "Test_2")
+    sMap.put("id_3", "Test_3")
+    assert(sMap.get("id_1").contains("Test_1"))
+    assert(sMap.get("id_2").contains("Test_2"))
+    assert(sMap.get("id_3").contains("Test_3"))
+  }
+
+  it should "be able to replace stuff put in it" in {
+    val sMap = new SolrMap[String, String]("gettingstarted", "replacement")
+    sMap.put("id_1", "10101010")
+    sMap.put("id_1", "This is a test")
+    sMap.put("id_2", "?")
+    assert(sMap.get("id_1").contains("This is a test"))
+    assert(sMap.get("id_2").contains("?"))
+  }
+
+  it should "be able to return all of the keys in a collection" in {
+    val sMap = new SolrMap[String, String]("gettingstarted", "list")
+    val sMap2 = new SolrMap[String, String]("gettingstarted", "0")
+    sMap.put("id_1", "!")
+    sMap.put("id_2", ">")
+    sMap.put("id_1", "?")
+    sMap.put("id_3", "$")
+    sMap.put("id_4", ")=)")
+    sMap2.put("id_5", "(!)...:(")
+    assert(sMap.getAllKeys.contains("id_1"))
+    assert(sMap.getAllKeys.contains("id_2"))
+    assert(sMap.getAllKeys.contains("id_3"))
+    assert(sMap.getAllKeys.contains("id_4"))
+    assert(!sMap.getAllKeys.contains("id_5"))
   }
   */
 }

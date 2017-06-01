@@ -27,7 +27,7 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
   def get(k: K): Option[V]  = {
     val queryURL = startingURL+"select?q=key:"+k+"&wt=json"
     val json = Http(queryURL).asString.body //Query the Database Using the URL
-    println(json)
+    //println(json)
     JSON.parseFull(json) match{
       case Some(parsed: Map[String, Any]) =>
         parsed.get("response") match{
@@ -91,7 +91,8 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
         }) +
         """
           |    }
-          |  }
+          |  },
+          |  "commit": {}
           |}
         """.stripMargin
       case l =>
@@ -142,13 +143,13 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
         mostOfString2.substring(0, mostOfString2.length-1) +
         """
           |    }
-          |  }
+          |  },
+          |  "commit": {}
           |}
         """.stripMargin
     }
-    //println(jsonValue)
     //Find a way to POST Request this into Solr
-    Http(queryURL).postData(jsonValue).header("Content-Type", "application/json").asString.body
+    Http(queryURL).postData(jsonValue.getBytes).header("Content-Type", "application/json").asString.body
   }
 
   def getAllKeys: List[K] = {
@@ -240,4 +241,51 @@ class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
   def put(k: K, v: V) : Unit = ()
 
   def getAllKeys: List[K] = List.empty[K]
+}
+
+class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080") extends DataMap[K,V]("","",ip,port,"",""){
+  val webServerAt: String = "http://"+ip+":"+port+"/"
+  def get(k: K): Option[V] = {
+    val gotten: String = Http(webServerAt+"get/key="+k.toString).asString.body
+    JSON.parseFull(gotten) match {
+      case m: Map[String, _] => m.get("succ") match{
+        case Some(true) => m.get("value").asInstanceOf[Option[V]]
+        case _ => None
+      }
+    }
+  }
+
+  def getAllKeys: List[K] = {
+    val gotten: String = Http(webServerAt+"getKeys").asString.body
+    JSON.parseFull(gotten) match {
+      case m: Map[String, Any] => m.get("succ") match{
+        case Some(true) => m.get("keys") match{
+          case Some(l: List[_]) => l.foldRight(List.empty[K]){
+            case (x, list) => x.asInstanceOf[K] :: list
+          }
+          case _ => List()
+        }
+        case None => List()
+      }
+    }
+  }
+
+  def put(k: K, v: V): Unit = {
+    val json: String = "{ \"key\": " + (k match{
+      case s: String => "\"" + s + "\""
+      case x => x
+    }) + ", \"value\": " + (v match{
+      case l: List[_] =>
+        val mostOfThis = "[ " + l.foldLeft(""){
+          case (str, value) => (value match{
+            case s: String => "\"" + s + "\""
+            case v: Any => v.toString
+          }) + ", "
+        }
+        mostOfThis.substring(0,mostOfThis.length-2) + " ]"
+      case s: String => "\"" + s + "\""
+      case x => x
+    }) + " }"
+    Http(webServerAt+"/put").postData(json)
+  }
 }

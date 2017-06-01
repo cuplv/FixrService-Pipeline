@@ -159,10 +159,10 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
     }
     case key: String => dMap.get(key) match{
       case Some(s: String) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + s + "\" }"
-      case Some(l: List[Any]) =>
+      case Some(l: List[_]) =>
         val start = l.foldLeft("{ \"succ\": true, \"key\": \"" + key + "\", \"value\": [ "){
           case (str, s: String) => str + "\"" + s.toString + "\", "
-          case (str, v: Any) => str + v.toString + ", "
+          case (str, v) => str + v.toString + ", "
         }
         val string = start.substring(0,start.length-2) + " ] }"
         sender() ! string
