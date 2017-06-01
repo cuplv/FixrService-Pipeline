@@ -37,27 +37,28 @@ object DataMapService {
             JSON.parseFull(queryStr) match {
               case Some(map: Map[String @ unchecked, Any @ unchecked]) => map("dataMap") match {
                 case Some(x) =>
-                  aMapRef.get(map("dataMap").toString) match{
+                  val dataMap = map("dataMap").toString
+                  aMapRef.get(dataMap) match{
                     case Some(a: ActorRef) =>
                       val res = a ? map
                       onComplete (res) {
                         case Success (x: String) => complete (x)
-                        case _ => complete ("{ \"succ\": false }")
+                        case _ => complete ("{ \"succ\": false, dataMap: \"" + dataMap + "\" }")
                       }
-                    case None => complete("{ \"succ\": false }")
+                    case None => complete("{ \"succ\": false, dataMap: \"" + dataMap + "\" }")
                   }
               }
               case Some(list: List[Any]) =>
-                if (list.length > 1) {
+                if (list.length > 2) {
                   val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
                   aMapRef.get(list(2).toString) match{
                     case Some(a: ActorRef) => a ! map
                       complete("")
-                    case None => complete("{ \"succ\": false }")
+                    case None => complete("{ \"succ\": false, \"dataMap\": \"" + list(2).toString + "\" }")
                   }
                 } else {
                   complete("{ \"succ\": false }")
-                } //key is first thing in list, value is second thing in list
+                } //key is first thing in list, value is second thing in list, dataMap is third thing in list. (KEY AND DATAMAP HAVE TO BE STRINGS)
               case _ => complete("{ \"succ\": false }")
             }
         }
@@ -72,18 +73,18 @@ object DataMapService {
                 case Success(fields: List[String]) =>
                   val fullString = {
                     if (fields.nonEmpty) {
-                      val mostOfString = fields.foldLeft("{ \"succ\": true, \"keys\": [ ") {
+                      val mostOfString = fields.foldLeft("{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [ ") {
                         case (str, key) => str + "\"" + key + "\", "
                       }
                       mostOfString.substring(0, mostOfString.length - 2) + " ] }"
                     } else {
-                      "{ \"succ\": true, \"keys\": [] }"
+                      "{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [] }"
                     }
                   }
                   complete(fullString)
-                case _ => complete("{ \"succ\": false }")
+                case _ => complete("{ \"succ\": false, \"dataMap\": \"" + dataMap + "\" }")
               }
-            case _ => complete("{ \"succ\": false }")
+            case _ => complete("{ \"succ\": false, \"dataMap\": \"" + dataMap + "\" }")
           }
         }
       } ~
@@ -93,9 +94,9 @@ object DataMapService {
             case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? key
               onComplete(res){
                 case Success(msg: String) => complete(msg)
-                case _ => complete("{ \"succ\": false, \"key\": \"" + key + "\" }")
+                case _ => complete("{ \"succ\": false, \"dataMap: \"" + dataMap + "\", \"key\": \"" + key + "\" }")
               }
-            case None => complete("{ \" succ\": false, \"key\": \"" + key + "\" }")
+            case None => complete("{ \" succ\": false, \"dataMap: \"" + dataMap + "\", \"key\": \"" + key + "\" }")
           }
 
         }

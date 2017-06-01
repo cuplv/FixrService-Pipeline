@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="41a08c10-d757-44f6-aa12-bc1d08d9a7e8" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" afterPath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -119,12 +116,12 @@
       <file leaf-file-name="DataMapService.scala" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-561">
-              <caret line="97" column="83" lean-forward="false" selection-start-line="97" selection-start-column="83" selection-end-line="97" selection-end-column="83" />
+            <state relative-caret-position="900">
+              <caret line="60" column="146" lean-forward="false" selection-start-line="60" selection-start-column="146" selection-end-line="60" selection-end-column="146" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#102#157#0" expanded="true" />
-                <element signature="e#6140#7656#0" expanded="false" />
+                <element signature="e#6553#8069#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -861,7 +858,7 @@
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#102#157#0" expanded="true" />
-            <element signature="e#6140#7656#0" expanded="false" />
+            <element signature="e#6553#8069#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -1161,12 +1158,12 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-561">
-          <caret line="97" column="83" lean-forward="false" selection-start-line="97" selection-start-column="83" selection-end-line="97" selection-end-column="83" />
+        <state relative-caret-position="900">
+          <caret line="60" column="146" lean-forward="false" selection-start-line="60" selection-start-column="146" selection-end-line="60" selection-end-column="146" />
           <folding>
             <element signature="n#!!doc" expanded="true" />
             <element signature="e#102#157#0" expanded="true" />
-            <element signature="e#6140#7656#0" expanded="false" />
+            <element signature="e#6553#8069#0" expanded="false" />
           </folding>
         </state>
       </provider>
