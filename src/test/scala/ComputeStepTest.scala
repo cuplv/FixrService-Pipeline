@@ -19,7 +19,7 @@ class ComputeStepTest extends FlatSpec {
     cStep.IncrementalCompute(blocking = true)
     assert(cStep.statMap.getAllKeys.foldLeft(true){
       case (true, key) => cStep.statMap.get(key).contains("Done")
-      case (false, key) => false
+      case (false, _) => false
     })
     assert(cStep.provMap.get(2).contains(List("id_1")))
     assert(cStep.provMap.get(6).contains(List("id_2")))

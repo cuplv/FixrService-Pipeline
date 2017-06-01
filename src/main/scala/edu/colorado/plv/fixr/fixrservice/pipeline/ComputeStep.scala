@@ -52,8 +52,8 @@ class ComputeStep[A,B](func: (A => B), config: String) {
       config.getString(checkVal)
     }
     catch{
-      case ceM: ConfigException.Missing => defaultVal
-      case ceWT: ConfigException.WrongType => config.getAnyRef(checkVal).toString //This should work? :|
+      case _: ConfigException.Missing => defaultVal
+      case _: ConfigException.WrongType => config.getAnyRef(checkVal).toString //This should work? :|
     }
   }
 
@@ -64,6 +64,7 @@ class ComputeStep[A,B](func: (A => B), config: String) {
       case Success(e: Exception) =>
         errMap.put(key, e)
         statMap.put(key, "Error")
+      case Success("") => ()
       case Success(b: B) =>
         val l = provMap.get(b) match {
           case Some(list) => key :: list
@@ -73,7 +74,6 @@ class ComputeStep[A,B](func: (A => B), config: String) {
         AToBMap.put(idToAMap.getM(key), b)
         statMap.put(key, "Done")
 
-      case Success("") => ()
       case _ =>
         errMap.put(key, new UnexpectedException)
         statMap.put(key, "Error")

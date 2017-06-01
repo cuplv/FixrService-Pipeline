@@ -29,11 +29,11 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     //println(json)
     JSON.parseFull(json) match{
-      case Some(parsed: Map[String, Any]) =>
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("response") match{
-          case Some(resp: Map[String, Any]) =>
+          case Some(resp: Map[String @ unchecked, Any @ unchecked]) =>
             resp.get("docs") match{
-              case Some(resp2:  List[Map[String, Any]]) => resp2 match{
+              case Some(resp2:  List[Map[String, Any] @ unchecked]) => resp2 match{
                 case first :: list =>
                   first.get(fName) match{
                     case Some(List(x)) => Some(x.asInstanceOf[V])
@@ -56,11 +56,11 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
     val queryURL = startingURL+"select?wt=json&q=key:"+k
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     JSON.parseFull(json) match{
-      case Some(parsed: Map[String, Any]) =>
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("response") match{
-          case Some(resp: Map[String, Any]) =>
+          case Some(resp: Map[String @ unchecked, Any @ unchecked]) =>
             resp.get("docs") match{
-              case Some((first: Map[String, Any]) :: list) =>
+              case Some((first: Map[String @ unchecked, Any @ unchecked]) :: list) =>
                 first.foldRight(List.empty[(String, Any)]){
                   case ((key, value), l) =>
                     (key, value) :: l
@@ -156,11 +156,11 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
     val queryURL = startingURL+"select?wt=json&rows=1000000&q=*:*"
     val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
     JSON.parseFull(json) match{
-      case Some(parsed: Map[String, Any]) =>
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("response") match {
-          case Some(resp: Map[String, Any]) =>
+          case Some(resp: Map[String @ unchecked, Any @ unchecked]) =>
             resp.get("docs") match {
-              case Some(resp2: List[Map[String, Any]]) =>
+              case Some(resp2: List[Map[String , Any] @ unchecked]) =>
                 resp2.foldRight(List.empty[K]){
                   case (map, l) => map.get("key") match{
                     case Some(List(v)) => map.get(fName) match{
@@ -248,25 +248,27 @@ class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080") ext
   def get(k: K): Option[V] = {
     val gotten: String = Http(webServerAt+"get/key="+k.toString).asString.body
     JSON.parseFull(gotten) match {
-      case m: Map[String, _] => m.get("succ") match{
+      case m: Map[String @ unchecked, _] => m.get("succ") match{
         case Some(true) => m.get("value").asInstanceOf[Option[V]]
         case _ => None
       }
+      case _ => None
     }
   }
 
   def getAllKeys: List[K] = {
     val gotten: String = Http(webServerAt+"getKeys").asString.body
     JSON.parseFull(gotten) match {
-      case m: Map[String, Any] => m.get("succ") match{
+      case m: Map[String @ unchecked, _] => m.get("succ") match{
         case Some(true) => m.get("keys") match{
           case Some(l: List[_]) => l.foldRight(List.empty[K]){
             case (x, list) => x.asInstanceOf[K] :: list
           }
           case _ => List()
         }
-        case None => List()
+        case _ => List()
       }
+      case _ => List()
     }
   }
 
