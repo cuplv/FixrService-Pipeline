@@ -12,7 +12,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 
-class ComputeStep[A,B](func: (A => B), config: String) {
+class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
   val system: ActorSystem = ActorSystem("IncrementalComputation")
   val c: Config =  ConfigFactory.load(config)
   val statMap: DataMap[String, String] = setUpDatabase(c, "StatusMap", "Database", "Status")

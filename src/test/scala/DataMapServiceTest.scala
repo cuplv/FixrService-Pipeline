@@ -8,6 +8,8 @@ import org.scalatest._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import edu.colorado.plv.fixr.fixrservice.pipeline.{DataMapActor, DataMapService, HeapMap}
 
+//These tests need to be rewritten.
+/*
 class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest {
   "DataMapService" should " work with post /put and get /get with basic query" in {
     val dMapService = DataMapService
@@ -62,4 +64,5 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
     }
   }
 }
+*/
 
