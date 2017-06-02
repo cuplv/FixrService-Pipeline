@@ -18,7 +18,7 @@ import scala.util.parsing.json.JSON
 import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 
 import scala.io.Source
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 
 object DataMapService {
@@ -27,7 +27,7 @@ object DataMapService {
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(5 seconds)
-  def getCommand(aMapRef: DataMap[String, ActorRef]): server.Route = {
+  def getCommand(aMapRef: DataMap[String, ActorRef], configFile: String = ""): server.Route = {
 
     post {
       path("put") {
@@ -103,43 +103,45 @@ object DataMapService {
                       case Some(true) =>
                         try {
                           //Load the config file first.
-                          val confFile = Source.fromFile("").getLines()
-                          val wrtFile = new PrintWriter("")
+                          val confFile = Source.fromFile(configFile).getLines().foldRight(List.empty[String]){
+                            (str, lis) => str :: lis
+                          }
+                          val wrtFile = new PrintWriter(configFile)
                           val databaseNum: Int = confFile.foldLeft(0){
                             case (num, str) =>
-                              if (str.substring(0, 17).equals("NumOfDatabases = ")){
-                                val formerNumOfDatabases = str.substring(17).toInt
-                                wrtFile.write(str.substring(0, 17)+(formerNumOfDatabases+1).toString)
+                              if (str.substring(0, 16).equals("NumOfDataMaps = ")){
+                                val formerNumOfDatabases = str.substring(16).toInt
+                                wrtFile.write(str.substring(0, 16)+(formerNumOfDatabases+1).toString+"\n")
                                 formerNumOfDatabases+1
                               } else{
-                                wrtFile.write(str)
+                                wrtFile.write(str+"\n")
                                 num
                               }
                           }
                           val dataMapID: String = "DataMap"+databaseNum.toString
-                          wrtFile.write(dataMapID+"ID = \""+name+"\"")
+                          wrtFile.write(dataMapID+"ID = \""+name+"\"\n")
                           map.get("type") match{
                             case Some("Solr") =>
-                              wrtFile.write(dataMapID+"Type = \"Solr\"")
-                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("coll", "gettingstarted"))
-                              wrtFile.write(dataMapID+"Field = \""+possiblyInMap("field", "value"))
-                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"")
-                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"")
+                              wrtFile.write(dataMapID+"DatabaseType = \"Solr\"\n")
+                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("coll", "gettingstarted")+"\"\n")
+                              wrtFile.write(dataMapID+"Field = \""+possiblyInMap("field", "value")+"\n")
+                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"\n")
+                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"\n")
                             case Some("MongoDB") =>
-                              wrtFile.write(dataMapID+"Type = \"MongoDB\"")
-                              wrtFile.write(dataMapID+"Database = \""+possiblyInMap("database", "test"))
-                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("collection", "coll"))
-                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"")
-                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"")
-                              wrtFile.write(dataMapID+"Username = \""+possiblyInMap("username", "")+"\"")
-                              wrtFile.write(dataMapID+"Password = \""+possiblyInMap("password", "")+"\"")
-                            case Some("Null") => wrtFile.write(dataMapID+"Type = \"Null\"")
-                            case _ => wrtFile.write(dataMapID+"Type = \"Heap\"")
+                              wrtFile.write(dataMapID+"DatabaseType = \"MongoDB\"\n")
+                              wrtFile.write(dataMapID+"Database = \""+possiblyInMap("database", "test")+"\"\n")
+                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("collection", "coll")+"\"\n")
+                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"\n")
+                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"\n")
+                              wrtFile.write(dataMapID+"Username = \""+possiblyInMap("username", "")+"\"\n")
+                              wrtFile.write(dataMapID+"Password = \""+possiblyInMap("password", "")+"\"\n")
+                            case Some("Null") => wrtFile.write(dataMapID+"DatabaseType = \"Null\"\n")
+                            case _ => wrtFile.write(dataMapID+"DatabaseType = \"Heap\"\n")
                           }
                           wrtFile.close()
                           complete("{ \"succ\": true, \"dataMap\": \"" + name + "\", \"perm\": true }")
                         } catch{
-                          case _: Exception => complete("{ \"succ\": false }")
+                          case e: Exception => complete("{ \"succ\": true, \"dataMap\": \"" + name + "\" , \"perm\": false, \"exception\": " + e.toString + " }")
                         }
                       case _ => complete("{ \"succ\": true, \"dataMap\": \"" + name + "\", \"perm\": false }")
                     }
@@ -193,9 +195,9 @@ object DataMapService {
   }
 
   def main(args: Array[String]) {
-    /*def possibly(args: Array[String], index: Int, default: String): String = {
+    def possibly(args: Array[String], index: Int, default: String): String = {
       if (args.length > index) args(index) else default
-    }*/
+    }
     def possiblyConfig[A](config: Config, field: String, default: A): A = {
       try{
         default match {
@@ -219,19 +221,18 @@ object DataMapService {
         case x => x
       }
     }
-
-    val actorMap: DataMap[String, ActorRef] = {
-      if (args.length == 0){
-        val hMap = new HeapMap[String, HeapMap[String, Any]]
-        val aMap = new HeapMap[String, ActorRef]
-        val hMap1 = new HeapMap[String, Any]
-        hMap.put("Default", hMap1)
-        aMap.put("Default", system.actorOf(Props(new DataMapActor(hMap1)), "DefaultDMapActor"))
-        aMap
-      } else args(0) match{
-        case confFile =>
-          val config = ConfigFactory.load(confFile)
-          val numOfDataMaps = possiblyConfig(config, "NumOfDatabases", 1)
+    val confFile = possibly(args, 0, "")
+    val actorMap: DataMap[String, ActorRef] = confFile match{
+        case "" =>
+          val hMap = new HeapMap[String, HeapMap[String, Any]]
+          val aMap = new HeapMap[String, ActorRef]
+          val hMap1 = new HeapMap[String, Any]
+          hMap.put("Default", hMap1)
+          aMap.put("Default", system.actorOf(Props(new DataMapActor(hMap1)), "DefaultDMapActor"))
+          aMap
+        case _ =>
+          val config = ConfigFactory.parseFile(new File(confFile+".conf"))
+          val numOfDataMaps = possiblyConfig(config, "NumOfDataMaps", 1)
           def addADatabase(dataMapNumber: Int, actorMap: DataMap[String, ActorRef]): DataMap[String, ActorRef] = dataMapNumber match{
             case x if x > numOfDataMaps => actorMap
             case x =>
@@ -261,9 +262,9 @@ object DataMapService {
               addADatabase(x+1, actorMap)
           }
           addADatabase(1, new HeapMap[String, ActorRef])
-      }
+          //val config = ConfigFactory.load(confFile)
     }
-    val route = getCommand(actorMap)
+    val route = getCommand(actorMap, confFile+".conf")
     val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
     StdIn.readLine() // let it run until user presses return
     bindingFuture
