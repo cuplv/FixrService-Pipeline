@@ -47,7 +47,7 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
       val IP = possiblyInConfig(c, name+"IP", "localhost")
       val port = possiblyInConfig(c, name+"Port", "8080")
       val dName = possiblyInConfig(c, name+"Name", "Default")
-      new WebServiceClient[C,D](IP, port, dName)
+      new DataMapWebServiceClient[C,D](IP, port, dName)
   }
 
   def possiblyInConfig(config: Config, checkVal: String, defaultVal: String): String = {

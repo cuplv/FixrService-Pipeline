@@ -1,7 +1,7 @@
 /**
   * Created by chanceroberts on 5/23/17.
   */
-import edu.colorado.plv.fixr.fixrservice.pipeline.{HeapMap, MongoDBMap, NullMap, SolrMap}
+import edu.colorado.plv.fixr.fixrservice.pipeline._
 import org.scalatest._
 
 class DataMapTest extends FlatSpec {
@@ -174,6 +174,26 @@ class DataMapTest extends FlatSpec {
     assert(sMap.getAllKeys.contains("id_3"))
     assert(sMap.getAllKeys.contains("id_4"))
     assert(!sMap.getAllKeys.contains("id_5"))
+  }
+  */
+
+  //WARNING: THESE TESTS ONLY WORK IF YOU HAVE AN INSTANCE OF THE DATAMAPSERVICE RUNNING.
+  //DO NOT UNCOMMENT THESE TESTS IF YOU DON'T HAVE AN INSTANCE OF THE DATAMAPSERVICE RUNNING.
+  /*
+  "DataMapServiceClient" should "get nothing if nothing is in it" in {
+    val dbSC = new DataMapWebServiceClient[String, String]()
+    assert(dbSC.get("Not+there").isEmpty)
+  }
+
+  "DataMapServiceClient" should "be able to put and add stuff" in {
+    val dbSC = new DataMapWebServiceClient[String, String]()
+    dbSC.put("id_1", "10101010")
+    dbSC.put("id_1", "This is a test")
+    dbSC.put("id_2", "?")
+    assert(dbSC.get("id_1").contains("This is a test"))
+    assert(dbSC.get("id_2").contains("?"))
+    dbSC.put("id_1", "")
+    dbSC.put("id_2", "")
   }
   */
 }
