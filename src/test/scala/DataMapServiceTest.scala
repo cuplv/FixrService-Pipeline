@@ -122,5 +122,20 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
       }
     }
   }
+
+  it should "allow you to add a DataMap to the service temporarily" in {
+    val dMapService = DataMapService
+    val testMapMap: HeapMap[String, DataMap[String, Any]] = new HeapMap[String, DataMap[String, Any]]
+    val testmap: HeapMap[String, Any] = new HeapMap[String, Any]
+    testMapMap.put("test", testmap)
+    val testActorMap: HeapMap[String, ActorRef] = new HeapMap[String, ActorRef]
+    testActorMap.put("test", system.actorOf(Props(new DataMapActor(testmap)), "testDMapActor"))
+    val testRoute: server.Route = dMapService.getCommand(testActorMap)
+    Post("/add", "{ \"name\": \"test2\", \"type\": \"Heap\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test\", \"value\": \"!\", \"dataMap\": \"test2\", \"perm\": false }") ~> testRoute
+    Get("/get?key=test&dataMap=test2") ~> testRoute ~> check {
+      responseAs[String] shouldEqual "{ \"succ\": true, \"dataMap\": \"test2\", \"key\": \"test\", \"value\": \"!\" }"
+    }
+  }
 }
 

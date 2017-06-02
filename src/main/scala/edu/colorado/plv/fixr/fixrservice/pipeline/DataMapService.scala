@@ -17,6 +17,9 @@ import scala.util.Success
 import scala.util.parsing.json.JSON
 import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 
+import scala.io.Source
+import java.io.PrintWriter
+
 
 object DataMapService {
   implicit val system = ActorSystem("System")
@@ -63,6 +66,90 @@ object DataMapService {
               case _ => complete("{ \"succ\": false }")
             }
         }
+      } ~
+      path("add") {
+        entity(as[String]) {
+          queryStr =>
+            JSON.parseFull(queryStr) match{
+              case Some(map: Map[String @ unchecked, Any @ unchecked]) => map.get("name") match{
+                case Some(name: String) => aMapRef.get(name) match{
+                  case Some(_) => complete("{ \"succ\": false, \"dataMap\": \"" + name + "\" }")
+                  case None =>
+                    def possiblyInMap(check: String, default: String): String = map.get(check) match{
+                      case Some(x) => x.toString
+                      case _ => default
+                    }
+                    val actorRef: ActorRef = map.get("type") match{
+                      case Some("Solr") =>
+                        val cName = possiblyInMap("collection", "gettingstarted")
+                        val fName = possiblyInMap("field", "value")
+                        val IP = possiblyInMap("IP", "localhost")
+                        val port = possiblyInMap("port", "8983")
+                        system.actorOf(Props(new DataMapActor(new SolrMap[String, Any](cName, fName, IP, port))), name+"DMapActor")
+                      case Some("MongoDB") =>
+                        val IP = possiblyInMap("IP", "localhost")
+                        val port = possiblyInMap("port", "27017")
+                        val dBName = possiblyInMap("database", "test")
+                        val cName = possiblyInMap("collection", "coll")
+                        val uName = possiblyInMap("username", "")
+                        val psswrd = possiblyInMap("password", "")
+                        system.actorOf(Props(new DataMapActor(new MongoDBMap[String, Any](dBName, cName, IP, port, uName, psswrd))))
+                      case Some("Heap") => system.actorOf(Props(new DataMapActor(new HeapMap[String, Any])), name+"DMapActor")
+                      case Some("Null") => system.actorOf(Props(new DataMapActor(new NullMap[String, Any])), name+"DMapActor")
+                      case _ => system.actorOf(Props(new DataMapActor(new HeapMap[String, Any])), name+"DMapActor")
+                    }
+                    aMapRef.put(name, actorRef)
+                    map.get("perm") match{
+                      case Some(true) =>
+                        try {
+                          //Load the config file first.
+                          val confFile = Source.fromFile("").getLines()
+                          val wrtFile = new PrintWriter("")
+                          val databaseNum: Int = confFile.foldLeft(0){
+                            case (num, str) =>
+                              if (str.substring(0, 17).equals("NumOfDatabases = ")){
+                                val formerNumOfDatabases = str.substring(17).toInt
+                                wrtFile.write(str.substring(0, 17)+(formerNumOfDatabases+1).toString)
+                                formerNumOfDatabases+1
+                              } else{
+                                wrtFile.write(str)
+                                num
+                              }
+                          }
+                          val dataMapID: String = "DataMap"+databaseNum.toString
+                          wrtFile.write(dataMapID+"ID = \""+name+"\"")
+                          map.get("type") match{
+                            case Some("Solr") =>
+                              wrtFile.write(dataMapID+"Type = \"Solr\"")
+                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("coll", "gettingstarted"))
+                              wrtFile.write(dataMapID+"Field = \""+possiblyInMap("field", "value"))
+                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"")
+                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"")
+                            case Some("MongoDB") =>
+                              wrtFile.write(dataMapID+"Type = \"MongoDB\"")
+                              wrtFile.write(dataMapID+"Database = \""+possiblyInMap("database", "test"))
+                              wrtFile.write(dataMapID+"Collection = \""+possiblyInMap("collection", "coll"))
+                              wrtFile.write(dataMapID+"IP = \""+possiblyInMap("IP","localhost")+"\"")
+                              wrtFile.write(dataMapID+"Port = \""+possiblyInMap("port","8983")+"\"")
+                              wrtFile.write(dataMapID+"Username = \""+possiblyInMap("username", "")+"\"")
+                              wrtFile.write(dataMapID+"Password = \""+possiblyInMap("password", "")+"\"")
+                            case Some("Null") => wrtFile.write(dataMapID+"Type = \"Null\"")
+                            case _ => wrtFile.write(dataMapID+"Type = \"Heap\"")
+                          }
+                          wrtFile.close()
+                          complete("{ \"succ\": true, \"dataMap\": \"" + name + "\", \"perm\": true }")
+                        } catch{
+                          case _: Exception => complete("{ \"succ\": false }")
+                        }
+                      case _ => complete("{ \"succ\": true, \"dataMap\": \"" + name + "\", \"perm\": false }")
+                    }
+
+                }
+                case _ => complete("{ \"succ\": false }")
+              }
+              case _ => complete("{ \"succ\": false }")
+            }
+        }
       }
     } ~
     get {
@@ -106,9 +193,9 @@ object DataMapService {
   }
 
   def main(args: Array[String]) {
-    def possibly(args: Array[String], index: Int, default: String): String = {
+    /*def possibly(args: Array[String], index: Int, default: String): String = {
       if (args.length > index) args(index) else default
-    }
+    }*/
     def possiblyConfig[A](config: Config, field: String, default: A): A = {
       try{
         default match {
@@ -149,7 +236,7 @@ object DataMapService {
             case x if x > numOfDataMaps => actorMap
             case x =>
               val dataNumberString = dataMapNumber.toString
-              val dataMapID = "Datamap"+dataNumberString
+              val dataMapID = "DataMap"+dataNumberString
               val dataMapName = possiblyConfig(config, dataMapID+"ID", "DataMap"+dataNumberString)
               val newDataMap = possibly2Config(config, dataMapID+"DatabaseType", dataMapName+"DatabaseType", "Heap") match{
                 case "MongoDB" =>
@@ -168,6 +255,7 @@ object DataMapService {
                   new SolrMap[String, Any](collName, fName, ip, port)
                 case "Heap" => new HeapMap[String, Any]
                 case "Null" => new NullMap[String, Any]
+                case _ => new HeapMap[String, Any]
               }
               actorMap.put(dataMapName, system.actorOf(Props(new DataMapActor(newDataMap)), dataMapName+"DMapActor"))
               addADatabase(x+1, actorMap)
