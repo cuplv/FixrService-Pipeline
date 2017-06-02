@@ -3,6 +3,8 @@
   */
 package edu.colorado.plv.fixr.fixrservice.pipeline
 
+import java.io.File
+
 import com.typesafe.config.{Config, ConfigException, ConfigFactory}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -10,11 +12,11 @@ import akka.util.Timeout
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Success, Failure}
+import scala.util.{Failure, Success}
 
 class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
   val system: ActorSystem = ActorSystem("IncrementalComputation")
-  val c: Config =  ConfigFactory.load(config)
+  val c: Config =  ConfigFactory.parseFile(new File(config+".conf"))
   val statMap: DataMap[String, String] = setUpDatabase(c, "StatusMap", "Database", "Status")
   val idToAMap: DataMap[String, A] = setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
   val idToBMap: DataMap[String, B] = setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
@@ -44,7 +46,8 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
     case "WebService" =>
       val IP = possiblyInConfig(c, name+"IP", "localhost")
       val port = possiblyInConfig(c, name+"Port", "8080")
-      new WebServiceClient[C,D](IP, port)
+      val dName = possiblyInConfig(c, name+"Name", "Default")
+      new WebServiceClient[C,D](IP, port, dName)
   }
 
   def possiblyInConfig(config: Config, checkVal: String, defaultVal: String): String = {
