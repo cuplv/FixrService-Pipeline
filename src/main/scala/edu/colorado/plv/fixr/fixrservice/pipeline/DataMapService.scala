@@ -35,24 +35,25 @@ object DataMapService {
         entity(as[String]) {
           queryStr =>
             JSON.parseFull(queryStr) match {
-              case Some(map: Map[String @ unchecked, Any @ unchecked]) => map("dataMap") match {
+              case Some(map: Map[String @ unchecked, Any @ unchecked]) => map.get("dataMap") match {
                 case Some(x) =>
                   val dataMap = x.toString
                   aMapRef.get(dataMap) match{
                     case Some(a: ActorRef) =>
-                      val res = a ? map
+                      val res = a ? (map, dataMap)
                       onComplete (res) {
                         case Success (x: String) => complete (x)
                         case _ => complete ("{ \"succ\": false, dataMap: \"" + dataMap + "\" }")
                       }
                     case None => complete("{ \"succ\": false, dataMap: \"" + dataMap + "\" }")
                   }
+                case None => complete("{ \"succ\": false }")
               }
               case Some(list: List[Any]) =>
                 if (list.length > 2) {
                   val map = Map.empty + ("key" -> list.head) + ("value" -> list(1))
                   aMapRef.get(list(2).toString) match{
-                    case Some(a: ActorRef) => a ! map
+                    case Some(a: ActorRef) => a ! (map, list(2).toString)
                       complete("")
                     case None => complete("{ \"succ\": false, \"dataMap\": \"" + list(2).toString + "\" }")
                   }
@@ -66,7 +67,7 @@ object DataMapService {
     } ~
     get {
       path("getKeys") {
-        parameter("dataMap") { dataMap =>
+        parameter("dataMap") { dataMap: String =>
           aMapRef.get(dataMap) match {
             case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? List.empty[String]
               onComplete(res) {
@@ -91,7 +92,7 @@ object DataMapService {
       path("get") {
         parameters("key", "dataMap") { (key, dataMap) =>
           aMapRef.get(dataMap) match {
-            case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? key
+            case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? (key, dataMap)
               onComplete(res){
                 case Success(msg: String) => complete(msg)
                 case _ => complete("{ \"succ\": false, \"dataMap: \"" + dataMap + "\", \"key\": \"" + key + "\" }")
@@ -188,32 +189,32 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
   val dMap: DataMap[String, Any] = dataMap
 
   def receive = {
-    case msg: Map[String @ unchecked, Any @ unchecked] => try {
+    case (msg: Map[String @ unchecked, Any @ unchecked], dataMap: String) => try {
       msg("key") match {
         case key: String => msg("value") match {
           case value: Any =>
             dMap.put(key.toString, value)
             sender() ! ""
-          case _ => sender() ! "{ \"succ\": false, \"key\": \"" + key.toString + "\" }"
+          case _ => sender() ! "{ \"succ\": false, \"dataMap\": \"" + dataMap + "\", \"key\": \"" + key.toString + "\" }"
         }
-        case _ => sender() ! """{ "succ": false }"""
+        case _ => sender() ! "{ \"succ\": false, \"dataMap\": \"" + dataMap + "\" }"
       }
     } catch {
-      case _: NoSuchElementException => sender() ! """{ "succ": false, "key": "" }"""
+      case _: NoSuchElementException => sender() ! "{ \"succ\": false, \"dataMap\": " + dataMap + "\", \"key\": \"\" }"
     }
-    case key: String => dMap.get(key) match{
-      case Some(s: String) => sender() ! "{ \"succ\": true, \"key\": \""  + key + "\", \"value\": \"" + s + "\" }"
+    case (key: String, dataMap: String) => dMap.get(key) match{
+      case Some(s: String) => sender() ! "{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"key\": \""  + key + "\", \"value\": \"" + s + "\" }"
       case Some(l: List[_]) =>
-        val start = l.foldLeft("{ \"succ\": true, \"key\": \"" + key + "\", \"value\": [ "){
+        val start = l.foldLeft("{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"key\": \"" + key + "\", \"value\": [ "){
           case (str, s: String) => str + "\"" + s.toString + "\", "
           case (str, v) => str + v.toString + ", "
         }
         val string = start.substring(0,start.length-2) + " ] }"
         sender() ! string
-      case Some(a: Any) => sender() ! "{ \"succ\": true, \"key\": \"" + key + "\", \"value\": " + a.toString + " }"
-      case None => sender() ! "{ \"succ\": false, \"key\": \"" + key + "\" }"
+      case Some(a: Any) => sender() ! "{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"key\": \"" + key + "\", \"value\": " + a.toString + " }"
+      case None => sender() ! "{ \"succ\": false, \"dataMap\": \"" + dataMap + "\", \"key\": \"" + key + "\" }"
     }
-    case (key: String, value: String) =>
+    case (key: String, value: String, _: String) =>
       dMap.put(key, value)
     case _: List[_] =>
       sender() ! dMap.getAllKeys

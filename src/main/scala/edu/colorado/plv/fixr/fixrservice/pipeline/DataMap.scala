@@ -243,10 +243,10 @@ class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
   def getAllKeys: List[K] = List.empty[K]
 }
 
-class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080") extends DataMap[K,V]("","",ip,port,"",""){
+class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080", dataMapName: String = "Default") extends DataMap[K,V]("","",ip,port,"",""){
   val webServerAt: String = "http://"+ip+":"+port+"/"
   def get(k: K): Option[V] = {
-    val gotten: String = Http(webServerAt+"get/key="+k.toString).asString.body
+    val gotten: String = Http(webServerAt+"get/key="+k.toString+"&dataMap="+dataMapName).asString.body
     JSON.parseFull(gotten) match {
       case m: Map[String @ unchecked, _] => m.get("succ") match{
         case Some(true) => m.get("value").asInstanceOf[Option[V]]
@@ -257,7 +257,7 @@ class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080") ext
   }
 
   def getAllKeys: List[K] = {
-    val gotten: String = Http(webServerAt+"getKeys").asString.body
+    val gotten: String = Http(webServerAt+"getKeys?dataMap="+dataMapName).asString.body
     JSON.parseFull(gotten) match {
       case m: Map[String @ unchecked, _] => m.get("succ") match{
         case Some(true) => m.get("keys") match{
@@ -287,7 +287,7 @@ class WebServiceClient[K,V](ip: String = "localhost", port: String = "8080") ext
         mostOfThis.substring(0,mostOfThis.length-2) + " ]"
       case s: String => "\"" + s + "\""
       case x => x
-    }) + " }"
+    }) + ", \"dataMap\": \""+dataMapName+"\" }"
     Http(webServerAt+"/put").postData(json)
   }
 }
