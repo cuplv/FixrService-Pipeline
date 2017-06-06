@@ -37,7 +37,7 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
                 case first :: list =>
                   first.get(fName) match{
                     case Some(List(x)) => Some(x.asInstanceOf[V])
-                    case Some(x :: more) => Some(x.asInstanceOf[V])
+                    case Some(x :: more) => Some((x :: more).asInstanceOf[V])
                     case Some(x) => Some(x.asInstanceOf[V])
                     case None => None
                   }

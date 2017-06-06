@@ -10,9 +10,9 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 
-import scala.concurrent.Future
+//import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
   val system: ActorSystem = ActorSystem("IncrementalComputation")
