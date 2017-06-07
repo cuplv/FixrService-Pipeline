@@ -1,7 +1,7 @@
 defmodule Fixr-Pipeline.DoAFunction do
-    def loop do
+    def function do
         receive do
-            {:function, aToB, a, sender} ->
+            {aToB, a, sender} ->
                 case aToB(a) do
                     {:ok, b} ->
                         send(sender, {:ok, b})
@@ -14,5 +14,12 @@ defmodule Fixr-Pipeline.DoAFunction do
             #
         end
     end
-    loop
+
+    #def program do
+    #    receive do
+    #        {path, args, sender} ->
+    #            System.cmd(path, args)
+    #            {:ok, :yourenotdonewiththisyet}
+    #    end
+    #end
 end

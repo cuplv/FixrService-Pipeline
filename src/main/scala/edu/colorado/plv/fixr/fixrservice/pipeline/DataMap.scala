@@ -20,6 +20,8 @@ abstract class DataMap[K,V](val databaseName: String, val tableName: String, val
   def put(k: K, v: V) : Unit
 
   def getAllKeys : List[K]
+
+  def getAllKeysAndValues: List[(K,V)]
 }
 
 class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: String = "localhost", val prt: String = "8983") extends DataMap[K,V](cName, fName, ip, prt, "", "") {
@@ -177,6 +179,32 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
       case _ => List.empty[K]
     }
   }
+
+  def getAllKeysAndValues: List[(K, V)] = {
+    val queryURL = startingURL+"select?wt=json&rows=1000000&q=*:*"
+    val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String @ unchecked, Any @ unchecked]) =>
+            resp.get("docs") match {
+              case Some(resp2: List[Map[String , Any] @ unchecked]) =>
+                resp2.foldRight(List.empty[(K,V)]){
+                  case (map, l) => map.get("key") match{
+                    case Some(List(v)) => map.get(fName) match{
+                      case Some(List(v2)) => (v.asInstanceOf[K], v2.asInstanceOf[V]) :: l
+                      case _ => l
+                    }
+                    case _ => l
+                  }
+                }
+              case _ => List.empty[(K,V)]
+            }
+          case _ => List.empty[(K,V)]
+        }
+      case _ => List.empty[(K,V)]
+    }
+  }
 }
 
 class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "localhost", val prt: String = "27017", val uName: String = "", val pssWord: String = "") extends DataMap[K,V](dName, tName, ip, prt, uName, pssWord) {
@@ -216,6 +244,14 @@ class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "l
         dbObj.get("key").asInstanceOf[K] :: l //If you're playing nice and doing put like you should, the asInstanceOf[K] should do nothing.
     }
   }
+
+  def getAllKeysAndValues: List[(K, V)] = {
+    val documents = coll.find()
+    documents.toList.foldRight(List.empty[(K,V)]) {
+      case (dbObj, l) =>
+        (dbObj.get("key").asInstanceOf[K], dbObj.get("value").asInstanceOf[V]) :: l //If you're playing nice and doing put like you should, the asInstanceOf[K] should do nothing.
+    }
+  }
 }
 
 //class HeapMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
@@ -232,6 +268,10 @@ class HeapMap[K,V] extends DataMap[K,V]("","","","","","") {
   def getAllKeys: List[K] = {
     map.foldRight(List.empty[K]){case ((k,v), l) => k :: l}
   }
+
+  def getAllKeysAndValues: List[(K, V)] = {
+    map.foldRight(List.empty[(K, V)]){case ((k,v), l) => (k,v) :: l}
+  }
 }
 
 //class NullMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
@@ -241,6 +281,8 @@ class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
   def put(k: K, v: V) : Unit = ()
 
   def getAllKeys: List[K] = List.empty[K]
+
+  def getAllKeysAndValues: List[(K, V)] = List.empty[(K, V)]
 }
 
 class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "8080", dataMapName: String = "Default") extends DataMap[K,V]("","",ip,port,"",""){
@@ -265,6 +307,22 @@ class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "808
         case Some(true) => m.get("keys") match{
           case Some(l: List[_]) => l.foldRight(List.empty[K]){
             case (x, list) => x.asInstanceOf[K] :: list
+          }
+          case _ => List()
+        }
+        case _ => List()
+      }
+      case _ => List()
+    }
+  }
+
+  def getAllKeysAndValues: List[(K, V)] = {
+    val gotten: String = Http(webServerAt+"getKeys?values=true&dataMap="+dataMapName).asString.body
+    JSON.parseFull(gotten) match {
+      case m: Map[String @ unchecked, _] => m.get("succ") match{
+        case Some(true) => (m.get("keys"), m.get("values")) match{
+          case (Some(keys: List[_]), Some(values: List[_])) => keys.zip(values).foldRight(List.empty[(K,V)]){
+            case ((k,v), list) => (k.asInstanceOf[K], v.asInstanceOf[V]) :: list
           }
           case _ => List()
         }

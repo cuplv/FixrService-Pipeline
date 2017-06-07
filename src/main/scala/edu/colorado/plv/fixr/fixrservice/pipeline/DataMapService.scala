@@ -156,7 +156,7 @@ object DataMapService {
     } ~
     get {
       path("getKeys") {
-        parameter("dataMap") { dataMap: String =>
+        parameters("dataMap","values" ? false) { (dataMap: String, values: Boolean) =>
           aMapRef.get(dataMap) match {
             case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? List.empty[String]
               onComplete(res) {
@@ -182,7 +182,7 @@ object DataMapService {
         parameters("key", "dataMap") { (key, dataMap) =>
           aMapRef.get(dataMap) match {
             case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? (key, dataMap)
-              onComplete(res){
+              onComplete(res) {
                 case Success(msg: String) => complete(msg)
                 case _ => complete("{ \"succ\": false, \"dataMap: \"" + dataMap + "\", \"key\": \"" + key + "\" }")
               }
