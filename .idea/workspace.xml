@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="41a08c10-d757-44f6-aa12-bc1d08d9a7e8" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -48,11 +48,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="ComputeStep.scala" pinned="false" current-in-tab="true">
+      <file leaf-file-name="ComputeStep.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="163">
-              <caret line="110" column="13" lean-forward="false" selection-start-line="110" selection-start-column="13" selection-end-line="110" selection-end-column="13" />
+              <caret line="110" column="27" lean-forward="true" selection-start-line="110" selection-start-column="27" selection-end-line="110" selection-end-column="27" />
               <folding>
                 <element signature="n#!!doc" expanded="true" />
                 <element signature="e#102#121#0" expanded="true" />
@@ -64,7 +64,7 @@
       <file leaf-file-name="ComputeStep.ex" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="215">
+            <state relative-caret-position="794">
               <caret line="71" column="29" lean-forward="true" selection-start-line="71" selection-start-column="29" selection-end-line="71" selection-end-column="29" />
               <folding />
             </state>
@@ -101,11 +101,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DataMap.scala" pinned="false" current-in-tab="false">
+      <file leaf-file-name="DataMap.scala" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="292">
-              <caret line="330" column="9" lean-forward="false" selection-start-line="330" selection-start-column="9" selection-end-line="330" selection-end-column="9" />
+            <state relative-caret-position="-561">
+              <caret line="197" column="46" lean-forward="false" selection-start-line="197" selection-start-column="46" selection-end-line="197" selection-end-column="46" />
               <folding />
             </state>
           </provider>
@@ -189,12 +189,12 @@
         <option value="$PROJECT_DIR$/elixir/mix.exs" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex" />
-        <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" />
         <option value="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" />
+        <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" />
       </list>
     </option>
   </component>
@@ -1125,14 +1125,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="292">
-          <caret line="330" column="9" lean-forward="false" selection-start-line="330" selection-start-column="9" selection-end-line="330" selection-end-column="9" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="380">
@@ -1149,26 +1141,29 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex">
+    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="38" lean-forward="false" selection-start-line="0" selection-start-column="38" selection-end-line="0" selection-end-column="38" />
+        <state relative-caret-position="420">
+          <caret line="28" column="30" lean-forward="false" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="163">
+          <caret line="110" column="27" lean-forward="true" selection-start-line="110" selection-start-column="27" selection-end-line="110" selection-end-column="27" />
+          <folding>
+            <element signature="n#!!doc" expanded="true" />
+            <element signature="e#102#121#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="215">
+        <state relative-caret-position="794">
           <caret line="71" column="29" lean-forward="true" selection-start-line="71" selection-start-column="29" selection-end-line="71" selection-end-column="29" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="420">
-          <caret line="28" column="30" lean-forward="false" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
           <folding />
         </state>
       </provider>
@@ -1181,14 +1176,19 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
+    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="163">
-          <caret line="110" column="13" lean-forward="false" selection-start-line="110" selection-start-column="13" selection-end-line="110" selection-end-column="13" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="0">
+          <caret line="0" column="38" lean-forward="false" selection-start-line="0" selection-start-column="38" selection-end-line="0" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-561">
+          <caret line="197" column="46" lean-forward="false" selection-start-line="197" selection-start-column="46" selection-end-line="197" selection-end-column="46" />
+          <folding />
         </state>
       </provider>
     </entry>

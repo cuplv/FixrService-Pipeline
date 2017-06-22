@@ -167,6 +167,8 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
                   case (map, l) => map.get("key") match{
                     case Some(List(v)) => map.get(fName) match{
                       case Some(List(v2)) => v.asInstanceOf[K] :: l
+                      case Some(v2 :: more) => v.asInstanceOf[K] :: l
+                      case Some(v2) => v2.asInstanceOf[K] :: l
                       case _ => l
                     }
                     case _ => l
@@ -193,6 +195,8 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
                   case (map, l) => map.get("key") match{
                     case Some(List(v)) => map.get(fName) match{
                       case Some(List(v2)) => (v.asInstanceOf[K], v2.asInstanceOf[V]) :: l
+                      case Some(v2 :: more) => (v.asInstanceOf[K], (v2 :: more).asInstanceOf[V]) :: l
+                      case Some(v2) => (v.asInstanceOf[K], v2.asInstanceOf[V]) :: l
                       case _ => l
                     }
                     case _ => l
