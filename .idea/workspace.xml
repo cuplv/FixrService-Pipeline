@@ -2,13 +2,15 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="41a08c10-d757-44f6-aa12-bc1d08d9a7e8" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapActor$$anonfun$receive$1.class" afterPath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapActor$$anonfun$receive$1.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapActor.class" afterPath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapActor.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService$.class" afterPath="$PROJECT_DIR$/target/scala-2.12/classes/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService$.class" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/target/scala-2.12/test-classes/DataMapServiceTest.class" afterPath="$PROJECT_DIR$/target/scala-2.12/test-classes/DataMapServiceTest.class" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex" afterPath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex" afterPath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex" afterPath="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" afterPath="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" afterPath="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -57,21 +59,18 @@
       <file leaf-file-name="ComputeStep.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-283">
+            <state relative-caret-position="300">
               <caret line="31" column="21" lean-forward="false" selection-start-line="31" selection-start-column="21" selection-end-line="31" selection-end-column="21" />
-              <folding>
-                <element signature="n#!!doc" expanded="true" />
-                <element signature="e#102#121#0" expanded="true" />
-              </folding>
+              <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ComputeStep.ex" pinned="false" current-in-tab="false">
+      <file leaf-file-name="ComputeStep.ex" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="67">
-              <caret line="68" column="38" lean-forward="true" selection-start-line="68" selection-start-column="38" selection-end-line="68" selection-end-column="38" />
+            <state relative-caret-position="1034">
+              <caret line="71" column="29" lean-forward="true" selection-start-line="71" selection-start-column="29" selection-end-line="71" selection-end-column="29" />
               <folding />
             </state>
           </provider>
@@ -80,8 +79,8 @@
       <file leaf-file-name="run_function_and_await.ex" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="307">
-              <caret line="28" column="30" lean-forward="true" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
+            <state relative-caret-position="420">
+              <caret line="28" column="30" lean-forward="false" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
               <folding />
             </state>
           </provider>
@@ -90,8 +89,8 @@
       <file leaf-file-name="DWS.ex" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-218">
-              <caret line="9" column="54" lean-forward="false" selection-start-line="9" selection-start-column="54" selection-end-line="9" selection-end-column="54" />
+            <state relative-caret-position="191">
+              <caret line="31" column="72" lean-forward="false" selection-start-line="31" selection-start-column="72" selection-end-line="31" selection-end-column="72" />
               <folding />
             </state>
           </provider>
@@ -107,10 +106,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DataMap.scala" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DataMap.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="392">
+            <state relative-caret-position="292">
               <caret line="330" column="9" lean-forward="false" selection-start-line="330" selection-start-column="9" selection-end-line="330" selection-end-column="9" />
               <folding />
             </state>
@@ -120,8 +119,8 @@
       <file leaf-file-name="DataMapService.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="732">
-              <caret line="307" column="7" lean-forward="true" selection-start-line="307" selection-start-column="7" selection-end-line="307" selection-end-column="7" />
+            <state relative-caret-position="380">
+              <caret line="198" column="60" lean-forward="false" selection-start-line="198" selection-start-column="60" selection-end-line="198" selection-end-column="60" />
               <folding />
             </state>
           </provider>
@@ -130,8 +129,8 @@
       <file leaf-file-name="DataMapServiceTest.scala" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="682">
-              <caret line="145" column="5" lean-forward="false" selection-start-line="145" selection-start-column="5" selection-end-line="145" selection-end-column="5" />
+            <state relative-caret-position="164">
+              <caret line="179" column="30" lean-forward="false" selection-start-line="179" selection-start-column="30" selection-end-line="179" selection-end-column="30" />
               <folding />
             </state>
           </provider>
@@ -157,6 +156,8 @@
       <find>NumOfDatabas</find>
       <find>{ \&quot;succ\&quot;: false, \&quot;dataMap\&quot;: \&quot;</find>
       <find>password</find>
+      <find>List.empty</find>
+      <find>getKeys</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -185,7 +186,6 @@
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixrservice/pipeline/DataMapService.scala" />
         <option value="$PROJECT_DIR$/build.sbt" />
         <option value="$PROJECT_DIR$/src/test/scala/ComputeStepTest.scala" />
-        <option value="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
         <option value="$PROJECT_DIR$/testing.conf" />
         <option value="$PROJECT_DIR$/src/test/scala/DataMapTest.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala" />
@@ -195,10 +195,11 @@
         <option value="$PROJECT_DIR$/elixir/mix.exs" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex" />
         <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DoAFunction.ex" />
-        <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex" />
-        <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala" />
         <option value="$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala" />
+        <option value="$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala" />
+        <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex" />
+        <option value="$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex" />
       </list>
     </option>
   </component>
@@ -223,8 +224,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scratches" />
       <pane id="PackagesPane" />
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -248,14 +249,6 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="src" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="test" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="scala" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -285,77 +278,9 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="project" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="project" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="target" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="elixir" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="FixrService-Pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="elixir" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="lib" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="fixr-pipeline" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
         </subPane>
       </pane>
-      <pane id="Scratches" />
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -846,34 +771,34 @@
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 51m 35s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 09h 42m 02s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 51m 37s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 09h 58m 42s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 52m 09s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 23m 46s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 53m 05s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 37m 56s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 53m 31s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 38m 35s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 53m 57s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 39m 53s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 54m 29s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 40m 10s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.02 at 15h 54m 59s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 41m 28s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.07 at 15h 19m 48s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 42m 01s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
-    <history-entry file="ScalaTests_in_'scala' - 2017.06.07 at 15h 31m 47s.xml">
+    <history-entry file="ScalaTests_in_'scala' - 2017.06.22 at 10h 50m 03s.xml">
       <configuration name="ScalaTests in 'scala'" configurationId="ScalaTestRunConfiguration" />
     </history-entry>
   </component>
@@ -943,10 +868,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="75">
           <caret line="5" column="7" lean-forward="false" selection-start-line="5" selection-start-column="7" selection-end-line="5" selection-end-column="7" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -970,10 +892,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="75">
           <caret line="5" column="7" lean-forward="true" selection-start-line="5" selection-start-column="7" selection-end-line="5" selection-end-column="7" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -997,10 +916,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
           <caret line="4" column="0" lean-forward="false" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -1025,10 +941,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
           <caret line="4" column="0" lean-forward="false" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -1044,10 +957,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
           <caret line="4" column="0" lean-forward="true" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -1055,10 +965,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
           <caret line="4" column="0" lean-forward="true" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -1135,7 +1042,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
           <caret line="11" column="3" lean-forward="false" selection-start-line="11" selection-start-column="3" selection-end-line="11" selection-end-column="3" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1169,26 +1075,41 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="682">
-          <caret line="145" column="5" lean-forward="false" selection-start-line="145" selection-start-column="5" selection-end-line="145" selection-end-column="5" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/elixir/mix.exs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
           <caret line="11" column="9" lean-forward="false" selection-start-line="11" selection-start-column="9" selection-end-line="11" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="300">
+          <caret line="31" column="21" lean-forward="false" selection-start-line="31" selection-start-column="21" selection-end-line="31" selection-end-column="21" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex">
+    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-218">
-          <caret line="9" column="54" lean-forward="false" selection-start-line="9" selection-start-column="54" selection-end-line="9" selection-end-column="54" />
+        <state relative-caret-position="292">
+          <caret line="330" column="9" lean-forward="false" selection-start-line="330" selection-start-column="9" selection-end-line="330" selection-end-column="9" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="380">
+          <caret line="198" column="60" lean-forward="false" selection-start-line="198" selection-start-column="60" selection-end-line="198" selection-end-column="60" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/test/scala/DataMapServiceTest.scala">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="164">
+          <caret line="179" column="30" lean-forward="false" selection-start-line="179" selection-start-column="30" selection-end-line="179" selection-end-column="30" />
           <folding />
         </state>
       </provider>
@@ -1201,45 +1122,26 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/DWS.ex">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="191">
+          <caret line="31" column="72" lean-forward="false" selection-start-line="31" selection-start-column="72" selection-end-line="31" selection-end-column="72" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/run_function_and_await.ex">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="307">
-          <caret line="28" column="30" lean-forward="true" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
+        <state relative-caret-position="420">
+          <caret line="28" column="30" lean-forward="false" selection-start-line="28" selection-start-column="30" selection-end-line="28" selection-end-column="30" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMapService.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="732">
-          <caret line="307" column="7" lean-forward="true" selection-start-line="307" selection-start-column="7" selection-end-line="307" selection-end-column="7" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/ComputeStep.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-283">
-          <caret line="31" column="21" lean-forward="false" selection-start-line="31" selection-start-column="21" selection-end-line="31" selection-end-column="21" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#102#121#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/elixir/lib/fixr-pipeline/ComputeStep.ex">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="67">
-          <caret line="68" column="38" lean-forward="true" selection-start-line="68" selection-start-column="38" selection-end-line="68" selection-end-column="38" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/scala/edu/colorado/plv/fixr/fixrservice/pipeline/DataMap.scala">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="392">
-          <caret line="330" column="9" lean-forward="false" selection-start-line="330" selection-start-column="9" selection-end-line="330" selection-end-column="9" />
+        <state relative-caret-position="1034">
+          <caret line="71" column="29" lean-forward="true" selection-start-line="71" selection-start-column="29" selection-end-line="71" selection-end-column="29" />
           <folding />
         </state>
       </provider>

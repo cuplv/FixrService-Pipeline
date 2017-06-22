@@ -158,15 +158,45 @@ object DataMapService {
       path("getKeys") {
         parameters("dataMap","values" ? false) { (dataMap: String, values: Boolean) =>
           aMapRef.get(dataMap) match {
-            case Some(aRef: ActorRef) => val res: Future[Any] = aRef ? List.empty[String]
+            case Some(aRef: ActorRef) => val res: Future[Any] = if (values) aRef ? List(("", "")) else aRef ? List("")
               onComplete(res) {
-                case Success(fields: List[String]) =>
+                /*case Success(fields: List[String]) =>
                   val fullString = {
                     if (fields.nonEmpty) {
                       val mostOfString = fields.foldLeft("{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [ ") {
                         case (str, key) => str + "\"" + key + "\", "
                       }
                       mostOfString.substring(0, mostOfString.length - 2) + " ] }"
+                    } else {
+                      "{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [] }"
+                    }
+                  }
+                  complete(fullString)*/
+                case Success(fields: List[_]) =>
+                  val fullString = {
+                    if (fields.nonEmpty) {
+                      val mostOfString = fields.foldLeft("{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [ "){
+                        case (str: String, key: String) => str + "\"" + key + "\", "
+                        case (str: String, (key: String, value)) => str + "\"" + key + "\", "
+                        case (str: String, _) => str
+                      }
+                      val (keepGoing, fullerString) = if (values) {
+                        fields.foldLeft((true, mostOfString.substring(0, mostOfString.length-2) + " ], \"values\": [ ")){
+                          case ((false, str), _) => (false, str)
+                          case ((_, str), (key: String, value)) => (true, str + (value match{
+                            case s: String => "\"" + s + "\""
+                            case l: List[_] =>
+                              val lString = l.foldLeft("[ "){
+                                case (st, s: String) => st + "\"" + s + "\", "
+                                case (st, a: Any) => st + a.toString + ", "
+                              }
+                              lString.substring(0, lString.length-2) + " ]"
+                            case a: Any => a.toString
+                          }) + ", ")
+                          case ((_, str), _) => (false, "{ \"succ\": false, \"dataMap\": \"" + dataMap + "\", \"keys\": [ ]")
+                        }
+                      } else (true, mostOfString)
+                      fullerString.substring(0, fullerString.length-2) + " ] }"
                     } else {
                       "{ \"succ\": true, \"dataMap\": \"" + dataMap + "\", \"keys\": [] }"
                     }
@@ -305,7 +335,11 @@ class DataMapActor(dataMap: DataMap[String, Any]) extends Actor{
     }
     case (key: String, value: String, _: String) =>
       dMap.put(key, value)
-    case _: List[_] =>
-      sender() ! dMap.getAllKeys
+    /*case _: List[_] =>
+      sender() ! dMap.getAllKeys*/
+    case x :: _ => x match{
+      case _: String => sender() ! dMap.getAllKeys
+      case (_: String, _: String) => sender() ! dMap.getAllKeysAndValues
+    }
   }
 }

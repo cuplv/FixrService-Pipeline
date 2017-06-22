@@ -157,6 +157,35 @@ class DataMapServiceTest extends FlatSpec with Matchers with ScalatestRouteTest 
     Post("/add", "{ \"name\": \"test\", \"type\": \"Heap\" }") ~> testRoute ~> check{
       responseAs[String] shouldEqual "{ \"succ\": false, \"dataMap\": \"test\" }"
     }
+    testActorMap.getAllKeys.foldLeft(){
+      (_, key) => testActorMap.get(key) match{
+        case Some(aRef) => system.stop(aRef)
+        case None => () //Should never occur.
+      }
+    }
+  }
+
+  it should "allow you to do a getKeysAndValues search" in {
+    val dMapService = DataMapService
+    val testMapMap: HeapMap[String, DataMap[String, Any]] = new HeapMap[String, DataMap[String, Any]]
+    val testmap: HeapMap[String, Any] = new HeapMap[String, Any]
+    testMapMap.put("test", testmap)
+    val testActorMap: HeapMap[String, ActorRef] = new HeapMap[String, ActorRef]
+    testActorMap.put("test", system.actorOf(Props(new DataMapActor(testmap)), "testDMapActor"))
+    val testRoute: server.Route = dMapService.getCommand(testActorMap)
+    Post("/put", "{ \"key\": \"test\", \"dataMap\": \"test\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test2\", \"dataMap\": \"test\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test3\", \"dataMap\": \"test\", \"value\": \"test\" }") ~> testRoute
+    Post("/put", "{ \"key\": \"test\", \"dataMap\": \"test\", \"value\": \"?\" }") ~> testRoute
+    Get("/getKeys?values=true&dataMap=test") ~> testRoute ~> check {
+      responseAs[String] shouldEqual "{ \"succ\": true, \"dataMap\": \"test\", \"keys\": [ \"test\", \"test2\", \"test3\" ], \"values\": [ \"?\", \"test\", \"test\" ] }"
+    }
+    testActorMap.getAllKeys.foldLeft(){
+      (_, key) => testActorMap.get(key) match{
+        case Some(aRef) => system.stop(aRef)
+        case None => () //Should never occur.
+      }
+    }
   }
 }
 

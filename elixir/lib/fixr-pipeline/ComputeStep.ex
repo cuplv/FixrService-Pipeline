@@ -22,13 +22,14 @@ defmodule Fixr-Pipeline.ComputeStep do
         notDone = confMap["NotDone"]
         err = "ErrorOn" <> notDone
         done = confMap["Done"]
-        case Fixr-Pipeline.DWS.getAllKeys(url, statMap) do
-            {:ok, listOfKeys} ->
+        case Fixr-Pipeline.DWS.getAllKeysAndValues(url, statMap) do
+            {:ok, listOfKeys, listOfValues} ->
                 notDone = confMap["NotDone"]
                 done = confMap["Done"]
                 #Enum.map(listOfKeys, )
-                listOfTasks = List.foldl(listOfKeys, [], fn(key, acc) ->
-                    case Fixr-Pipeline.DWS.getValue(url, statMap, key) do
+                listOfKeysAndValues = List.zip([listOfKeys, listOfValues])
+                listOfTasks = List.foldl(listOfKeys, [], fn({key, stat}, acc) ->
+                    case stat do
                         ^notDone ->
                             task = Task.async(Fixr-Pipeline.DoAFunction, :function, [confMap, function, key, ""])
                             [{task, key} | acc]
@@ -68,7 +69,7 @@ defmodule Fixr-Pipeline.ComputeStep do
                 else
                     {:ok, listOfTasks}
                 end
-            {:error, reason} -> {:error, reason}
+            {:error, reason, _} -> {:error, reason}
         end
     end
 

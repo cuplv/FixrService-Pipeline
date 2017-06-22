@@ -11,12 +11,25 @@ defmodule Fixr-Pipeline.DWS do
     def getAllKeys(dataWebService, dataMap) do
         case HTTPoison.get(dataWebService <> "getAllKeys?dataMap=" <> dataMap) do
             {:ok, response} ->
-            mp = Poison.decode!(response.body)
-            case mp["succ"] do
-                true -> {:ok, mp["keys"]}
-                _ -> {:error, "Failed to load the " <> dataMap <> " map."}
-                    end
+                mp = Poison.decode!(response.body)
+                case mp["succ"] do
+                    true -> {:ok, mp["keys"]}
+                    _ -> {:error, "Failed to load the " <> dataMap <> " map."}
+                end
             _ -> {:error, "Failed to load the" <> dataMap <> " map."}
+        end
+    end
+
+    @spec getAllKeysAndValues(String.t, String.t) :: {atom, any, any}
+    def getAllKeys(dataWebService, dataMap) do
+        case HTTPoison.get(dataWebService <> "getAllKeys?values=true&dataMap=" <> dataMap) do
+            {:ok, response} ->
+                mp = Poison.decope!(response.body)
+                case mp["succ"] do
+                    true -> {:ok, mp["keys"]}
+                    _ -> {:error, "Failed to load the " <> dataMap <> " map.", ""}
+                end
+            _ -> {:error, "Failed to load the " <> dataMap <> " map.", ""}
         end
     end
 
