@@ -85,15 +85,15 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
 
   def IncrementalCompute(blocking: Boolean = false, includeExceptions: List[Exception] = List.empty): Unit = {
     //Start by getting every single key available. (Can probably do this through the Status Map.
-    val statusKeys: List[String] = statMap.getAllKeys
+    val statusKeys: List[(String,String)] = statMap.getAllKeysAndValues
     //Iterate through all of the statusKeys
     val futures = statusKeys.foldRight(List.empty[String]){
-      case (key, list) => statMap.get(key) match {
-        case Some("Not Done") =>
+      case ((key, stat), list) => stat match {
+        case "Not Done" =>
           IncrementalComputeHelper(key)
           key :: list
 
-        case Some("Error") =>
+        case "Error" =>
           val canRedo: Boolean = errMap.get(key) match {
             case Some(e) => includeExceptions.foldLeft(false) {
               case (false, checkE) =>
@@ -108,7 +108,7 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
             IncrementalComputeHelper(key)
             key :: list
           } else list
-        case Some("Done") => list
+        case "Done" => list
         case _ =>
           println("Invalid Status on " + key)
           list
