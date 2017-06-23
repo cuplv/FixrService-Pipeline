@@ -79,7 +79,7 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
   val AToBMap: DataMap[A, B] = setup.setUpDatabase(c, "AToBMap", "Database", "AToB")
   implicit val timeout = Timeout(10 hours)
   implicit val executionContext = system.dispatcher
-  
+
 
   def IncrementalComputeHelper(key: String): Unit = {
     val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")

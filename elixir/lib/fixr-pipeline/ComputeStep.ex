@@ -54,7 +54,7 @@ defmodule Fixr-Pipeline.ComputeStep do
                 if (blocking) do
                     List.foldl(listOfTasks, {:ok, []}, fn(taskTuple, status) ->
                         {task, key} = taskTuple
-                        case Task.await(task, 10*60*1000) do #Worst case scenario, a function should only take 10 hours.
+                        case Task.await(task, 10*60*60*1000) do #Worst case scenario, a function should only take 10 hours.
                             {:ok, idB} -> status
                             {:error, reason} -> case status do
                                 {:err, list} -> {:err, list++[{key, reason}]}
