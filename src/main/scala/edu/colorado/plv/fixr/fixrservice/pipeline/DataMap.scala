@@ -8,7 +8,7 @@ import scala.util.parsing.json.JSON
 /**
   * Created by chanceroberts on 5/23/17.
   */
-abstract class DataMap[K,V](val databaseName: String, val tableName: String, val IP: String, val port: String, val username: String, val password: String) {
+abstract class DataMap[K,V] {
   def get(k: K) : Option[V]
 
 
@@ -24,8 +24,8 @@ abstract class DataMap[K,V](val databaseName: String, val tableName: String, val
   def getAllKeysAndValues: List[(K,V)]
 }
 
-class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: String = "localhost", val prt: String = "8983") extends DataMap[K,V](cName, fName, ip, prt, "", "") {
-  val startingURL: String = "http://"+ip+":"+port+"/solr/"+cName+"/"
+class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: String = "localhost", val prt: String = "8983") extends DataMap[K,V] {
+  val startingURL: String = "http://"+ip+":"+prt+"/solr/"+cName+"/"
   def get(k: K): Option[V]  = {
     val queryURL = startingURL+"select?q=key:"+k+"&wt=json"
     val json = Http(queryURL).asString.body //Query the Database Using the URL
@@ -211,7 +211,7 @@ class SolrMap[K, V](val cName: String, val fName: String = "value", val ip: Stri
   }
 }
 
-class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "localhost", val prt: String = "27017", val uName: String = "", val pssWord: String = "") extends DataMap[K,V](dName, tName, ip, prt, uName, pssWord) {
+class MongoDBMap[K, V](val databaseName: String, val tableName: String, val ip: String = "localhost", val port: String = "27017", val username: String = "", val password: String = "") extends DataMap[K,V] {
   val client = MongoClient(MongoClientURI{
     val startingPoint = "mongodb://"
     val addUserPass = (username, password) match{
@@ -259,7 +259,7 @@ class MongoDBMap[K, V](val dName: String, val tName: String, val ip: String = "l
 }
 
 //class HeapMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
-class HeapMap[K,V] extends DataMap[K,V]("","","","","","") {
+class HeapMap[K,V] extends DataMap[K,V] {
   var map: Map[K, V] = Map.empty
 
   def get(k: K): Option[V] = map.get(k)
@@ -279,7 +279,7 @@ class HeapMap[K,V] extends DataMap[K,V]("","","","","","") {
 }
 
 //class NullMap[K,V](val tName: String = "", val uName: String = "", val pssWord: String = "", val ip: String = "", val prt: Int = 0) extends DataMap[K,V](tName, uName, pssWord, ip, prt) {
-class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
+class NullMap[K,V] extends DataMap[K,V]{
   def get(k: K) : Option[V] = Some(k.asInstanceOf[V])
 
   def put(k: K, v: V) : Unit = ()
@@ -289,7 +289,7 @@ class NullMap[K,V] extends DataMap[K,V]("","","","","",""){
   def getAllKeysAndValues: List[(K, V)] = List.empty[(K, V)]
 }
 
-class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "8080", dataMapName: String = "Default") extends DataMap[K,V]("","",ip,port,"",""){
+class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "8080", dataMapName: String = "Default") extends DataMap[K,V]{
   val webServerAt: String = "http://"+ip+":"+port+"/"
   def get(k: K): Option[V] = {
     val gotten: String = Http(webServerAt+"get?key="+k.toString+"&dataMap="+dataMapName).asString.body
@@ -353,5 +353,37 @@ class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "808
       case x => x
     }) + ", \"dataMap\": \""+dataMapName+"\" }"
     Http(webServerAt+"put").postData(json)
+  }
+}
+
+class DualDataMap[A,B,C,D](dataMapOne: DataMap[A, C], dataMapTwo: DataMap[B, D]) extends DataMap[(A,B),(C,D)]{
+  def get(k: (A,B)): Option[(C,D)] = {
+    (dataMapOne.get(k._1), dataMapTwo.get(k._2)) match{
+      case (Some(x), Some(y)) => Some((x,y))
+      case _ => None
+    }
+  }
+
+  def getAllKeys: List[(A,B)] = {
+    val keysB = dataMapTwo.getAllKeys
+    dataMapOne.getAllKeys.foldRight(List.empty[(A,B)]){
+      (keyA,keyPairs) => keysB.foldRight(keyPairs){
+        (keyB, kPairs) => (keyA, keyB) :: kPairs
+      }
+    }
+  }
+
+  def getAllKeysAndValues: List[((A,B), (C,D))] = {
+    val keysAndValuesB = dataMapTwo.getAllKeysAndValues
+    dataMapOne.getAllKeysAndValues.foldRight(List.empty[((A,B), (C,D))]){
+      (keyAndValueA, kVPairs) => keysAndValuesB.foldRight(kVPairs){
+        (keyAndValueB, kVPairList) => ((keyAndValueA._1, keyAndValueB._1), (keyAndValueA._2, keyAndValueB._2)) :: kVPairList
+      }
+    }
+  }
+
+  def put(k: (A,B), v: (C,D)): Unit = {
+    dataMapOne.put(k._1, v._1)
+    dataMapTwo.put(k._2, v._2)
   }
 }

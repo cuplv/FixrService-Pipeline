@@ -14,42 +14,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.util.Success
 
-class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
-  val system: ActorSystem = ActorSystem("IncrementalComputation")
-  val c: Config =  ConfigFactory.parseFile(new File(config+".conf"))
-  val statMap: DataMap[String, String] = setUpDatabase(c, "StatusMap", "Database", "Status")
-  val idToAMap: DataMap[String, A] = setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
-  val idToBMap: DataMap[String, B] = setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
-  val errMap: DataMap[String, Exception] = setUpDatabase(c, "ErrorMap", "Database", "Error")
-  val provMap: DataMap[B, List[String]] = setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
-  val AToBMap: DataMap[A, B] = setUpDatabase(c, "AToBMap", "Database", "AToB")
-  implicit val timeout = Timeout(10 hours)
-  implicit val executionContext = system.dispatcher
-
-  def setUpDatabase[C,D](c: Config, name: String, defDataName: String, defCollName: String): DataMap[C,D] = possiblyInConfig(c, name+"Type", "Heap") match {
-    case "Null" => new NullMap[C,D]
-    case "Heap" => new HeapMap[C,D]
-    case "MongoDB" =>
-      val databaseName = possiblyInConfig(c, name+"Database", defDataName)
-      val collectionName = possiblyInConfig(c, name+"Collection", defCollName)
-      val username = possiblyInConfig(c, name+"Username", "")
-      val password = possiblyInConfig(c, name+"Password", "")
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "27017")
-      new MongoDBMap[C, D](databaseName, collectionName, IP, port, username, password)
-    case "Solr" =>
-      val collectionName = possiblyInConfig(c, name+"Collection", defDataName)
-      val fieldName = possiblyInConfig(c, name+"Field", defDataName)
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "8983")
-      new SolrMap[C,D](collectionName, fieldName, IP, port)
-    case "WebService" =>
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "8080")
-      val dName = possiblyInConfig(c, name+"Name", "Default")
-      new DataMapWebServiceClient[C,D](IP, port, dName)
-  }
-
+class SetupDatabases {
   def possiblyInConfig(config: Config, checkVal: String, defaultVal: String): String = {
     try{
       config.getString(checkVal)
@@ -59,6 +24,62 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
       case _: ConfigException.WrongType => config.getAnyRef(checkVal).toString //This should work? :|
     }
   }
+
+  def possiblyInMultipleConfigs(configs: List[Config], checkVal: String, defaultVal: String): String = {
+    configs.foldLeft((false, "")) {
+      case ((b, str), conf) => if (b) (b, str) else {
+        try {
+          (true, conf.getString(checkVal))
+        }
+        catch {
+          case _: ConfigException.Missing => (false, "")
+          case _: ConfigException.WrongType => (true, conf.getAnyRef(checkVal).toString)
+        }
+      }
+    } match {
+      case (false, _) => defaultVal
+      case (true, str) => str
+    }
+  }
+
+  def setUpDatabase[A,B](c: Config, name: String, defDataName: String, defCollName: String): DataMap[A,B] = possiblyInConfig(c, name+"Type", "Heap") match {
+    case "Null" => new NullMap[A,B]
+    case "Heap" => new HeapMap[A,B]
+    case "MongoDB" =>
+      val databaseName = possiblyInConfig(c, name+"Database", defDataName)
+      val collectionName = possiblyInConfig(c, name+"Collection", defCollName)
+      val username = possiblyInConfig(c, name+"Username", "")
+      val password = possiblyInConfig(c, name+"Password", "")
+      val IP = possiblyInConfig(c, name+"IP", "localhost")
+      val port = possiblyInConfig(c, name+"Port", "27017")
+      new MongoDBMap[A,B](databaseName, collectionName, IP, port, username, password)
+    case "Solr" =>
+      val collectionName = possiblyInConfig(c, name+"Collection", defDataName)
+      val fieldName = possiblyInConfig(c, name+"Field", defDataName)
+      val IP = possiblyInConfig(c, name+"IP", "localhost")
+      val port = possiblyInConfig(c, name+"Port", "8983")
+      new SolrMap[A,B](collectionName, fieldName, IP, port)
+    case "WebService" =>
+      val IP = possiblyInConfig(c, name+"IP", "localhost")
+      val port = possiblyInConfig(c, name+"Port", "8080")
+      val dName = possiblyInConfig(c, name+"Name", "Default")
+      new DataMapWebServiceClient[A,B](IP, port, dName)
+  }
+}
+
+class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
+  val system: ActorSystem = ActorSystem("IncrementalComputation")
+  val c: Config =  ConfigFactory.parseFile(new File(config+".conf"))
+  val setup: SetupDatabases = new SetupDatabases
+  val statMap: DataMap[String, String] = setup.setUpDatabase(c, "StatusMap", "Database", "Status")
+  val idToAMap: DataMap[String, A] = setup.setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
+  val idToBMap: DataMap[String, B] = setup.setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
+  val errMap: DataMap[String, Exception] = setup.setUpDatabase(c, "ErrorMap", "Database", "Error")
+  val provMap: DataMap[B, List[String]] = setup.setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
+  val AToBMap: DataMap[A, B] = setup.setUpDatabase(c, "AToBMap", "Database", "AToB")
+  implicit val timeout = Timeout(10 hours)
+  implicit val executionContext = system.dispatcher
+  
 
   def IncrementalComputeHelper(key: String): Unit = {
     val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
@@ -84,7 +105,7 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
   }
 
   def IncrementalCompute(blocking: Boolean = false, includeExceptions: List[Exception] = List.empty): Unit = {
-    //Start by getting every single key available. (Can probably do this through the Status Map.
+    //Start by getting every single key available.
     val statusKeys: List[(String,String)] = statMap.getAllKeysAndValues
     //Iterate through all of the statusKeys
     val futures = statusKeys.foldRight(List.empty[String]){
@@ -125,6 +146,23 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
     IncrementalCompute()
   }
   */
+}
+
+/*class ComputeAStepTuple[A,B,C](func: (((A,B)) => C), config: String, prefix: String = "") extends ComputeStep[(A,B),C](func, config, prefix){
+  override val idToAMap = new NullMap[String, (A,B)]
+  val idToAMaps = setUpTupleDatabase(c, "IDToAs", "Database", "IDToA")
+  setUpTupleDatabase[String, String, A, B](c, "IDToA", "Database", "Status")
+  def setUpTupleDatabase[D,E,F,G](c: Config, name: String, defDataName: String, defCollName: String): DataMap[(D,E), (F,G)] = {
+    val dataMapOne = setUpDatabase[D,F](c, name+"SubmapOne", defDataName, defCollName)
+    val dataMapTwo = setUpDatabase[E,G](c, name+"SubmapTwo", defDataName, defCollName)
+    new DualDataMap[D,E,F,G](dataMapOne, dataMapTwo)
+  }
+
+}*/
+
+class CombineTwoDataMaps[A,B,C,D](dataMapOne: DataMap[A,B], dataMapTwo: DataMap[C,D], prefixOne: String, prefixTwo: String, c: Config){
+  val dMap = new DualDataMap[A,C,B,D](dataMapOne, dataMapTwo)
+  val sMap = new HeapMap[String, String]
 }
 
 /*object ComputeAStep{
