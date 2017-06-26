@@ -7,7 +7,7 @@ import org.scalatest.FlatSpec
 class ComputeStepTest extends FlatSpec {
 
   "ComputeStep" should "only compute the files that have not been computed yet." in {
-    val cStep = new ComputeStep({i: Int => i+1}, "")
+    val cStep = new ComputeStep[Int, Int]({i: Int => i+1}, "")
     cStep.statMap.put("id_1", "Not Done")
     cStep.statMap.put("id_2", "Not Done")
     cStep.statMap.put("id_3", "Done")
@@ -28,7 +28,7 @@ class ComputeStepTest extends FlatSpec {
   }
 
   it should "put exceptions in the errMap" in {
-    val cStep = new ComputeStep({i: Int => if (i > 10) throw new ArithmeticException() else i+1}, "")
+    val cStep = new ComputeStep[Int, Int]({i: Int => if (i > 10) throw new ArithmeticException() else i+1}, "")
     cStep.statMap.put("id_1", "Not Done")
     cStep.statMap.put("id_2", "Not Done")
     cStep.idToAMap.put("id_1", 100)
@@ -44,7 +44,7 @@ class ComputeStepTest extends FlatSpec {
   }
 
   it should "skip over stuff that has an error that can't be redone yet" in {
-    val cStep = new ComputeStep({i: Int => i+1}, "")
+    val cStep = new ComputeStep[Int, Int]({i: Int => i+1}, "")
     cStep.statMap.put("id_1", "Error")
     cStep.idToAMap.put("id_1", 10)
     cStep.errMap.put("id_1", new ArrayIndexOutOfBoundsException)
@@ -53,7 +53,7 @@ class ComputeStepTest extends FlatSpec {
   }
 
   it should "try to fix the stuff that it can actually fix now" in {
-    val cStep = new ComputeStep({i: Int => i+1}, "")
+    val cStep = new ComputeStep[Int, Int]({i: Int => i+1}, "")
     cStep.statMap.put("id_1", "Error")
     cStep.errMap.put("id_1", new ArrayIndexOutOfBoundsException)
     cStep.idToAMap.put("id_1", 12)

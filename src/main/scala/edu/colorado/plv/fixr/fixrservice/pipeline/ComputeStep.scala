@@ -42,44 +42,46 @@ class SetupDatabases {
     }
   }
 
-  def setUpDatabase[A,B](c: Config, name: String, defDataName: String, defCollName: String): DataMap[A,B] = possiblyInConfig(c, name+"Type", "Heap") match {
-    case "Null" => new NullMap[A,B]
-    case "Heap" => new HeapMap[A,B]
-    case "MongoDB" =>
-      val databaseName = possiblyInConfig(c, name+"Database", defDataName)
-      val collectionName = possiblyInConfig(c, name+"Collection", defCollName)
-      val username = possiblyInConfig(c, name+"Username", "")
-      val password = possiblyInConfig(c, name+"Password", "")
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "27017")
-      new MongoDBMap[A,B](databaseName, collectionName, IP, port, username, password)
-    case "Solr" =>
-      val collectionName = possiblyInConfig(c, name+"Collection", defDataName)
-      val fieldName = possiblyInConfig(c, name+"Field", defDataName)
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "8983")
-      new SolrMap[A,B](collectionName, fieldName, IP, port)
-    case "WebService" =>
-      val IP = possiblyInConfig(c, name+"IP", "localhost")
-      val port = possiblyInConfig(c, name+"Port", "8080")
-      val dName = possiblyInConfig(c, name+"Name", "Default")
-      new DataMapWebServiceClient[A,B](IP, port, dName)
+  def setUpDatabase[A,B](c: Config, name: String, defDataName: String, defCollName: String, dMap: Option[DataMap[A, B]] = None) = dMap match{
+    case None => possiblyInConfig(c, name + "Type", "Heap") match {
+      case "Null" => new NullMap[A, B]
+      case "Heap" => new HeapMap[A, B]
+      case "MongoDB" =>
+        val databaseName = possiblyInConfig(c, name + "Database", defDataName)
+        val collectionName = possiblyInConfig(c, name + "Collection", defCollName)
+        val username = possiblyInConfig(c, name + "Username", "")
+        val password = possiblyInConfig(c, name + "Password", "")
+        val IP = possiblyInConfig(c, name + "IP", "localhost")
+        val port = possiblyInConfig(c, name + "Port", "27017")
+        new MongoDBMap[A, B](databaseName, collectionName, IP, port, username, password)
+      case "Solr" =>
+        val collectionName = possiblyInConfig(c, name + "Collection", defDataName)
+        val fieldName = possiblyInConfig(c, name + "Field", defDataName)
+        val IP = possiblyInConfig(c, name + "IP", "localhost")
+        val port = possiblyInConfig(c, name + "Port", "8983")
+        new SolrMap[A, B](collectionName, fieldName, IP, port)
+      case "WebService" =>
+        val IP = possiblyInConfig(c, name + "IP", "localhost")
+        val port = possiblyInConfig(c, name + "Port", "8080")
+        val dName = possiblyInConfig(c, name + "Name", "Default")
+        new DataMapWebServiceClient[A, B](IP, port, dName)
+    }
+    case Some(x) => x
   }
 }
 
-class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
+class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "", dMap: Option[DataMap[String, A]] = None, sMap: Option[DataMap[String, String]] = None) {
   val system: ActorSystem = ActorSystem("IncrementalComputation")
   val c: Config =  ConfigFactory.parseFile(new File(config+".conf"))
   val setup: SetupDatabases = new SetupDatabases
-  val statMap: DataMap[String, String] = setup.setUpDatabase(c, "StatusMap", "Database", "Status")
-  val idToAMap: DataMap[String, A] = setup.setUpDatabase(c, "IDtoAMap", "Database", "IDtoA")
+  val statMap: DataMap[String, String] = setup.setUpDatabase(c, "StatusMap", "Database", "Status", sMap)
+  val idToAMap: DataMap[String, A] = setup.setUpDatabase(c, "IDtoAMap", "Database", "IDtoA", dMap)
   val idToBMap: DataMap[String, B] = setup.setUpDatabase(c, "IDtoBMap", "Database", "IDtoB")
   val errMap: DataMap[String, Exception] = setup.setUpDatabase(c, "ErrorMap", "Database", "Error")
   val provMap: DataMap[B, List[String]] = setup.setUpDatabase(c, "ProvenanceMap", "Database", "Provenance")
   val AToBMap: DataMap[A, B] = setup.setUpDatabase(c, "AToBMap", "Database", "AToB")
   implicit val timeout = Timeout(10 hours)
   implicit val executionContext = system.dispatcher
-
 
   def IncrementalComputeHelper(key: String): Unit = {
     val actor: ActorRef = system.actorOf(Props(new FunctionActor(func)), key + "LoadedActor")
@@ -141,35 +143,21 @@ class ComputeStep[A,B](func: (A => B), config: String, prefix: String = "") {
          else curr
     }){}
   }
-  /*
-  def main(args: Array[String]) = { //If for whatever reason you want to use this...
-    IncrementalCompute()
-  }
-  */
 }
-
-/*class ComputeAStepTuple[A,B,C](func: (((A,B)) => C), config: String, prefix: String = "") extends ComputeStep[(A,B),C](func, config, prefix){
-  override val idToAMap = new NullMap[String, (A,B)]
-  val idToAMaps = setUpTupleDatabase(c, "IDToAs", "Database", "IDToA")
-  setUpTupleDatabase[String, String, A, B](c, "IDToA", "Database", "Status")
-  def setUpTupleDatabase[D,E,F,G](c: Config, name: String, defDataName: String, defCollName: String): DataMap[(D,E), (F,G)] = {
-    val dataMapOne = setUpDatabase[D,F](c, name+"SubmapOne", defDataName, defCollName)
-    val dataMapTwo = setUpDatabase[E,G](c, name+"SubmapTwo", defDataName, defCollName)
-    new DualDataMap[D,E,F,G](dataMapOne, dataMapTwo)
+/*
+class ComputeAStepTuple[A,B,C](func: (((A,B)) => C), config: String, prefix: String = "") extends ComputeStep[(A,B),C](func, config, prefix){
+  override val idToAMap = setUpTupleDatabase(c, "IDToA", "Database", "IDToA")
+  //setUpTupleDatabase[String, String, A, B](c, "IDToA", "Database", "Status")
+  def setUpTupleDatabase[D,E,F,G](c: Config, name: String, defDataName: String, defCollName: String): DataMap[String, (F,G)] = {
+    val dataMapOne = setup.setUpDatabase[D,F](c, name+"SubmapOne", defDataName, defCollName)
+    val dataMapTwo = setup.setUpDatabase[E,G](c, name+"SubmapTwo", defDataName, defCollName)
+    new DualStringDataMap[D,E,F,G](dataMapOne, dataMapTwo)
   }
 
-}*/
-
-class CombineTwoDataMaps[A,B,C,D](dataMapOne: DataMap[A,B], dataMapTwo: DataMap[C,D], prefixOne: String, prefixTwo: String, c: Config){
-  val dMap = new DualDataMap[A,C,B,D](dataMapOne, dataMapTwo)
-  val sMap = new HeapMap[String, String]
 }
+*/
 
-/*object ComputeAStep{
-  def main(args: Array[String]) = {
 
-  }
-}*/
 
 class FunctionActor[A,B](func: A => B) extends Actor{
   def receive = {

@@ -355,7 +355,7 @@ class DataMapWebServiceClient[K,V](ip: String = "localhost", port: String = "808
     Http(webServerAt+"put").postData(json)
   }
 }
-
+/*
 class DualDataMap[A,B,C,D](dataMapOne: DataMap[A, C], dataMapTwo: DataMap[B, D]) extends DataMap[(A,B),(C,D)]{
   def get(k: (A,B)): Option[(C,D)] = {
     (dataMapOne.get(k._1), dataMapTwo.get(k._2)) match{
@@ -387,3 +387,49 @@ class DualDataMap[A,B,C,D](dataMapOne: DataMap[A, C], dataMapTwo: DataMap[B, D])
     dataMapTwo.put(k._2, v._2)
   }
 }
+
+class DualStringDataMap[A,B,C,D] (dataMapOne: DataMap[A, C], dataMapTwo: DataMap[B, D]) extends DataMap[String,(C,D)] {
+  val delimiter = "-:**:-"
+  def get(k: String): Option[(C,D)] = {
+    k.indexOf(delimiter) match {
+      case -1 => None
+      case z =>
+        val k1 = k.substring(0,z).asInstanceOf[A]
+        val k2 = k.substring(z+6).asInstanceOf[B]
+        (dataMapOne.get(k1), dataMapTwo.get(k2)) match{
+          case (Some(x), Some(y)) => Some((x,y))
+          case _ => None
+        }
+    }
+  }
+
+  def getAllKeys: List[String] = {
+    val keysB = dataMapTwo.getAllKeys
+    dataMapOne.getAllKeys.foldRight(List.empty[String]){
+      (keyA, keyPairs) => keysB.foldRight(keyPairs){
+        (keyB, kPairs) => (keyA.toString+delimiter+keyB.toString) :: kPairs
+      }
+    }
+  }
+
+  def getAllKeysAndValues: List[(String, (C,D))] = {
+    val keysAndValuesB = dataMapTwo.getAllKeysAndValues
+    dataMapOne.getAllKeysAndValues.foldRight(List.empty[(String, (C,D))]){
+      (keyAndValueA, kVPairs) => keysAndValuesB.foldRight(kVPairs){
+        (keyAndValueB, kVPairList) => (keyAndValueA._1.toString+delimiter+keyAndValueB._1, (keyAndValueA._2,keyAndValueB._2)) :: kVPairList
+      }
+    }
+  }
+
+  def put(k: String, v: (C,D)): Unit = {
+    k.indexOf(delimiter) match{
+      case -1 => ()
+      case z =>
+        val k1 = k.substring(0,z).asInstanceOf[A]
+        val k2 = k.substring(z+6).asInstanceOf[B]
+        dataMapOne.put(k1, v._1)
+        dataMapTwo.put(k2, v._2)
+    }
+  }
+}
+*/
