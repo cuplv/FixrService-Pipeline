@@ -1,4 +1,8 @@
 import pipecombi._
+import com.typesafe.config.Config
+
+import scala.util.parsing.json.JSON
+import scalaj.http.Http
 
 /**
   * Created by edmundlam on 6/23/17.
@@ -43,11 +47,211 @@ case class SolrDoc() extends Identifiable {
   override def identity(): Identity = ???
 }
 
-case class SolrMap[SDoc <: Identifiable](name: String) extends DataMap[SDoc] {
-  override def put(identity: Identity, item: SDoc): Boolean = ???
-  override def get(identity: Identity): Option[SDoc] = ???
-  override def identities: List[Identity] = ???
-  override def items: List[SDoc] = ???
+case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) extends DataMap[SDoc] {
+  val databaseLocation: String = ConfigHelper.possiblyInConfig(conf, name+"Location", "http://localhost:8983/solr/")
+  val collectionName: String = ConfigHelper.possiblyInConfig(conf, name+"CollectionName","gettingstarted")
+  val url: String = databaseLocation+collectionName+"/"
+  /*
+  val (verti, field) = if (ConfigHelper.possiblyInConfig(conf, name+"Vertical", default = true)){
+    (true, ConfigHelper.possiblyInConfig(conf, name+"Field", name))
+  } else {
+    (false, ConfigHelper.possiblyInConfig(conf, name+"Document", name))
+  }*/
+  val fName: String = ConfigHelper.possiblyInConfig(conf, name+"Field", name)
+  val delimiter = "`#**#`"
+
+  def getObject(k: String = ""): List[(String, Any)] = {
+    val queryURL = url + "select?wt=json&q=key:" + k
+    val json = Http(queryURL).asString.body //Query the Database Using the URL
+    JSON.parseFull(json) match {
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String@unchecked, Any@unchecked]) =>
+            resp.get("docs") match {
+              case Some((first: Map[String@unchecked, Any@unchecked]) :: list) =>
+                first.foldRight(List.empty[(String, Any)]) {
+                  case ((key, value), l) =>
+                    (key, value) :: l
+                }
+              case _ => List.empty[(String, Any)]
+            }
+          case _ => List.empty[(String, Any)]
+        }
+      case _ => List.empty[(String, Any)]
+    }
+  }
+
+  override def put(identity: Identity, item: SDoc): Boolean = {
+    val startingURL = url+"update"
+    val id = identity.version match{
+      case Some(y) => identity.id+delimiter+y
+      case None => identity.id
+    }
+    val itemF = item.getVersion() match{
+      case Some(y) => item.getId()+delimiter+y
+      case None => item.getId()
+    }
+    val jsonValue = getObject(id) match{
+      case l if l.isEmpty =>
+        """{
+          |  "add": {
+          |    "doc": {
+          |      "id": """.stripMargin + id +
+          """,
+            |      """.stripMargin + "\"" + fName + "\": " + itemF +
+          """
+            |    }
+            |  },
+            |  "commit": {}
+            |}
+          """.stripMargin
+      case l =>
+        val (mostOfString, needToAddValue) = l.foldLeft(
+          """{
+            |  "add": {
+            |    "doc": {""".stripMargin, true) {
+          case ((json, curr), (key, value)) => if (key.equals(fName)) {
+            (json + """
+                      |      """.stripMargin + "\"" + fName + "\": " + itemF + ",", false)
+          } else if (!key.equals("_version_")) {
+            (json + """
+                      |      """.stripMargin + "\"" + key + "\": " + (value match {
+              case s: String => "\"" + value + "\""
+              case vL: List[_] => val tBC = "[ " +  vL.foldLeft(""){
+                case (j: String, s: String) => j + "\"" + s + "\", "
+                case (j: String, va) => j + va.toString + ", "
+              }
+                tBC.substring(0,tBC.length-2) + " ]"
+              case _ => value.toString
+            }) + ",", curr)
+          } else{
+            (json,curr)
+          }
+        }
+        val mostOfString2 = if (needToAddValue){
+          mostOfString + """
+                           |      """.stripMargin + "\"" + fName + "\": " + itemF + ","
+        } else {
+          mostOfString + ""
+        }
+        mostOfString2.substring(0, mostOfString2.length-1) +
+          """
+            |    }
+            |  },
+            |  "commit": {}
+            |}
+          """.stripMargin
+    }
+    //Find a way to POST Request this into Solr
+    val json = Http(url).postData(jsonValue.getBytes).header("Content-Type", "application/json").asString.body
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed("error") match{
+          case Some(_) => false
+          case _ => true
+        }
+      case _ => false
+    }
+  }
+
+  def getSDoc(s: String): SDoc = {
+    s.indexOf(delimiter) match{
+      case -1 => Identity(s, None).asInstanceOf[SDoc]
+      case x => Identity(s.substring(0,x), Some(s.substring(x+delimiter.length))).asInstanceOf[SDoc]
+    }
+  }
+
+  def getIdentity(s: String): Identity = {
+    s.indexOf(delimiter) match{
+      case -1 => Identity(s, None)
+      case x => Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
+    }
+  }
+
+  override def get(identity: Identity): Option[SDoc] = {
+    val id = identity.version match{
+      case Some(y) => identity.id+delimiter+y
+      case None => identity.id
+    }
+    val queryURL = url+"select?q=id:"+id+"&wt=json"
+    val json = Http(queryURL).asString.body //Query the Database Using the URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("response") match{
+          case Some(resp: Map[String @ unchecked, Any @ unchecked]) =>
+            resp.get("docs") match{
+              case Some(resp2: List[Map[String, Any] @ unchecked]) => resp2 match{
+                case first :: list =>
+                  first.get(fName) match{
+                    case Some(List(x)) => Some(getSDoc(x.toString))
+                    case Some(x :: more) => Some(getSDoc(x.toString))
+                    case Some(x) => Some(getSDoc(x.toString))
+                    case None => None
+                  }
+                case _ => None
+              }
+              case _ => None
+            }
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
+  override def identities: List[Identity] = {
+    val queryURL = url+"select?wt=json&rows=1000000&q=*:*"
+    val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String@unchecked, Any@unchecked]) =>
+            resp.get("docs") match {
+              case Some(resp2: List[Map[String, Any]@unchecked]) =>
+                resp2.foldRight(List.empty[Identity]) {
+                  case (map, l) => map.get("id") match {
+                    case Some(List(v)) => map.get(fName) match{
+                      case Some(List(v2)) => getIdentity(v.toString) :: l
+                      case Some(v2 :: more) => getIdentity(v.toString) :: l
+                      case Some(v2) => getIdentity(v.toString) :: l
+                    }
+                    case _ => l
+                  }
+                }
+              case _ => List.empty[Identity]
+            }
+          case _ => List.empty[Identity]
+        }
+      case _ => List.empty[Identity]
+    }
+  }
+
+  override def items: List[SDoc] = {
+    val queryURL = url+"select?wt=json&rows=1000000&q=*:*"
+    val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String@unchecked, Any@unchecked]) =>
+            resp.get("docs") match {
+              case Some(resp2: List[Map[String, Any]@unchecked]) =>
+                resp2.foldRight(List.empty[SDoc]) {
+                  case (map, l) => map.get("id") match {
+                    case Some(List(v)) => map.get(fName) match{
+                      case Some(List(v2)) => getSDoc(v2.toString) :: l
+                      case Some(v2 :: more) => getSDoc(v2.toString) :: l
+                      case Some(v2) => getSDoc(v2.toString) :: l
+                    }
+                    case _ => l
+                  }
+                }
+              case _ => List.empty[SDoc]
+            }
+          case _ => List.empty[SDoc]
+        }
+      case _ => List.empty[SDoc]
+    }
+  }
+
   override def displayName: String = name
 }
 

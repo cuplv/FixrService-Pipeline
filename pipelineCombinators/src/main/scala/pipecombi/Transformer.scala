@@ -1,5 +1,5 @@
 package pipecombi
-
+import com.typesafe.config.Config
 import pipecombi._
 
 /**
@@ -31,7 +31,8 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable] extends Transformer[Input, Output] {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c: Config = null) extends Transformer[Input, Output] {
+  c.getObject("akka")
 
   def tryComputeThenStore(input: Input, outputMap: DataMap[Output]): List[Output] = {
     try {
