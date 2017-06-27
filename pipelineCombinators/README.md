@@ -14,3 +14,20 @@ encodes the following:
 
 <img src="pipeline-example.png" width="1000" height="305">
 
+Here's how the language is defined (adopting Scala's typing notation):
+
+```
+DataMap  Dm[D]    Transformer  Tr[I,O]    Composer   Cr[L,R]
+
+Pipe        P[D]     ::=  Dm[D]                                        -- DataNode[D]
+                      |   P[I]  :--Tr[I,O]-->  Dm[O]  D == O           -- TransformationPipe[I,O]
+                      |   P[L]  <-*Cr[L,R]*->  P[R]   D == (L,R)       -- CompositionPipe[I,O]
+                      |   P[I]  :<  l[I,O]            D == O           -- JunctionPipe[I,O]
+                      |   P[L]  ||  P[R]              D == Either L R  -- ParallelPipe[L,R]
+
+Partial Pipe   l[I,D]   ::=   :--Tr[I,O]-->  Dm[O]    D == O           -- PartialTransformationPipe[I,O]
+                         |    <-*Cr[L,R]*->  P[R]     D == (L,R)       -- PartialCompositionPipe[L,R]
+                         |    l[I,O]  l[O,D]                           -- PartialHeadPipe[I,O,D]
+                         |    l[I,L] ~ l[I,R]         D == Either L R  -- PartialParallelPipes[I,L,R]
+```
+
