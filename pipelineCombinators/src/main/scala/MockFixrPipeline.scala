@@ -48,8 +48,8 @@ case class SolrDoc() extends Identifiable {
 }
 
 case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) extends DataMap[SDoc] {
-  val databaseLocation: String = ConfigHelper.possiblyInConfig(conf, name+"Location", "http://localhost:8983/solr/")
-  val collectionName: String = ConfigHelper.possiblyInConfig(conf, name+"CollectionName","gettingstarted")
+  val databaseLocation: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Location", "http://localhost:8983/solr/")
+  val collectionName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"CollectionName","gettingstarted")
   val url: String = databaseLocation+collectionName+"/"
   /*
   val (verti, field) = if (ConfigHelper.possiblyInConfig(conf, name+"Vertical", default = true)){
@@ -57,7 +57,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   } else {
     (false, ConfigHelper.possiblyInConfig(conf, name+"Document", name))
   }*/
-  val fName: String = ConfigHelper.possiblyInConfig(conf, name+"Field", name)
+  val fName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Field", name)
   val delimiter = "`#**#`"
 
   def getObject(k: String = ""): List[(String, Any)] = {

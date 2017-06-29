@@ -4,12 +4,12 @@ import com.typesafe.config.{Config, ConfigException}
   * Created by chanceroberts on 6/27/17.
   */
 object ConfigHelper {
-  def possiblyInConfig(c: Config, field: String, default: String): String = {
+  def possiblyInConfig(c: Option[Config], field: String, default: String): String = {
     c match{
-      case null => default
-      case _ =>
+      case None => default
+      case Some(config) =>
         try {
-          c.getString(field)
+          config.getString(field)
         } catch {
           case _: ConfigException.Missing => default
           case _: ConfigException.WrongType => default
@@ -18,12 +18,24 @@ object ConfigHelper {
 
   }
 
-  def possiblyInConfig(c: Config, field: String, default: Boolean): Boolean = {
+  def possiblyInConfig(c: Option[Config], field: String, default: Boolean): Boolean = {
     c match {
-      case null => default
-      case _ =>
+      case None => default
+      case Some(config) =>
         try {
-          c.getBoolean(field)
+          config.getBoolean(field)
+        } catch {
+          case _: Exception => default
+        }
+    }
+  }
+
+  def possiblyInConfig(c: Option[Config], field: String, default: Integer): Integer = {
+    c match {
+      case None => default
+      case Some(config) =>
+        try {
+          config.getInt(field)
         } catch {
           case _: Exception => default
         }
