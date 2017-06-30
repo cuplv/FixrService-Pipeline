@@ -31,3 +31,28 @@ Partial Pipe   l[I,D]   ::=   :--Tr[I,O]-->  Dm[O]    D == O           -- Partia
                          |    l[I,L] ~ l[I,R]         D == Either L R  -- PartialParallelPipes[I,L,R]
 ```
 
+The equivalent in Haskell datatypes:
+
+```
+data DataMap d = DataMap d
+
+data Transform i o = Transform i o
+
+data Compose l r
+
+data Pipe d where
+   DataNode :: DataMap d -> Pipe d
+   TransformPipe :: Pipe i -> Transform i o -> DataMap o -> Pipe o
+   ComposePipe  :: Pipe l -> Compose l r -> Pipe r -> Pipe (i,o)
+   JunctionPipe :: Pipe i -> PartialPipe i o -> Pipe o
+   ParallelPipe :: Pipe l -> Pipe r -> Pipe (Either l r)
+
+data PartialPipe i o where
+   PartialTransformPipe :: Transform i o -> DataMap o -> PartialPipe i o
+   PartialComposePipe :: Compose l r -> Pipe r -> PartialPipe l r
+   PartialHeadPipe :: PartialPipe i d -> PartialPipe d o -> PartialPipe i o
+   PartialParallelPipe :: PartialPipe i l -> PartialPipe i r -> PartialPipe i (Either l r)
+```
+
+And that's all the Haskell we should ever write for this project!
+
