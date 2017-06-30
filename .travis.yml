@@ -3,3 +3,10 @@ language: scala
 scala:
    - 2.10.4
    - 2.12.1
+
+#jdk:
+#  - oraclejdk8
+#script:
+#  - sbt clean coverage test
+#after_success:
+#  - sbt coverageReport coveralls codacyCoverage
