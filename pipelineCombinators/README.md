@@ -43,7 +43,7 @@ data Compose l r
 data Pipe d where
    DataNode :: DataMap d -> Pipe d
    TransformPipe :: Pipe i -> Transform i o -> DataMap o -> Pipe o
-   ComposePipe  :: Pipe l -> Compose l r -> Pipe r -> Pipe (i,r)
+   ComposePipe  :: Pipe l -> Compose l r -> Pipe r -> Pipe (l,r)
    JunctionPipe :: Pipe i -> PartialPipe i o -> Pipe o
    ParallelPipe :: Pipe l -> Pipe r -> Pipe (Either l r)
 
