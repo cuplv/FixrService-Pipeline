@@ -67,7 +67,11 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
         val numberOfActors = ConfigHelper.possiblyInConfig(c, "numberOfRemoteActors", 0)
         def buildAnActorList(aList: List[ActorRef], actorsLeft: Int, prefix: String): List[ActorRef] = actorsLeft match {
           case 0 => aList
-          case x => actorSys.actorOf(Props(new FunctionActor(compute)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList
+          case x =>
+            buildAnActorList(
+              actorSys.actorOf(Props(new FunctionActor(compute)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
+              actorsLeft-1, prefix
+            )
         }
         val remoteList = buildAnActorList(List.empty[ActorRef], numberOfActors, "remoteActor")
         //Next step: Local Actors! :)

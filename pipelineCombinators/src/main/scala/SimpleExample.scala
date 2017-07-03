@@ -1,3 +1,6 @@
+import java.io.File
+
+import com.typesafe.config.{Config, ConfigFactory}
 import pipecombi._
 
 /**
@@ -34,7 +37,7 @@ object PlusOne extends IncrTransformer[IDInt, IDInt] {
   override def toString: String = "_+1"
 }
 
-case class Plus(n: Int) extends IncrTransformer[IDInt, IDInt] {
+case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -82,7 +85,7 @@ object BProduct extends Composer[IDInt, IDInt] {
 object Example1 {
 
    def main(args: Array[String]): Unit = {
-
+     implicit val conf = Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
      val m0 = IDInt.mkMap(List(101,203), "m0")
      val m1 = IDInt.mkMap(List(10,27,34), "m1")
      val m2 = new InMemDataMap[IDInt](name = "m2")
