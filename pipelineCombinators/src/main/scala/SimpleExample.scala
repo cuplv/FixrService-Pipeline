@@ -49,6 +49,18 @@ case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransf
   override def toString: String = s"_+$n"
 }
 
+case class PlusSleep(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf){
+  override val version = "0.1"
+
+  override val statMap = new InMemDataMap[Stat]()
+  override val provMap = new InMemDataMap[Identity]()
+  override val errMap = new InMemDataMap[ErrorSummary]()
+
+  override def compute(input: IDInt): List[IDInt] = List(IDInt{Thread.sleep(input.i*1000); input.i + n})
+
+  override def toString: String = s"_+$n"
+}
+
 object TimesPair extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
   override val version = "0.1"
 
@@ -96,15 +108,19 @@ object Example1 {
      val m6 = new InMemDataMap[IDInt](name = "m6")
      val m7 = new InMemDataMap[IDInt](name = "m7")
      val m8 = new InMemDataMap[IDInt](name = "m8")
+     val m9 = IDInt.mkMap(List(6,2,4), "m9")
+     val m10 = new InMemDataMap[IDInt](name = "m10")
 
      // { (m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3) } :--TimesPair--> m4
 
      import Implicits._
 
+     /*
      val pipe = { ((m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3)) :--TimesPair--> m4 } :< {
        (PlusOne--> m5) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
-     }
+     } // */
 
+     val pipe = m9 :--PlusSleep(1)--> m10
      println(pipe)
 
      pipe.run()
@@ -118,7 +134,8 @@ object Example1 {
      println(s"m6: ${m6.toString}")
      println(s"m7: ${m7.toString}")
      println(s"m8: ${m8.toString}")
-
+     println(s"m9: ${m9.toString}")
+     println(s"m10: ${m10.toString}")
    }
 
 }
