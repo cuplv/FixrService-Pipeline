@@ -17,7 +17,16 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] with Actor {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] {
+  val stepActor: ActorRef = ActorSystem().actorOf(Props(new StepActor(this)))
+  val context: ActorContext = {
+    val futContext = stepActor.ask("context")(Timeout(1 second))
+    Await.ready(futContext, 1 second)
+    futContext.value match{
+      case Some(Success(a: ActorContext)) => a
+      case _ => null
+    }
+  }
   def compute(input: Input): List[Output]
 
   def process(iFeat: DataMap[Input], oFeat: DataMap[Output]): DataMap[Output]
@@ -77,7 +86,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
           case 0 => aList
           case x =>
             buildAnActorList(
-              context.actorOf(Props(new FunctionActor(compute, timer)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
+              context.system.actorOf(Props(new FunctionActor(compute, timer)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
               actorsLeft-1, prefix
             )
         }
@@ -192,7 +201,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
               }) + " has already been completed!")
               None
             }
-            case Error if (errMap.get(inputId) match{
+            case Error if (errMap.get(inputId) match{ //Error Blacklist
                 case Some(e) =>
                   def falseLoop(errList: List[String]): Boolean = errList match{
                     case Nil => false
@@ -247,6 +256,29 @@ class FunctionActor[Input <: Identifiable, Output <: Identifiable](func: Input=>
         case e: Exception => sender() ! e
       }
     case _ => List.empty[Output]
+  }
+}
+
+class StepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[Input, Output]) extends Actor {
+  def receive = {
+    case "context" => sender() ! context
+    case (dmI: DataMap[Input], dmO: DataMap[Output]) =>
+      try{
+        sender() ! t.process(dmI, dmO)
+      } catch {
+        case e: Exception => sender() ! e
+      }
+    case (dmI: DataMap[Input], dmO: DataMap[Output], n: Int) =>
+      try{
+        //Only send n things inside the DataMap
+        //We'll handle this here?
+        //This assumes that DataMaps are idempotent.
+        val keysAndValues = dmI.identities.zip(dmI.items)
+        
+        sender() ! t.process(dmI, dmO)
+      } catch {
+        case e: Exception => sender() ! e
+      }
   }
 }
 
