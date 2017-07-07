@@ -115,13 +115,12 @@ object Example1 {
 
      import Implicits._
 
-     /*
      val pipe = { ((m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3)) :--TimesPair--> m4 } :< {
-       (PlusOne--> m5) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
-     } // */
+       (PlusOne--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
+     }
 
-     val pipe = m9 :--PlusSleep(1)--> m10
-     println(pipe)
+     //val pipe = m9 :--PlusSleep(1)--> m10
+     //println(pipe)
 
      pipe.run()
 

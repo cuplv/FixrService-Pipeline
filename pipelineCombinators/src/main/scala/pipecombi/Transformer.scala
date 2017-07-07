@@ -1,5 +1,5 @@
 package pipecombi
-import akka.actor.{Actor, ActorRef, ActorSystem, Props, ReceiveTimeout}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props, ReceiveTimeout, ActorContext}
 import akka.util.Timeout
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigObject}
@@ -17,7 +17,7 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] with Actor {
   def compute(input: Input): List[Output]
 
   def process(iFeat: DataMap[Input], oFeat: DataMap[Output]): DataMap[Output]
@@ -26,6 +26,7 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extend
   // def --> (output: DataMap[Output]): Transformation[Input, Output] = Transformation(this, output)
 
   def -->(output: DataMap[Output]): PartialTransformationPipe[Input, Output] = PartialTransformationPipe(this, output)
+
 }
 
 
@@ -42,8 +43,9 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c: Option[Config] = None) extends Transformer[Input, Output] {
-  val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
-  implicit val executionContext = actorSys.dispatcher
+  //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
+  //val actorSys: ActorSystem = context.system
+  implicit val executionContext = context.system.dispatcher
   val timer = 5 seconds
   val verbose = ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
   val errList = ConfigHelper.possiblyInConfig(c, "exceptionsBlacklist", List.empty[String])
@@ -52,7 +54,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
   } */
   def addAnActor(numberOfCores: Integer, list: List[ActorRef]): List[ActorRef] = numberOfCores match {
     case x if x == 0 => list
-    case x => addAnActor(numberOfCores-1, actorSys.actorOf(Props(new FunctionActor(compute, timer)), "FunctionActor"+(numberOfCores-1).toString) :: list)
+    case x => addAnActor(numberOfCores-1, context.actorOf(Props(new FunctionActor(compute, timer)), "FunctionActor"+(numberOfCores-1).toString) :: list)
   }
   val actorList: List[ActorRef] = c match{
     case None =>  //default case
@@ -75,7 +77,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
           case 0 => aList
           case x =>
             buildAnActorList(
-              actorSys.actorOf(Props(new FunctionActor(compute, timer)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
+              context.actorOf(Props(new FunctionActor(compute, timer)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
               actorsLeft-1, prefix
             )
         }
@@ -113,7 +115,6 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
   def multiComputeThenStore(inputs: List[Input], outputMap: DataMap[Output]): List[Output] = {
     val inputsMaxLength = math.ceil(inputs.length/(actorListLength*1.0)).toInt+1
     //The way I wrote this, each future's index corresponds to inputs.reverse's index.
-    @tailrec
     def divideOntoActors(inputs: List[Input], actors: List[ActorRef], futures: List[Future[Any]]): (List[Input], List[Future[Any]]) = (inputs.length, actors.length) match {
       case (0, _) => (inputs, futures)
       case (_, 0) => (inputs, futures)
@@ -123,7 +124,6 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
         divideOntoActors(inputs.tail, actors.tail, currList)
     }
 
-    @tailrec
     def getListOfFutureOutputs(inputs: List[Input], actors: List[ActorRef], futures: List[Future[Any]]): (List[Input], List[Future[Any]]) = inputs.length match {
       case 0 => (inputs, futures)
       case x =>
@@ -169,6 +169,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
         }
         catch{
           case e: Exception =>
+            if (verbose) println(input.identity.id + " timed out.")
             errMap.put(input.identity, GeneralErrorSummary(e))
             statMap.put(input.identity, Error)
             oList
@@ -230,7 +231,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
     // println(inputs)
     //inputs.flatMap( tryComputeThenStore(_, outputMap) )
     multiComputeThenStore(inputs, outputMap)
-    actorSys.terminate
+    //actorSys.terminate
     outputMap
   }
 }
