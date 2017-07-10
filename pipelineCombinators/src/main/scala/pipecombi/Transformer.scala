@@ -18,7 +18,7 @@ import scala.concurrent.{Await, Future}
 
 
 abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] {
-  val stepActor: ActorRef = ActorSystem().actorOf(Props(new StepActor(this)))
+  val stepActor: ActorRef = ActorSystem().actorOf(Props(new StepActor(this))) //FIX: This creates a new actor system for each step actor.
   val context: ActorContext = {
     val futContext = stepActor.ask("context")(Timeout(1 second))
     Await.ready(futContext, 1 second)
@@ -28,6 +28,10 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extend
     }
   }
   def compute(input: Input): List[Output]
+
+  def computeAndStore(inputs: List[Input], outputMap: DataMap[Output]): List[Output] = List.empty[Output] //Override this method
+
+  def getListofInputs(inputMap: DataMap[Input]): List[Input]
 
   def process(iFeat: DataMap[Input], oFeat: DataMap[Output]): DataMap[Output]
   override def operate(arg1: DataMap[Input], arg2: DataMap[Output]): DataMap[Output] = process(arg1,arg2)
@@ -101,6 +105,9 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
   }
   val actorListLength = actorList.length
   //implicit val timeout = Timeout(10 hours)
+
+  def computeThenStore(input: List[Input], outputMap: DataMap[Output]): List[Output] = multiComputeThenStore(input, outputMap)
+
   def tryComputeThenStore(input: Input, outputMap: DataMap[Output]): List[Output] = {
     try {
       compute(input).map(
@@ -186,9 +193,8 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
     }.reverse
   }
 
-  def process(inputMap: DataMap[Input], outputMap : DataMap[Output]): DataMap[Output] = {
-    // println("Process started: " + inputMap.identities)
-    val inputs = inputMap.identities.flatMap(
+  def getListofInputs(inputMap: DataMap[Input]): List[Input] = {
+    inputMap.identities.flatMap(
       inputId => statMap.get(inputId) match {
         case Some(stat) => {
           // println(stat)
@@ -202,14 +208,14 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
               None
             }
             case Error if (errMap.get(inputId) match{ //Error Blacklist
-                case Some(e) =>
-                  def falseLoop(errList: List[String]): Boolean = errList match{
-                    case Nil => false
-                    case errSum :: rest => if (errSum.equals(e.identity().id)) true else falseLoop(rest)
-                  }
-                  falseLoop(errList)
-                case None => false //Assume that the error status was a fluke.
-              }) => None //There's nothing we can do here.
+              case Some(e) =>
+                def falseLoop(errList: List[String]): Boolean = errList match{
+                  case Nil => false
+                  case errSum :: rest => if (errSum.equals(e.identity().id)) true else falseLoop(rest)
+                }
+                falseLoop(errList)
+              case None => false //Assume that the error status was a fluke.
+            }) => None //There's nothing we can do here.
             case default => {
               // Status is either NotDone or Error. For now, just recompute in both cases
               inputMap.get(inputId) match {
@@ -237,6 +243,11 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
         }
       }
     )
+  }
+
+  def process(inputMap: DataMap[Input], outputMap : DataMap[Output]): DataMap[Output] = {
+    // println("Process started: " + inputMap.identities)
+    val inputs = getListofInputs(inputMap)
     // println(inputs)
     //inputs.flatMap( tryComputeThenStore(_, outputMap) )
     multiComputeThenStore(inputs, outputMap)
@@ -262,22 +273,27 @@ class FunctionActor[Input <: Identifiable, Output <: Identifiable](func: Input=>
 class StepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[Input, Output]) extends Actor {
   def receive = {
     case "context" => sender() ! context
-    case (dmI: DataMap[Input], dmO: DataMap[Output]) =>
+    case (dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef) =>
       try{
-        sender() ! t.process(dmI, dmO)
+        aRef ! (t.process(dmI, dmO), "output")
       } catch {
-        case e: Exception => sender() ! e
+        case e: Exception => aRef ! (e, "output")
       }
-    case (dmI: DataMap[Input], dmO: DataMap[Output], n: Int) =>
+    case (dmI: DataMap[Input], dmO: DataMap[Output], n: Int, aRef: ActorRef) =>
       try{
         //Only send n things inside the DataMap
-        //We'll handle this here?
-        //This assumes that DataMaps are idempotent.
-        val keysAndValues = dmI.identities.zip(dmI.items)
-        
-        sender() ! t.process(dmI, dmO)
+        def sendBatches(lI: List[Input], dmO: DataMap[Output], n: Int): DataMap[Output] = {
+          val (currBatch, nextBatch) = lI.splitAt(n)
+          t.computeAndStore(currBatch, dmO)
+          aRef ! (dmO, "output")
+          nextBatch match{
+            case Nil => dmO
+            case _ => sendBatches(nextBatch, dmO, n)
+          }
+        }
+        sendBatches(t.getListofInputs(dmI), dmO, n)
       } catch {
-        case e: Exception => sender() ! e
+        case e: Exception => aRef ! (e, "output")
       }
   }
 }

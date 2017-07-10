@@ -2,7 +2,7 @@ package pipecombi
 
 import Implicits.DataNode
 import pipecombi.Identifiable
-import akka.actor.{ActorSystem, Actor}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 /**
   * Created by edmundlam on 6/23/17.
@@ -50,6 +50,7 @@ object Implicits {
 
 case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
       (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output]) extends Pipe[Output] {
+  ActorSystem().actorOf(Props(new PipeActor(trans.stepActor, List(), output))) //Find a way to get the next step's actor somehow.
   override def toString: String = s"${input.toString} :--${trans.toString}--> ${output.displayName}"
   override def run(): DataMap[Output] = {
     val map = trans.process(input.run(),output)
@@ -117,4 +118,16 @@ case class ParallelPartialPipes[Input <: Identifiable, Output1 <: Identifiable, 
       (p1: PartialPipe[Input, Output1], p2: PartialPipe[Input, Output2]) extends PartialPipe[Input, pipecombi.Either[Output1,Output2]] {
   override def completeWith(input: Pipe[Input]): Pipe[pipecombi.Either[Output1, Output2]] = ParallelPipes( p1.completeWith(input), p2.completeWith(input) )
   override def toString: String = s"\n   ${p1.toString}\n   ${p2.toString}"
+}
+
+class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRef, nextSteps: List[ActorRef], outputMap: DataMap[Output]) extends Actor {
+  def receive: Receive = {
+    case (d: DataMap[Input], "input") => currStep ! (d, outputMap, self)
+    case (d: DataMap[Input], n: Int, "input") => currStep ! (d, outputMap, n, self)
+    case (d: DataMap[Output], "output") =>
+      nextSteps.foldLeft(){
+        case (_, nextStep) => nextStep ! (d, "input")
+      }
+    case _ => ()
+  }
 }

@@ -156,8 +156,12 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
 
   def getSDoc(s: String): SDoc = {
     s.indexOf(delimiter) match{
-      case -1 => Identity(s, None).asInstanceOf[SDoc]
-      case x => Identity(s.substring(0,x), Some(s.substring(x+delimiter.length))).asInstanceOf[SDoc]
+      case -1 => new Identifiable{
+        def identity() = Identity(s, None)
+      }.asInstanceOf[SDoc]
+      case x => new Identifiable{
+        def identity() = Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
+      }.asInstanceOf[SDoc]
     }
   }
 
