@@ -1,5 +1,6 @@
 import java.io.File
 
+import akka.actor.ActorSystem
 import com.typesafe.config.{Config, ConfigFactory}
 import pipecombi._
 
@@ -25,7 +26,7 @@ case class IDInt(i : Int) extends Identifiable {
    override def identity(): Identity = Identity(i.toString,None)
 }
 
-object PlusOne extends IncrTransformer[IDInt, IDInt] {
+case class PlusOne()(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt] {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -61,7 +62,7 @@ case class PlusSleep(n: Int)(implicit conf: Option[Config] = None) extends IncrT
   override def toString: String = s"_+$n"
 }
 
-object TimesPair extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
+case class TimesPair()(implicit system: ActorSystem) extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -75,7 +76,7 @@ object TimesPair extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
   override def toString: String = "_*_"
 
 }
-
+/*
 object BProduct extends Composer[IDInt, IDInt] {
   override val version = "0.1"
 
@@ -93,11 +94,12 @@ object BProduct extends Composer[IDInt, IDInt] {
     outMap
   }
 }
-
+*/
 object Example1 {
 
    def main(args: Array[String]): Unit = {
      implicit val conf = Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
+     implicit val system = ActorSystem()
      val m0 = IDInt.mkMap(List(101,203), "m0")
      val m1 = IDInt.mkMap(List(10,27,34), "m1")
      val m2 = new InMemDataMap[IDInt](name = "m2")
@@ -115,8 +117,8 @@ object Example1 {
 
      import Implicits._
 
-     val pipe = { ((m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3)) :--TimesPair--> m4 } :< {
-       (PlusOne--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
+     val pipe = { ((m0 :--PlusOne()--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne()--> m3)) :--TimesPair()--> m4 } :< {
+       (PlusOne()--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
      }
 
      //val pipe = m9 :--PlusSleep(1)--> m10

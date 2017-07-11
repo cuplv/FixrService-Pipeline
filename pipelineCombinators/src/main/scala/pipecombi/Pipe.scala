@@ -25,6 +25,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 
 abstract class Pipe[Data <: Identifiable] {
+  val aRef: Option[ActorRef] = None
   def :--[Next <: Identifiable](parTrans: PartialTransformationPipe[Data,Next]): Pipe[Next] = {
     TransformationPipe(this, parTrans.trans, parTrans.output)
   }
@@ -36,6 +37,7 @@ abstract class Pipe[Data <: Identifiable] {
     JunctionPipe(this, p)
   }
   def run(): DataMap[Data]
+
 }
 
 object Implicits {
@@ -50,7 +52,7 @@ object Implicits {
 
 case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
       (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output]) extends Pipe[Output] {
-  ActorSystem().actorOf(Props(new PipeActor(trans.stepActor, List(), output))) //Find a way to get the next step's actor somehow.
+  override val aRef = Some(ActorSystem().actorOf(Props(new PipeActor(trans.stepActor, output))))
   override def toString: String = s"${input.toString} :--${trans.toString}--> ${output.displayName}"
   override def run(): DataMap[Output] = {
     val map = trans.process(input.run(),output)
@@ -61,6 +63,7 @@ case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
 
 case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
       (inputL: Pipe[InputL], comp: Composer[InputL,InputR], inputR: Pipe[InputR]) extends Pipe[pipecombi.Pair[InputL,InputR]] {
+  override val aRef = Some(ActorSystem().actorOf(Props(new ComposedPipeActor(comp))))
   override def toString: String = s"${inputL.toString} <-*${comp.toString}*-> ${inputR.toString}"
   override def run(): DataMap[pipecombi.Pair[InputL,InputR]] = {
     val map = comp.compose(inputL.run(), inputR.run())
@@ -71,7 +74,7 @@ case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
 
 case class ParallelPipes[OutputL <: Identifiable, OutputR <: Identifiable]
       (outputL: Pipe[OutputL], outputR: Pipe[OutputR]) extends Pipe[pipecombi.Either[OutputL,OutputR]] {
-
+  
   override def run(): DataMap[pipecombi.Either[OutputL,OutputR]] = {
     val mapL: DataMap[OutputL] = outputL.run()
     val mapR: DataMap[OutputR] = outputR.run()
@@ -120,14 +123,116 @@ case class ParallelPartialPipes[Input <: Identifiable, Output1 <: Identifiable, 
   override def toString: String = s"\n   ${p1.toString}\n   ${p2.toString}"
 }
 
-class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRef, nextSteps: List[ActorRef], outputMap: DataMap[Output]) extends Actor {
-  def receive: Receive = {
+class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRef, outputMap: DataMap[Output]) extends Actor {
+  import context._
+  def receive: Receive = { //Assume there's no next step after this.
+    case (acRef: ActorRef, "nextStep") => become(haveNextSteps(List((acRef, ""))))
+    case (acRef: ActorRef, "nextStepL") => become(haveNextSteps(List((acRef, "L"))))
+    case (acRef: ActorRef, "nextStepR") => become(haveNextSteps(List((acRef, "R"))))
+    case (d: DataMap[Input], "input") => currStep ! (d, outputMap, self)
+    case (d: DataMap[Input], n: Int, "input") => currStep ! (d, outputMap, n, self)
+    case _ => ()
+  }
+
+  def haveNextSteps(nextSteps: List[(ActorRef, String)]): Receive = {
+    case (acRef: ActorRef, "nextStep") => become(haveNextSteps((acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(haveNextSteps((acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(haveNextSteps((acRef, "R") :: nextSteps))
     case (d: DataMap[Input], "input") => currStep ! (d, outputMap, self)
     case (d: DataMap[Input], n: Int, "input") => currStep ! (d, outputMap, n, self)
     case (d: DataMap[Output], "output") =>
       nextSteps.foldLeft(){
-        case (_, nextStep) => nextStep ! (d, "input")
+        case (_, (nextStep, "")) => nextStep ! (d, "input")
+        case (_, (nextStep, "L")) => nextStep ! (d, "inputL")
+        case (_, (nextStep, "R")) => nextStep ! (d, "inputR")
       }
+    case "readyToCompose" =>
+      nextSteps.foldLeft(){
+        case (_, (nextStep, "L")) => nextStep ! "readyToComposeL"
+        case (_, (nextStep, "R")) => nextStep ! "readyToComposeR"
+        case _ => ()
+      }
+    case _ => ()
+  }
+}
+
+class ComposedPipeActor[InputL <: Identifiable, InputR <: Identifiable](currStep: Composer[InputL, InputR]) extends Actor {
+  import context._
+  def composeAndSend(dML: DataMap[InputL], dMR: DataMap[InputR], nextSteps: List[(ActorRef, String)]): Unit = {
+    val dMap = currStep.compose(dML, dMR)
+    nextSteps.foldLeft(){
+      case (_, (nextStep, "")) => nextStep ! (dMap, "input")
+      case (_, (nextStep, "L")) =>
+        nextStep ! (dMap, "inputL")
+        nextStep ! "readyToComposeL"
+      case (_, (nextStep, "R")) =>
+        nextStep ! (dMap, "inputR")
+        nextStep ! "readyToComposeR"
+    }
+  }
+
+  def dataMapLGotten(dML: DataMap[InputL], rTCL: Boolean, nextSteps: List[(ActorRef, String)]): Receive = {
+    case (d: DataMap[InputL], "inputL") => become(dataMapLGotten(d, rTCL, nextSteps))
+    case (d: DataMap[InputR], "inputR") => become(dataMapLRGotten(dML, d, (rTCL, false), nextSteps))
+    case (acRef: ActorRef, "nextStep") => become(dataMapLGotten(dML, rTCL, (acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(dataMapLGotten(dML, rTCL, (acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(dataMapLGotten(dML, rTCL, (acRef, "R") :: nextSteps))
+    case "readyToComposeL" => become(dataMapLGotten(dML, rTCL = true, nextSteps))
+    case _ => ()
+  }
+
+  def dataMapRGotten(dMR: DataMap[InputR], rTCR: Boolean, nextSteps: List[(ActorRef, String)]): Receive = {
+    case (d: DataMap[InputL], "inputL") => become(dataMapLRGotten(d, dMR, (false, rTCR), nextSteps))
+    case (d: DataMap[InputR], "inputR") => become(dataMapRGotten(d, rTCR, nextSteps))
+    case (acRef: ActorRef, "nextStep") => become(dataMapRGotten(dMR, rTCR, (acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(dataMapRGotten(dMR, rTCR, (acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(dataMapRGotten(dMR, rTCR, (acRef, "R") :: nextSteps))
+    case "readyToComposeR" => become(dataMapRGotten(dMR, rTCR = true, nextSteps))
+    case _ => ()
+  }
+
+  def dataMapLRGotten(dML: DataMap[InputL], dMR: DataMap[InputR], rTC: (Boolean, Boolean), nextSteps: List[(ActorRef, String)]): Receive = {
+    case (d: DataMap[InputL], "inputL") => become(dataMapLRGotten(d, dMR, rTC, nextSteps))
+    case (d: DataMap[InputR], "inputR") => become(dataMapLRGotten(dML, d, rTC, nextSteps))
+    case (acRef: ActorRef, "nextStep") => become(dataMapLRGotten(dML, dMR, rTC, (acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(dataMapLRGotten(dML, dMR, rTC, (acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(dataMapLRGotten(dML, dMR, rTC, (acRef, "R") :: nextSteps))
+    case "readyToComposeL" => rTC match{
+      case (_, false) => become(dataMapLRGotten(dML, dMR, (true, false), nextSteps))
+      case (_, true) =>
+        composeAndSend(dML, dMR, nextSteps)
+        become(dataMapLRGotten(dML, dMR, (true, true), nextSteps))
+    }
+    case "readyToComposeR" => rTC match{
+      case (false, _) => become(dataMapLRGotten(dML, dMR, (false, true), nextSteps))
+      case (true, _) =>
+        composeAndSend(dML, dMR, nextSteps)
+        become(dataMapLRGotten(dML, dMR, (true, true), nextSteps))
+    }
+    case (d: DataMap[pipecombi.Pair[InputL, InputR]] @ unchecked, "composed") =>
+      nextSteps.foldLeft(){
+        case (_, (nextStep, "")) => nextStep ! (d, "input")
+        case (_, (nextStep, "L")) => nextStep ! (d, "inputL")
+        case (_, (nextStep, "R")) => nextStep ! (d, "inputR")
+      }
+    case _ => ()
+  }
+
+  def dataMapNoGotten(nextSteps: List[(ActorRef, String)]): Receive = {
+    case (d: DataMap[InputL], "inputL") => become(dataMapLGotten(d, rTCL = false, nextSteps))
+    case (d: DataMap[InputR], "inputR") => become(dataMapRGotten(d, rTCR = false, nextSteps))
+    case (acRef: ActorRef, "nextStep") => become(dataMapNoGotten((acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(dataMapNoGotten((acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(dataMapNoGotten((acRef, "R") :: nextSteps))
+    case _ => ()
+  }
+
+  def receive: Receive = {
+    case (d: DataMap[InputL], "inputL") => become(dataMapLGotten(d, rTCL = false, List()))
+    case (d: DataMap[InputR], "inputR") => become(dataMapRGotten(d, rTCR = false, List()))
+    case (acRef: ActorRef, "nextStep") => become(dataMapNoGotten(List((acRef, ""))))
+    case (acRef: ActorRef, "nextStepL") => become(dataMapNoGotten(List((acRef, "L"))))
+    case (acRef: ActorRef, "nextStepR") => become(dataMapNoGotten(List((acRef, "R"))))
     case _ => ()
   }
 }

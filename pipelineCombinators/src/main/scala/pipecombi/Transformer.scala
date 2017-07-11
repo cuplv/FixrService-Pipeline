@@ -276,6 +276,7 @@ class StepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[In
     case (dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef) =>
       try{
         aRef ! (t.process(dmI, dmO), "output")
+        aRef ! "readyToCompose"
       } catch {
         case e: Exception => aRef ! (e, "output")
       }
@@ -292,11 +293,11 @@ class StepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[In
           }
         }
         sendBatches(t.getListofInputs(dmI), dmO, n)
+        aRef ! "readyToCompose"
       } catch {
         case e: Exception => aRef ! (e, "output")
       }
   }
 }
-
 
 
