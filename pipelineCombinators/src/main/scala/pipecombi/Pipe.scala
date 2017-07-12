@@ -1,7 +1,7 @@
 package pipecombi
 
 import Implicits.DataNode
-import pipecombi.Identifiable
+//import pipecombi.Identifiable //UNNEEDED IMPORT STATEMENT
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 /**
@@ -32,20 +32,35 @@ abstract class Pipe[Data <: Identifiable] {
   def <-*[Other <: Identifiable](parComp: PartialCompositionPipe[Data,Other]): Pipe[pipecombi.Pair[Data,Other]] = {
     CompositionPipe(this, parComp.comp, parComp.inputR)
   }
-  def :<[Next <: Identifiable](p: PartialPipe[Data,Next]): Pipe[Next] = {
+  def :<[Next <: Identifiable](p: PartialPipe[Data,Next])(implicit system: ActorSystem): Pipe[Next] = {
     // p.completeWith(this)
     JunctionPipe(this, p)
   }
   def run(): DataMap[Data]
-
+  def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = List.empty[(ActorRef, String)]
 }
 
 object Implicits {
-  implicit class DataNode[Data <: Identifiable](map: DataMap[Data]) extends Pipe[Data] {
+  implicit class DataNode[Data <: Identifiable](map: DataMap[Data])(implicit system: ActorSystem, parallel: Boolean = false) extends Pipe[Data] {
+    val dMap: DataMap[Data] = map
+    override val aRef =
+      if (!parallel) Some(system.actorOf(Props(new SimplePipeActor[Data](this)))) else None
     override def toString: String = map.displayName
     override def run(): DataMap[Data] = {
       println(s"DataMap ${map.displayName} Computed")
       map
+    }
+
+    override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+      aRef match {
+        case Some(acRef) =>
+          nextSteps foreach { nextStep => acRef ! nextStep }
+          (acRef, "") :: firstSteps
+        case None =>
+          nextSteps.foldRight(firstSteps){
+            case ((nextStep, code), list) => (nextStep, code+"P") :: list
+          }
+      }
     }
   }
 }
@@ -59,6 +74,12 @@ case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
     println(s"Computed transformation ${trans.toString} and deposited data in ${output.displayName}")
     map
   }
+
+  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+    val acRef = aRef.value
+    nextSteps.foreach{ nextStep => acRef ! nextStep }
+    input.build(List((acRef, "nextStep")), firstSteps)
+  }
 }
 
 case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
@@ -70,6 +91,13 @@ case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
     println(s"Computed composition ${comp.toString}")
     map
   }
+
+  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+    val acRef = aRef.value
+    nextSteps.foreach{ nextStep => acRef ! nextStep }
+    inputR.build(List((acRef, "nextStepR")), inputL.build(List((acRef, "nextStepL")), firstSteps))
+  }
+
 }
 
 case class ParallelPipes[OutputL <: Identifiable, OutputR <: Identifiable]
@@ -80,12 +108,30 @@ case class ParallelPipes[OutputL <: Identifiable, OutputR <: Identifiable]
     val mapR: DataMap[OutputR] = outputR.run()
     EitherDataMap(mapL,mapR)
   }
+
+  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+    outputR.build(nextSteps, outputL.build(nextSteps, firstSteps))
+  }
 }
 
-case class JunctionPipe[Input <: Identifiable, Output <: Identifiable](input: Pipe[Input], output: PartialPipe[Input, Output]) extends Pipe[Output] {
+case class JunctionPipe[Input <: Identifiable, Output <: Identifiable](input: Pipe[Input], output: PartialPipe[Input, Output])(implicit system: ActorSystem) extends Pipe[Output] {
   override def toString: String = s"${input.toString} :< { ${output.toString} }"
   override def run(): DataMap[Output] = {
     output.completeWith(new DataNode(input.run())).run()
+    //output.completeWith(input).run()
+  }
+
+  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+    val newPipe = output.completeWith(new DataNode(new InMemDataMap[Input]())(system, true))
+    val inTheJunction = newPipe.build(List(), List())
+    val (newNextSteps, newFirstSteps) = inTheJunction.foldRight((nextSteps, firstSteps)){
+      case ((a, "nextStepP"), (newSteps, currSteps)) => ((a, "nextStep") :: newSteps, currSteps)
+      case ((a, "nextStepLP"), (newSteps, currSteps)) => ((a, "nextStepL") :: newSteps, currSteps)
+      case ((a, "nextStepRP"), (newSteps, currSteps)) => ((a, "nextStepR") :: newSteps, currSteps)
+      case ((a, s), (newSteps, currSteps)) => (newSteps, (a, s) :: currSteps)
+      case (_, x) => x
+    }
+    input.build(newNextSteps, newFirstSteps)
   }
 }
 
@@ -234,5 +280,31 @@ class ComposedPipeActor[InputL <: Identifiable, InputR <: Identifiable](currStep
     case (acRef: ActorRef, "nextStepL") => become(dataMapNoGotten(List((acRef, "L"))))
     case (acRef: ActorRef, "nextStepR") => become(dataMapNoGotten(List((acRef, "R"))))
     case _ => ()
+  }
+}
+
+class SimplePipeActor[Data <: Identifiable](d: DataNode[Data]) extends Actor {
+  import context._
+  def receive: Receive = {
+    case (acRef: ActorRef, "nextStep") => become(haveNextSteps(List((acRef, ""))))
+    case (acRef: ActorRef, "nextStepL") => become(haveNextSteps(List((acRef, "L"))))
+    case (acRef: ActorRef, "nextStepR") => become(haveNextSteps(List((acRef, "R"))))
+    case _ => ()
+  }
+
+  def haveNextSteps(nextSteps: List[(ActorRef, String)]): Receive = {
+    case (acRef: ActorRef, "nextStep") => become(haveNextSteps((acRef, "") :: nextSteps))
+    case (acRef: ActorRef, "nextStepL") => become(haveNextSteps((acRef, "L") :: nextSteps))
+    case (acRef: ActorRef, "nextStepR") => become(haveNextSteps((acRef, "R") :: nextSteps))
+    case "output" => nextSteps.foreach{
+      case (nextStep, "") => nextStep ! (d.dMap, "input")
+      case (nextStep, "L") =>
+        nextStep ! (d.dMap, "inputL")
+        nextStep ! "readyToComposeL"
+      case (nextStep, "R") =>
+        nextStep ! (d.dMap, "inputR")
+        nextStep ! "readyToComposeR"
+      case _ => ()
+    }
   }
 }

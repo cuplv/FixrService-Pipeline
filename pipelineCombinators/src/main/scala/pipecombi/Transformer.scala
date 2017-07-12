@@ -17,8 +17,8 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable] extends Operator[Input, Output, Output] {
-  val stepActor: ActorRef = ActorSystem().actorOf(Props(new StepActor(this))) //FIX: This creates a new actor system for each step actor.
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+  val stepActor: ActorRef = system.actorOf(Props(new StepActor(this)))
   val context: ActorContext = {
     val futContext = stepActor.ask("context")(Timeout(1 second))
     Await.ready(futContext, 1 second)
@@ -55,7 +55,7 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c: Option[Config] = None) extends Transformer[Input, Output] {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c: Option[Config] = None)(implicit system: ActorSystem) extends Transformer[Input, Output] {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   implicit val executionContext = context.system.dispatcher

@@ -38,7 +38,7 @@ case class PlusOne()(implicit system: ActorSystem) extends IncrTransformer[IDInt
   override def toString: String = "_+1"
 }
 
-case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf) {
+case class Plus(n: Int)(implicit conf: Option[Config] = None, system: ActorSystem) extends IncrTransformer[IDInt, IDInt](conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -50,7 +50,7 @@ case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransf
   override def toString: String = s"_+$n"
 }
 
-case class PlusSleep(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf){
+case class PlusSleep(n: Int)(implicit conf: Option[Config] = None, system: ActorSystem) extends IncrTransformer[IDInt, IDInt](conf){
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()

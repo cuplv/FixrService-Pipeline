@@ -5,8 +5,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 /**
   * Created by edmundlam on 6/25/17.
   */
-abstract class Composer[InputL <: Identifiable, InputR <: Identifiable] extends Operator[InputL, InputR, pipecombi.Pair[InputL,InputR]] {
-
+abstract class Composer[InputL <: Identifiable, InputR <: Identifiable](implicit system: ActorSystem) extends Operator[InputL, InputR, pipecombi.Pair[InputL,InputR]] {
   def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]]
 
   override def operate(arg1: DataMap[InputL], arg2: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]] = compose(arg1,arg2)
@@ -16,7 +15,7 @@ abstract class Composer[InputL <: Identifiable, InputR <: Identifiable] extends 
   def *->(inputR: Pipe[InputR]): PartialCompositionPipe[InputL, InputR] = PartialCompositionPipe(this, inputR)
 }
 
-case class BatchProduct[L <: Identifiable,R <: Identifiable]() extends Composer[L, R] {
+case class BatchProduct[L <: Identifiable,R <: Identifiable]()(implicit system: ActorSystem) extends Composer[L, R] {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -37,7 +36,7 @@ case class BatchProduct[L <: Identifiable,R <: Identifiable]() extends Composer[
 }
 
 object BatchProduct {
-  def composer[L <: Identifiable,R <: Identifiable](): Composer[L,R] = BatchProduct[L,R]()
+  def composer[L <: Identifiable,R <: Identifiable]()(implicit system: ActorSystem): Composer[L,R] = BatchProduct[L,R]()(system)
 }
 
 /*
