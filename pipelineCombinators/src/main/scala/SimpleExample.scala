@@ -124,7 +124,9 @@ object Example1 {
      //val pipe = m9 :--PlusSleep(1)--> m10
      //println(pipe)
 
-     pipe.run()
+     //pipe.run()
+     pipe.run(pipe.build())
+     Thread.sleep(100)
 
      println(s"m0: ${m0.toString}")
      println(s"m1: ${m1.toString}")

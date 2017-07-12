@@ -26,10 +26,10 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 abstract class Pipe[Data <: Identifiable] {
   val aRef: Option[ActorRef] = None
-  def :--[Next <: Identifiable](parTrans: PartialTransformationPipe[Data,Next]): Pipe[Next] = {
+  def :--[Next <: Identifiable](parTrans: PartialTransformationPipe[Data,Next])(implicit system: ActorSystem): Pipe[Next] = {
     TransformationPipe(this, parTrans.trans, parTrans.output)
   }
-  def <-*[Other <: Identifiable](parComp: PartialCompositionPipe[Data,Other]): Pipe[pipecombi.Pair[Data,Other]] = {
+  def <-*[Other <: Identifiable](parComp: PartialCompositionPipe[Data,Other])(implicit system: ActorSystem): Pipe[pipecombi.Pair[Data,Other]] = {
     CompositionPipe(this, parComp.comp, parComp.inputR)
   }
   def :<[Next <: Identifiable](p: PartialPipe[Data,Next])(implicit system: ActorSystem): Pipe[Next] = {
@@ -37,7 +37,10 @@ abstract class Pipe[Data <: Identifiable] {
     JunctionPipe(this, p)
   }
   def run(): DataMap[Data]
-  def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = List.empty[(ActorRef, String)]
+  def run(refs: List[(ActorRef, String)]) = {
+    refs.foreach{ case (ref, "") => ref ! "output" }
+  }
+  def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = List.empty[(ActorRef, String)]
 }
 
 object Implicits {
@@ -51,7 +54,7 @@ object Implicits {
       map
     }
 
-    override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+    override def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = {
       aRef match {
         case Some(acRef) =>
           nextSteps foreach { nextStep => acRef ! nextStep }
@@ -66,8 +69,8 @@ object Implicits {
 }
 
 case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
-      (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output]) extends Pipe[Output] {
-  override val aRef = Some(ActorSystem().actorOf(Props(new PipeActor(trans.stepActor, output))))
+      (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output])(implicit system: ActorSystem) extends Pipe[Output] {
+  override val aRef = Some(system.actorOf(Props(new PipeActor(trans.stepActor, output))))
   override def toString: String = s"${input.toString} :--${trans.toString}--> ${output.displayName}"
   override def run(): DataMap[Output] = {
     val map = trans.process(input.run(),output)
@@ -75,7 +78,7 @@ case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
     map
   }
 
-  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+  override def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = {
     val acRef = aRef.value
     nextSteps.foreach{ nextStep => acRef ! nextStep }
     input.build(List((acRef, "nextStep")), firstSteps)
@@ -83,8 +86,8 @@ case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
 }
 
 case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
-      (inputL: Pipe[InputL], comp: Composer[InputL,InputR], inputR: Pipe[InputR]) extends Pipe[pipecombi.Pair[InputL,InputR]] {
-  override val aRef = Some(ActorSystem().actorOf(Props(new ComposedPipeActor(comp))))
+      (inputL: Pipe[InputL], comp: Composer[InputL,InputR], inputR: Pipe[InputR])(implicit system: ActorSystem) extends Pipe[pipecombi.Pair[InputL,InputR]] {
+  override val aRef = Some(system.actorOf(Props(new ComposedPipeActor(comp))))
   override def toString: String = s"${inputL.toString} <-*${comp.toString}*-> ${inputR.toString}"
   override def run(): DataMap[pipecombi.Pair[InputL,InputR]] = {
     val map = comp.compose(inputL.run(), inputR.run())
@@ -92,7 +95,7 @@ case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
     map
   }
 
-  override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
+  override def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = {
     val acRef = aRef.value
     nextSteps.foreach{ nextStep => acRef ! nextStep }
     inputR.build(List((acRef, "nextStepR")), inputL.build(List((acRef, "nextStepL")), firstSteps))
@@ -101,7 +104,7 @@ case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
 }
 
 case class ParallelPipes[OutputL <: Identifiable, OutputR <: Identifiable]
-      (outputL: Pipe[OutputL], outputR: Pipe[OutputR]) extends Pipe[pipecombi.Either[OutputL,OutputR]] {
+      (outputL: Pipe[OutputL], outputR: Pipe[OutputR])(implicit system: ActorSystem) extends Pipe[pipecombi.Either[OutputL,OutputR]] {
   
   override def run(): DataMap[pipecombi.Either[OutputL,OutputR]] = {
     val mapL: DataMap[OutputL] = outputL.run()
@@ -138,7 +141,7 @@ case class JunctionPipe[Input <: Identifiable, Output <: Identifiable](input: Pi
 
 // Partial Pipes
 
-abstract class PartialPipe[Input <: Identifiable, Data <: Identifiable] {
+abstract class PartialPipe[Input <: Identifiable, Data <: Identifiable](implicit system: ActorSystem) {
    def completeWith(input: Pipe[Input]): Pipe[Data]
    def :--[Next <: Identifiable](p: PartialTransformationPipe[Data,Next]): PartialPipe[Input,Next] = PartialHeadPipe(this, p)
    def <-*[Other <: Identifiable](p: PartialCompositionPipe[Data,Other]): PartialPipe[Input,pipecombi.Pair[Data,Other]] = PartialHeadPipe(this, p)
@@ -146,25 +149,25 @@ abstract class PartialPipe[Input <: Identifiable, Data <: Identifiable] {
 }
 
 case class PartialTransformationPipe[Input <: Identifiable, Output <: Identifiable]
-      (trans: Transformer[Input,Output], output: DataMap[Output]) extends PartialPipe[Input,Output] {
+      (trans: Transformer[Input,Output], output: DataMap[Output])(implicit system: ActorSystem) extends PartialPipe[Input,Output] {
    override def completeWith(input: Pipe[Input]): Pipe[Output] = TransformationPipe(input, trans, output)
    override def toString: String = s":--${trans.toString}--> ${output.displayName}"
 }
 
 case class PartialCompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
-      (comp: Composer[InputL,InputR], inputR: Pipe[InputR]) extends PartialPipe[InputL,pipecombi.Pair[InputL,InputR]] {
+      (comp: Composer[InputL,InputR], inputR: Pipe[InputR])(implicit system: ActorSystem) extends PartialPipe[InputL,pipecombi.Pair[InputL,InputR]] {
    override def completeWith(inputL: Pipe[InputL]): Pipe[pipecombi.Pair[InputL,InputR]] = CompositionPipe(inputL, comp, inputR)
    override def toString: String = s"<-*${comp.toString}*-> ${inputR.toString}"
 }
 
 case class PartialHeadPipe[Input <: Identifiable, Inter <: Identifiable, Output <: Identifiable]
-     (head: PartialPipe[Input,Inter], rest: PartialPipe[Inter,Output]) extends PartialPipe[Input, Output] {
+     (head: PartialPipe[Input,Inter], rest: PartialPipe[Inter,Output])(implicit system: ActorSystem) extends PartialPipe[Input, Output] {
    override def completeWith(input: Pipe[Input]): Pipe[Output] = rest.completeWith(head.completeWith(input))
    override def toString: String = s"${head.toString} ${rest.toString}"
 }
 
 case class ParallelPartialPipes[Input <: Identifiable, Output1 <: Identifiable, Output2 <: Identifiable]
-      (p1: PartialPipe[Input, Output1], p2: PartialPipe[Input, Output2]) extends PartialPipe[Input, pipecombi.Either[Output1,Output2]] {
+      (p1: PartialPipe[Input, Output1], p2: PartialPipe[Input, Output2])(implicit system: ActorSystem) extends PartialPipe[Input, pipecombi.Either[Output1,Output2]] {
   override def completeWith(input: Pipe[Input]): Pipe[pipecombi.Either[Output1, Output2]] = ParallelPipes( p1.completeWith(input), p2.completeWith(input) )
   override def toString: String = s"\n   ${p1.toString}\n   ${p2.toString}"
 }
