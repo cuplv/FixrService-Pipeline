@@ -38,7 +38,10 @@ abstract class Pipe[Data <: Identifiable] {
   }
   def run(): DataMap[Data]
   def run(refs: List[(ActorRef, String)]) = {
-    refs.foreach{ case (ref, "") => ref ! "output" }
+    refs.foreach{
+      case (ref, "") => ref ! "output"
+      case _ => ()
+    }
   }
   def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = List.empty[(ActorRef, String)]
 }
@@ -70,7 +73,7 @@ object Implicits {
 
 case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
       (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output])(implicit system: ActorSystem) extends Pipe[Output] {
-  override val aRef = Some(system.actorOf(Props(new PipeActor(trans.stepActor, output))))
+  override val aRef = Some(system.actorOf(Props(new PipeActor(trans.toString, trans.stepActor, output))))
   override def toString: String = s"${input.toString} :--${trans.toString}--> ${output.displayName}"
   override def run(): DataMap[Output] = {
     val map = trans.process(input.run(),output)
@@ -121,7 +124,6 @@ case class JunctionPipe[Input <: Identifiable, Output <: Identifiable](input: Pi
   override def toString: String = s"${input.toString} :< { ${output.toString} }"
   override def run(): DataMap[Output] = {
     output.completeWith(new DataNode(input.run())).run()
-    //output.completeWith(input).run()
   }
 
   override def build(nextSteps: List[(ActorRef, String)], firstSteps: List[(ActorRef, String)]): List[(ActorRef, String)] = {
@@ -172,7 +174,7 @@ case class ParallelPartialPipes[Input <: Identifiable, Output1 <: Identifiable, 
   override def toString: String = s"\n   ${p1.toString}\n   ${p2.toString}"
 }
 
-class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRef, outputMap: DataMap[Output]) extends Actor {
+class PipeActor[Input <: Identifiable, Output <: Identifiable](name: String, currStep: ActorRef, outputMap: DataMap[Output]) extends Actor {
   import context._
   def receive: Receive = { //Assume there's no next step after this.
     case (acRef: ActorRef, "nextStep") => become(haveNextSteps(List((acRef, ""))))
@@ -180,6 +182,7 @@ class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRe
     case (acRef: ActorRef, "nextStepR") => become(haveNextSteps(List((acRef, "R"))))
     case (d: DataMap[Input], "input") => currStep ! (d, outputMap, self)
     case (d: DataMap[Input], n: Int, "input") => currStep ! (d, outputMap, n, self)
+    case (d: DataMap[Output], "output") => println(s"Computed transformation ${name} and deposited data in ${d.displayName}")
     case _ => ()
   }
 
@@ -190,6 +193,7 @@ class PipeActor[Input <: Identifiable, Output <: Identifiable](currStep: ActorRe
     case (d: DataMap[Input], "input") => currStep ! (d, outputMap, self)
     case (d: DataMap[Input], n: Int, "input") => currStep ! (d, outputMap, n, self)
     case (d: DataMap[Output], "output") =>
+      println(s"Computed transformation ${name} and deposited data in ${d.displayName}")
       nextSteps.foldLeft(){
         case (_, (nextStep, "")) => nextStep ! (d, "input")
         case (_, (nextStep, "L")) => nextStep ! (d, "inputL")
@@ -218,6 +222,7 @@ class ComposedPipeActor[InputL <: Identifiable, InputR <: Identifiable](currStep
         nextStep ! (dMap, "inputR")
         nextStep ! "readyToComposeR"
     }
+    println(s"Computed composition ${currStep.toString}")
   }
 
   def dataMapLGotten(dML: DataMap[InputL], rTCL: Boolean, nextSteps: List[(ActorRef, String)]): Receive = {
@@ -309,5 +314,6 @@ class SimplePipeActor[Data <: Identifiable](d: DataNode[Data]) extends Actor {
         nextStep ! "readyToComposeR"
       case _ => ()
     }
+      println(s"DataMap ${d.dMap.displayName} Computed")
   }
 }
