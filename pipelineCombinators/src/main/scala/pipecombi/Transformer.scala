@@ -6,7 +6,7 @@ import com.typesafe.config.{Config, ConfigObject}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
-import scala.collection.JavaConverters
+import collection.JavaConverters._
 import pipecombi._
 
 import scala.annotation.tailrec
@@ -17,8 +17,12 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](implicit system: ActorSystem) extends Operator[Input, Output, Output] {
-  val stepActor: ActorRef = system.actorOf(Props(new StepActor(this)))
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "")(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+  val stepActor: ActorRef = name match{
+    case "" => system.actorOf(Props(new StepActor(this)))
+    case _ => system.actorOf(Props(new StepActor(this)), name)
+  }
+  val nameLength: Int = name.length
   val context: ActorContext = {
     val futContext = stepActor.ask("context")(Timeout(1 second))
     Await.ready(futContext, 1 second)
@@ -55,36 +59,68 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c: Option[Config] = None)(implicit system: ActorSystem) extends Transformer[Input, Output] {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "")(implicit system: ActorSystem, c: Option[Config] = None) extends Transformer[Input, Output](name) {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   implicit val executionContext = context.system.dispatcher
   val timer = 5 seconds
-  val verbose = ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
-  val errList = ConfigHelper.possiblyInConfig(c, "exceptionsBlacklist", List.empty[String])
-  /* val errList: List[ErrorSummary] = exceptions.foldRight(List.empty[ErrorSummary]){
-    case (exceptionInfo, excList) => GeneralErrorSummary(new Exception(exceptionInfo)) :: excList
-  } */
-  def addAnActor(numberOfCores: Integer, list: List[ActorRef]): List[ActorRef] = numberOfCores match {
+  val verbose = ConfigHelper.possiblyInConfig(c, name+"_verbosity", default = false) ||
+                ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
+  val errList = ConfigHelper.possiblyInConfig(c, name+"_exceptionsBlacklist", List.empty[String])
+  /*def addAnActor(numberOfCores: Integer, list: List[ActorRef]): List[ActorRef] = numberOfCores match {
     case x if x == 0 => list
     case x => addAnActor(numberOfCores-1, context.actorOf(Props(new FunctionActor(compute, timer)), "FunctionActor"+(numberOfCores-1).toString) :: list)
+  }*/
+  def addAnActor(actorsLeft: Int, actorString: List[String], actorList: List[ActorRef]): List[ActorRef] = (actorsLeft, actorString) match {
+    case (x, Nil) if x <= 0 => actorList
+    case (x, Nil) => addAnActor(actorsLeft-1, Nil,
+      context.actorOf(Props(new FunctionActor(compute, timer))) :: actorList)
+    case (x, curr :: rest) =>
+      def loopOverTheChildren(s: String, ac: ActorContext): Option[ActorRef] = s.indexOf('/') match{
+        case -1 => Some(ac.actorOf(Props(new FunctionActor(compute, timer)), curr))
+        case num =>
+          ac.child(s.substring(0, num)) match{
+            case Some(aRef: ActorRef) =>
+              try {
+                val futContext = stepActor.ask("context")(Timeout(1 second))
+                Await.ready(futContext, 1 second)
+                futContext.value match {
+                  case Some(Success(a: ActorContext)) => println(s.substring(num+1)); loopOverTheChildren(s.substring(num+1), a)
+                  case _ => None
+                }
+              } catch{
+                case _: Exception => None
+              }
+            case None => None
+          }
+      }
+      loopOverTheChildren(curr, context) match{
+        case Some(ac: ActorRef) => addAnActor(actorsLeft - 1, rest, ac :: actorList)
+        case None => addAnActor(actorsLeft, rest, actorList)
+      }
   }
   val actorList: List[ActorRef] = c match{
     case None =>  //default case
       //I know I have 4 cores on this machine, so for now, I'm going to say that it's 4.
       //Until I figure out a way to get the number of cores on a machine, this will be the default behavior, I guess...
-      addAnActor(4, List.empty[ActorRef])
+      addAnActor(4, List(), List())
     case Some(conf) =>
       try {
-        val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment").toConfig
-        /*val actorMap = JavaConverters.mapAsScalaMap(actorsToImplement.unwrapped())
-        actorMap.foldRight(List.empty[ActorRef]){
-          case ((s, aRef), list) => aRef match{
-              case c: ConfigObject => c.
-            }
+        val amountOfActorsMin = ConfigHelper.possiblyInConfig(c, name+"_minActors", 4) match{
+          case x if x <= 0 => 4
+          case x => x
+        }
+        val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment")
+        val actorStringList = newConf.unwrapped().asScala.toList.foldRight(List.empty[String]){
+          case ((str, _), list) => str.substring(1, nameLength+2) match{
+            case x if x.equals(name+"/") && x.length > 0 => str.substring(nameLength+2) :: list
+            case _ => list
           }
-        }*/
-        //Redundant stuff required in the config file. Please fix whenever you can.
+        }
+        println(actorStringList)
+        addAnActor(amountOfActorsMin, actorStringList, List())
+        /*
+        val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment").toConfig
         val numberOfActors = ConfigHelper.possiblyInConfig(c, "numberOfRemoteActors", 0)
         def buildAnActorList(aList: List[ActorRef], actorsLeft: Int, prefix: String): List[ActorRef] = actorsLeft match {
           case 0 => aList
@@ -98,11 +134,13 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
         //Next step: Local Actors! :)
         val numberOfLocalActors = ConfigHelper.possiblyInConfig(c, "numberOfLocalActors", 0)
         buildAnActorList(remoteList, numberOfLocalActors, "localActor")
+        */
       } catch{
-        case e: Exception => addAnActor(4, List.empty[ActorRef])
+        case e: Exception => addAnActor(4, List(), List())
       }
       //Get all of the actors out of the Actor System somehow.
   }
+  actorList.foreach{actorRef => println(actorRef.path)}
   val actorListLength = actorList.length
   //implicit val timeout = Timeout(10 hours)
 
@@ -259,6 +297,13 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
 class FunctionActor[Input <: Identifiable, Output <: Identifiable](func: Input=>List[Output], timeout: Duration) extends Actor{
   context.setReceiveTimeout(timeout)
   def receive = {
+    case "context" => sender() ! context
+    case (s: String, "YourNewChild") =>
+      try {
+        context.actorOf(Props(new FunctionActor(func, timeout)), s)
+      } catch {
+        case e: Exception => sender() ! e
+      }
     case i: Input =>
       try {
         val output = func(i)
