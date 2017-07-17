@@ -99,6 +99,26 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
         case None => addAnActor(actorsLeft, rest, actorList)
       }
   }
+  /*
+  def makeNestedMapAList(map: Map[String, Any], prefix: String = ""): List[String] = map.foldRight(List.empty[String]){
+    case ((str, res), list) => res match {
+      case "/" => println("Prefix: " + prefix+str); prefix+str :: list
+      case m: Map[String @ unchecked, Any] =>
+        println("Looping through " + str)
+        val anotherList = makeNestedMapAList(m)
+        list ::: anotherList
+      case _ => list
+    }
+  }
+  def addToNestedMap(map: Map[String, Any], str: String): Map[String, Any] = str.indexOf('/') match{
+    case -1 => map + (str -> "/")
+    case num => val newStr = str.substring(num+1)
+      map.get(str.substring(0, num)) match {
+        case Some("/") => map + (str -> addToNestedMap(Map[String, Any]() + ("/" -> ""), newStr.substring(0, str.indexOf('/'))))
+        case None => map + (str -> addToNestedMap(Map[String, Any](), newStr.substring(0, str.indexOf('/'))))
+      }
+  }
+  */
   val actorList: List[ActorRef] = c match{
     case None =>  //default case
       //I know I have 4 cores on this machine, so for now, I'm going to say that it's 4.
@@ -113,28 +133,17 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
         val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment")
         val actorStringList = newConf.unwrapped().asScala.toList.foldRight(List.empty[String]){
           case ((str, _), list) => str.substring(1, nameLength+2) match{
-            case x if x.equals(name+"/") && x.length > 0 => str.substring(nameLength+2) :: list
+            case x if x.equals(name+"/") && x.length > 0 => str.substring(nameLength+2) :: list//addToNestedMap(map, str.substring(nameLength+2))
             case _ => list
           }
         }
-        println(actorStringList)
+        /*val actorStringList = newConf.unwrapped().asScala.toList.foldRight(Map.empty[String, Any]){
+          case ((str, _), map) => str.substring(1, nameLength+2) match{
+            case x if x.equals(name+"/") && x.length > 0 => addToNestedMap(map, str.substring(nameLength+2))
+            case _ => map
+          }
+        }*/
         addAnActor(amountOfActorsMin, actorStringList, List())
-        /*
-        val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment").toConfig
-        val numberOfActors = ConfigHelper.possiblyInConfig(c, "numberOfRemoteActors", 0)
-        def buildAnActorList(aList: List[ActorRef], actorsLeft: Int, prefix: String): List[ActorRef] = actorsLeft match {
-          case 0 => aList
-          case x =>
-            buildAnActorList(
-              context.system.actorOf(Props(new FunctionActor(compute, timer)), ConfigHelper.possiblyInConfig(c, prefix+actorsLeft, prefix+actorsLeft)) :: aList,
-              actorsLeft-1, prefix
-            )
-        }
-        val remoteList = buildAnActorList(List.empty[ActorRef], numberOfActors, "remoteActor")
-        //Next step: Local Actors! :)
-        val numberOfLocalActors = ConfigHelper.possiblyInConfig(c, "numberOfLocalActors", 0)
-        buildAnActorList(remoteList, numberOfLocalActors, "localActor")
-        */
       } catch{
         case e: Exception => addAnActor(4, List(), List())
       }
@@ -331,7 +340,7 @@ class StepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[In
         def sendBatches(lI: List[Input], dmO: DataMap[Output], n: Int): DataMap[Output] = {
           val (currBatch, nextBatch) = lI.splitAt(n)
           t.computeAndStore(currBatch, dmO)
-          aRef ! (dmO, "output")
+          aRef ! (dmO, "output", n)
           nextBatch match{
             case Nil => dmO
             case _ => sendBatches(nextBatch, dmO, n)

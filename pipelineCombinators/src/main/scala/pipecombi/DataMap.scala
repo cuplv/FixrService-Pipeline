@@ -1,6 +1,6 @@
 package pipecombi
 
-import pipecombi.{Identifiable, Identity}
+//import pipecombi.{Identifiable, Identity}
 
 /**
   * Created by edmundlam on 6/23/17.
