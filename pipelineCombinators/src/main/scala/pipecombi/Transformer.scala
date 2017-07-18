@@ -67,10 +67,6 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
   val verbose = ConfigHelper.possiblyInConfig(c, name+"_verbosity", default = false) ||
                 ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
   val errList = ConfigHelper.possiblyInConfig(c, name+"_exceptionsBlacklist", List.empty[String])
-  /*def addAnActor(numberOfCores: Integer, list: List[ActorRef]): List[ActorRef] = numberOfCores match {
-    case x if x == 0 => list
-    case x => addAnActor(numberOfCores-1, context.actorOf(Props(new FunctionActor(compute, timer)), "FunctionActor"+(numberOfCores-1).toString) :: list)
-  }*/
   def addAnActor(actorsLeft: Int, actorString: List[String], actorList: List[ActorRef]): List[ActorRef] = (actorsLeft, actorString) match {
     case (x, Nil) if x <= 0 => actorList
     case (x, Nil) => addAnActor(actorsLeft-1, Nil,
@@ -85,7 +81,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
                 val futContext = stepActor.ask("context")(Timeout(1 second))
                 Await.ready(futContext, 1 second)
                 futContext.value match {
-                  case Some(Success(a: ActorContext)) => println(s.substring(num+1)); loopOverTheChildren(s.substring(num+1), a)
+                  case Some(Success(a: ActorContext)) => loopOverTheChildren(s.substring(num+1), a)
                   case _ => None
                 }
               } catch{
@@ -149,7 +145,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
       }
       //Get all of the actors out of the Actor System somehow.
   }
-  actorList.foreach{actorRef => println(actorRef.path)}
+  //actorList.foreach{actorRef => println(actorRef.path)}
   val actorListLength = actorList.length
   //implicit val timeout = Timeout(10 hours)
 
