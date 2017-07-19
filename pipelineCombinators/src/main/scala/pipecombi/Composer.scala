@@ -8,7 +8,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 abstract class Composer[InputL <: Identifiable, InputR <: Identifiable](implicit system: ActorSystem) extends Operator[InputL, InputR, pipecombi.Pair[InputL,InputR]] {
   def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]]
 
-  //def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR], currMap: DataMap[pipecombi.Pair[InputL,InputR]]): DataMap[pipecombi.Pair[InputL,InputR]]
+  def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR], currMap: DataMap[pipecombi.Pair[InputL,InputR]]): DataMap[pipecombi.Pair[InputL,InputR]]
 
   override def operate(arg1: DataMap[InputL], arg2: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]] = compose(arg1,arg2)
 
@@ -28,12 +28,12 @@ case class BatchProduct[L <: Identifiable,R <: Identifiable]()(implicit system: 
     val outMap = new InMemDataMap[pipecombi.Pair[L,R]]()
     mapL.items.map {
       inputL => mapR.items.map {
-        inputR => { outMap.put(pipecombi.Pair(inputL,inputR)) }
+        inputR => { outMap.put(pipecombi.Pair(inputL, inputR)) }
       }
     }
     outMap
   }
-  /*
+
   override def compose(mapL: DataMap[L], mapR: DataMap[R], currMap: DataMap[pipecombi.Pair[L,R]]): DataMap[pipecombi.Pair[L,R]] = {
     mapL.items.map{
       inputL =>
@@ -57,7 +57,7 @@ case class BatchProduct[L <: Identifiable,R <: Identifiable]()(implicit system: 
     }
     currMap
   }
-  */
+
   override def toString: String = "BatchProduct"
 }
 

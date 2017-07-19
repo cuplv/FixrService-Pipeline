@@ -2,7 +2,7 @@
   * Created by chanceroberts on 7/18/17.
   */
 import akka.actor.SupervisorStrategy.{Restart, Resume}
-import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, Props, Terminated}
+import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, Props, Terminated}
 import akka.util.Timeout
 
 import scala.concurrent.duration._
@@ -10,7 +10,10 @@ import scala.concurrent.duration._
 object DestroyedActorTest {
   def main(args: Array[String]) {
     val system = ActorSystem()
-    val supervisor = system.actorOf(Props(new SupervisedActor()))
+    var supervisor = system.actorOf(Props(new SupervisedActor()))
+    supervisor ! PoisonPill
+    println("It's dead. :(")
+    supervisor = system.actorOf(Props(new SupervisedActor()))
     supervisor ! "go"
   }
 }
