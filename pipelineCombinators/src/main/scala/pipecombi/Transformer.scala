@@ -1,13 +1,13 @@
 package pipecombi
 import java.io.File
 
-import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout, Terminated}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
 import akka.util.Timeout
 import akka.pattern.ask
-import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{Success}
 import collection.JavaConverters._
 import pipecombi._
 
