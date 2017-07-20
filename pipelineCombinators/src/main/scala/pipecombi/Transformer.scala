@@ -1,8 +1,10 @@
 package pipecombi
+import java.io.File
+
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout, Terminated}
 import akka.util.Timeout
 import akka.pattern.ask
-import com.typesafe.config.{Config, ConfigObject}
+import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -16,7 +18,13 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "", c: Option[Config] = None)(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+  val c: Option[Config] = conf match{
+    case "" => None
+    case s: String => Some(ConfigFactory.parseFile(new File(s)))
+    case c: Config => Some(c)
+    case _ => None
+  }
   val stepActor: ActorRef = name match{
     case "" => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this)))
     case _ => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this, ConfigHelper.possiblyInConfig(c, "batchSize", Int.MaxValue))), "super")
@@ -61,7 +69,7 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", c: Option[Config] = None)(implicit system: ActorSystem) extends Transformer[Input, Output](name, c) {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Transformer[Input, Output](name, conf) {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   implicit val executionContext = context.system.dispatcher

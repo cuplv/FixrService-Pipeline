@@ -26,7 +26,7 @@ case class IDInt(i : Int) extends Identifiable {
    override def identity(): Identity = Identity(i.toString,None)
 }
 
-case class PlusOne(name: String = "", conf: Option[Config] = None)(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
+case class PlusOne(name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -38,7 +38,7 @@ case class PlusOne(name: String = "", conf: Option[Config] = None)(implicit syst
   override def toString: String = "_+1"
 }
 
-case class Plus(n: Int, name: String = "", conf: Option[Config] = None)(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
+case class Plus(n: Int, name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -50,7 +50,7 @@ case class Plus(n: Int, name: String = "", conf: Option[Config] = None)(implicit
   override def toString: String = s"_+$n"
 }
 
-case class PlusSleep(n: Int, name: String = "", conf: Option[Config] = None)(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf){
+case class PlusSleep(n: Int, name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf){
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -62,7 +62,7 @@ case class PlusSleep(n: Int, name: String = "", conf: Option[Config] = None)(imp
   override def toString: String = s"_+$n"
 }
 
-case class TimesPair(name: String = "", conf: Option[Config] = None)(implicit system: ActorSystem) extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt](name, conf) {
+case class TimesPair(name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -98,9 +98,9 @@ object BProduct extends Composer[IDInt, IDInt] {
 object Example1 {
 
    def main(args: Array[String]): Unit = {
-     implicit val conf = Some(ConfigFactory.parseFile(new File("AkkaSpreadOutTest.conf")))
-     val conf2 = Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
-     implicit val system = ActorSystem.apply("default", conf)
+     val conf = ConfigFactory.parseFile(new File("AkkaSpreadOutTest.conf"))
+     val conf2 = "AkkaLocalTest.conf" //Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
+     implicit val system = ActorSystem()
      val m0 = IDInt.mkMap(List(101,203), "m0")
      val m1 = IDInt.mkMap(List(10,27,34), "m1")
      val m2 = new InMemDataMap[IDInt](name = "m2")
