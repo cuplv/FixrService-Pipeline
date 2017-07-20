@@ -13,13 +13,13 @@ object DestroyedActorTest {
     var supervisor = system.actorOf(Props(new SupervisedActor()))
     supervisor ! PoisonPill
     println("It's dead. :(")
-    supervisor = system.actorOf(Props(new SupervisedActor()))
+    supervisor = system.actorOf(Props(new SupervisedActor()), "supervise")
     supervisor ! "go"
   }
 }
 
 class SupervisedActor extends Actor {
-  val destroyedActor = context.actorOf(Props(new DeadActor()))
+  val destroyedActor = context.actorOf(Props(new DeadActor()), "destroyed")
   implicit val timeout = Timeout(10 minutes)
   /*override val supervisorStrategy =
     OneForOneStrategy(){
@@ -27,8 +27,10 @@ class SupervisedActor extends Actor {
     }*/
   context.watch(destroyedActor)
   import context._
+  var as = "YES"
   def state(s: String): Receive = {
     case "whatsMyState" => destroyedActor ! ("createState", s); println("State Restored?"); become(receive)
+    case ("state, s: String") => as = s; become(state(s))
   }
   def receive: Receive = {
     case "go" =>
@@ -42,7 +44,10 @@ class SupervisedActor extends Actor {
       destroyedActor ! ("createState", "211")
     case "remove" =>
       println("You CAN change the state of the actors if they crashed. (and/or do other things as needed...)")
-    case ("state", s: String) => become(state(s))
+    case ("state", s: String) => as = s; become(state(s))
+    case (aRef: ActorRef, "crashed", str: String) =>
+      println(s"I can't believe you'd do such a thing, ${aRef.path}! >:(")
+      println(s"Who will take care of $str now?!")
     case e => println(e)
 
   }
@@ -52,22 +57,23 @@ class SupervisedActor extends Actor {
 class DeadActor extends Actor {
   import context._
   context.parent ! "whatsMyState"
+  var as = "123"
   override def postStop(): Unit = {
     super.postStop()
     println("Whoops!")
-    self ! "sendState"
+    context.parent ! (self, "crashed", as)
   }
 
   def state(s: String): Receive = {
     case (n: Int, m: Int) => println(n/m + n/m)
-    case "state" => println(s)
+    case "state" => println(s); as += "1"; println(as)
     case "sendState" => context.parent ! ("state", s)
     case ("createState", st: String) => become(state(st)); println(s"I'm state $s currently!")
   }
 
   def receive: Receive = {
     case (n: Int, m: Int) => println(n/m)
-    case "state" => println("noState")
+    case "state" => println("noState"); as += "2"
     case ("createState", s: String) => become(state(s))
   }
 }

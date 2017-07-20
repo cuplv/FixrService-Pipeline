@@ -1,5 +1,5 @@
 package pipecombi
-import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout}
+import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout, Terminated}
 import akka.util.Timeout
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigObject}
@@ -16,12 +16,12 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "")(implicit system: ActorSystem, c: Option[Config] = None) extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "", c: Option[Config] = None)(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
   val stepActor: ActorRef = name match{
-    case "" => system.actorOf(Props(new TransStepActor(this)))
-    case _ => system.actorOf(Props(new TransStepActor(this, ConfigHelper.possiblyInConfig(c, name+"_n", Int.MaxValue))), name)
+    case "" => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this)))
+    case _ => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this, ConfigHelper.possiblyInConfig(c, "batchSize", Int.MaxValue))), "super")
   }
-  val nameLength: Int = name.length
+  val nameLength: Int = "super".length //name.length
   val context: ActorContext = {
     val futContext = stepActor.ask("context")(Timeout(1 second))
     Await.ready(futContext, 1 second)
@@ -61,14 +61,14 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "")(implicit system: ActorSystem, c: Option[Config] = None) extends Transformer[Input, Output](name) {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", c: Option[Config] = None)(implicit system: ActorSystem) extends Transformer[Input, Output](name, c) {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   implicit val executionContext = context.system.dispatcher
   val timer = 5 seconds
-  val verbose = ConfigHelper.possiblyInConfig(c, name+"_verbosity", default = false) ||
+  val verbose = //ConfigHelper.possiblyInConfig(c, name+"_verbosity", default = false) ||
                 ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
-  val errList = ConfigHelper.possiblyInConfig(c, name+"_exceptionsBlacklist", List.empty[String])
+  val errList = ConfigHelper.possiblyInConfig(c, "exceptionsBlacklist", List.empty[String])
   def addAnActor(actorsLeft: Int, actorString: List[String], actorList: List[ActorRef]): List[ActorRef] = (actorsLeft, actorString) match {
     case (x, Nil) if x <= 0 => actorList
     case (x, Nil) => addAnActor(actorsLeft-1, Nil,
@@ -124,14 +124,14 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
       addAnActor(4, List(), List())
     case Some(conf) =>
       try {
-        val amountOfActorsMin = ConfigHelper.possiblyInConfig(c, name+"_minActors", 4) match{
+        val amountOfActorsMin = ConfigHelper.possiblyInConfig(c, "minActors", 4) match{
           case x if x <= 0 => 4
           case x => x
         }
         val newConf = conf.getObject("akka").toConfig.getObject("actor").toConfig.getObject("deployment")
         val actorStringList = newConf.unwrapped().asScala.toList.foldRight(List.empty[String]){
           case ((str, _), list) => str.substring(1, nameLength+2) match{
-            case x if x.equals(name+"/") && x.length > 0 => str.substring(nameLength+2) :: list//addToNestedMap(map, str.substring(nameLength+2))
+            case x if x.equals("super/") && x.length > 0 =>  str.substring(nameLength+2) :: list//addToNestedMap(map, str.substring(nameLength+2))
             case _ => list
           }
         }
@@ -317,13 +317,20 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
 
 class FunctionActor[Input <: Identifiable, Output <: Identifiable](func: Input=>List[Output], timeout: Duration) extends Actor{
   context.setReceiveTimeout(timeout)
+  var currInput: Option[Input] = None
+  override def postStop(): Unit = {
+    super.postStop()
+    context.parent ! (self, "crashed", currInput)
+  }
   def receive: Receive = {
     case "context" => sender() ! context
     case i: Input @ unchecked =>
       try {
+        currInput = Some(i)
         val output = func(i)
         //println(context.parent.path)
         context.parent ! (i, output, "finished")
+        currInput = None
       } catch {
         case e: Exception => context.parent ! (i, e, "exception")
       }
@@ -334,12 +341,19 @@ class FunctionActor[Input <: Identifiable, Output <: Identifiable](func: Input=>
 class TransStepActor[Input <: Identifiable, Output <: Identifiable](t: Transformer[Input, Output], n: Int = Int.MaxValue) extends Actor {
   import context._
   def newState(dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef,
-              acList: List[ActorRef], jobsLeft: Int = 0, jobsDoneInBatch: Int = 0): Receive = {
+              acList: List[ActorRef], isReady: Boolean, jobsLeft: Int = 0, jobsDoneInBatch: Int = 0): Receive = {
+    case (aRef: ActorRef, "crashed", Some(input: Input)) if isReady =>
+      t.errMap.put(input.identity(), GeneralErrorSummary(new Exception("The actor failed to compute it.")))
+      t.statMap.put(input.identity(), Error)
+      if (jobsLeft-1 <= 0) self ! "checkAgain"
+      become(newState(dmI, dmO, aRef, acList, true, jobsLeft-1, jobsDoneInBatch))
+    case (aRef: ActorRef, "crashed", _) => ()
+      println(s"Actor ${aRef.path} crashed on the actor of ${dmI.displayName}'s input.")
     case (input: Input @ unchecked, e: Exception, "exception") =>
       t.errMap.put(input.identity(), GeneralErrorSummary(e))
       t.statMap.put(input.identity(), Error)
-      if (jobsLeft-1 == 0) self ! "checkAgain"
-      become(newState(dmI, dmO, aRef, acList, jobsLeft-1, jobsDoneInBatch))
+      if (jobsLeft-1 <= 0) self ! "checkAgain"
+      become(newState(dmI, dmO, aRef, acList, true, jobsLeft-1, jobsDoneInBatch))
     case (input: Input @ unchecked, outputs: List[Output] @ unchecked, "finished") =>
       outputs.foreach{ output =>
         t.provMap.put(output.identity(), input.identity())
@@ -349,87 +363,35 @@ class TransStepActor[Input <: Identifiable, Output <: Identifiable](t: Transform
       if (jobsLeft-1 == 0) self ! "checkAgain"
       if (jobsDoneInBatch+1 >= n){
         aRef ! "output"
-        become(newState(dmI, dmO, aRef, acList, jobsLeft-1))
+        become(newState(dmI, dmO, aRef, acList, true, jobsLeft-1))
       } else {
-        become(newState(dmI, dmO, aRef, acList, jobsLeft-1, jobsDoneInBatch+1))
+        become(newState(dmI, dmO, aRef, acList, true, jobsLeft-1, jobsDoneInBatch+1))
       }
-    case "input" => acList match{
-      case Nil =>
+    case "input" => (acList, isReady) match{
+      case (Nil, _) =>
         val newActorList = t.computeActorList
         t.process(dmI, dmO, newActorList)
-        become(newState(dmI, dmO, aRef, newActorList))
-      case _ => t.process(dmI, dmO, acList)
+        become(newState(dmI, dmO, aRef, newActorList, true))
+      case (_, true) => t.process(dmI, dmO, acList)
+      case (_, false) => self ! "input" //Do stuff when it is actually ready to build up again.
     }
-    case "addedJob" => become(newState(dmI, dmO, aRef, acList, jobsLeft+1, jobsDoneInBatch))
+    case "addedJob" => become(newState(dmI, dmO, aRef, acList, true, jobsLeft+1, jobsDoneInBatch))
     case "checkAgain" => if (jobsLeft == 0){ //Quietness, for now at least.
       if (jobsDoneInBatch > 0) aRef ! "output"
       //Unbuild everything.
       acList.foreach{ actor => actor ! PoisonPill }
-      become(newState(dmI, dmO, aRef, List()))
+      become(newState(dmI, dmO, aRef, List(), false))
     }
+    case Terminated(aRef: ActorRef) =>
+      become(newState(dmI, dmO, aRef, acList.diff(List(aRef)), false))
     case x => println(x)
   }
 
   def receive: Receive = {
     case "context" => sender() ! context
-    case (dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef) => become(newState(dmI, dmO, aRef, t.computeActorList))
+    case (dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef) => become(newState(dmI, dmO, aRef, t.computeActorList, true))
     case other => println(other)
   }
-  /*
-  become(Receive())
-  def Receive(jobsLeft: Int = 0, errors: Int = 0, jobsDoneInBatch: Int = 0, n: Int = Int.MaxValue): Receive = {
-    case "context" => sender() ! context
-    case (input: Input @ unchecked, e: Exception, "exception") =>
-      t.errMap.put(input.identity(), GeneralErrorSummary(e))
-      t.statMap.put(input.identity(), Error)
-      if (jobsLeft-1 == errors) self ! "checkAgain" //It's done.
-      become(Receive(jobsLeft-1, errors, jobsDoneInBatch, n))
-    case (input: Input @ unchecked, output: Output @ unchecked, "finished") =>
-      t.provMap.put(output.identity(), input.identity())
-      t.statMap.put(input.identity(), Done)
-      if (jobsDoneInBatch+1 >= n){
-        ???
-        //aRef ! (dmO, "output", n)
-        become (Receive(jobsLeft-1, errors, 0, n))
-      } else if (jobsLeft-1 == errors){
-        self ! "checkAgain"
-      }
-      else {
-        ???
-        become(Receive(jobsLeft-1, errors, jobsDoneInBatch + 1, n))
-      }
-    case (dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef) =>
-      try{
-        aRef ! (t.process(dmI, dmO), "output")
-        aRef ! "readyToCompose"
-      } catch {
-        case e: Exception => aRef ! (e, "output")
-      }
-    case (dmI: DataMap[Input], dmO: DataMap[Output], n: Int, aRef: ActorRef) =>
-      try{
-        //Only send n things inside the DataMap
-        /*
-        def sendBatches(lI: List[Input], dmO: DataMap[Output], n: Int): DataMap[Output] = {
-          val (currBatch, nextBatch) = lI.splitAt(n)
-          t.computeAndStore(currBatch, dmO)
-          aRef ! (dmO, "output", n)
-          nextBatch match{
-            case Nil => dmO
-            case _ => sendBatches(nextBatch, dmO, n)
-          }
-        }
-        sendBatches(t.getListofInputs(dmI), dmO, n)
-        */
-        val workingOn = t.getListofInputs(dmI)
-        aRef ! "readyToCompose"
-      } catch {
-        case e: Exception => aRef ! (e, "output")
-      }
-  }
-  def receive: Receive = {
-    case _ => println("How did we get here?!")
-  }
-  */
 }
 
 
