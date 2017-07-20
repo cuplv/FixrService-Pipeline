@@ -1,3 +1,4 @@
+import akka.actor.ActorSystem
 import pipecombi._
 import com.typesafe.config.Config
 
@@ -156,8 +157,12 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
 
   def getSDoc(s: String): SDoc = {
     s.indexOf(delimiter) match{
-      case -1 => Identity(s, None).asInstanceOf[SDoc]
-      case x => Identity(s.substring(0,x), Some(s.substring(x+delimiter.length))).asInstanceOf[SDoc]
+      case -1 => new Identifiable{
+        def identity() = Identity(s, None)
+      }.asInstanceOf[SDoc]
+      case x => new Identifiable{
+        def identity() = Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
+      }.asInstanceOf[SDoc]
     }
   }
 
@@ -257,7 +262,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
 
 // Mock feature transformers
 
-object Clone extends IncrTransformer[GitID, GitRepo] {
+case class Clone(implicit system: ActorSystem) extends IncrTransformer[GitID, GitRepo] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -267,7 +272,7 @@ object Clone extends IncrTransformer[GitID, GitRepo] {
   override def compute(input: GitID): List[GitRepo] = ???
 }
 
-object Build extends IncrTransformer[GitRepo, GitBuilds] {
+case class Build(implicit system: ActorSystem) extends IncrTransformer[GitRepo, GitBuilds] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -277,7 +282,7 @@ object Build extends IncrTransformer[GitRepo, GitBuilds] {
   override def compute(input: GitRepo): List[GitBuilds] = ???
 }
 
-object CallbackInstr extends IncrTransformer[GitBuilds,InstrumentedAPKs] {
+case class CallbackInstr(implicit system: ActorSystem) extends IncrTransformer[GitBuilds,InstrumentedAPKs] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -287,7 +292,7 @@ object CallbackInstr extends IncrTransformer[GitBuilds,InstrumentedAPKs] {
   override def compute(input: GitBuilds): List[InstrumentedAPKs] = ???
 }
 
-object ExtractGroum extends IncrTransformer[GitBuilds,Groums] {
+case class ExtractGroum(implicit system: ActorSystem) extends IncrTransformer[GitBuilds,Groums] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -297,7 +302,7 @@ object ExtractGroum extends IncrTransformer[GitBuilds,Groums] {
   override def compute(input: GitBuilds): List[Groums] = ???
 }
 
-case class Stop[A <: Identifiable]() extends IncrTransformer[A,End] {
+case class Stop[A <: Identifiable]()(implicit system: ActorSystem) extends IncrTransformer[A,End] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -307,7 +312,7 @@ case class Stop[A <: Identifiable]() extends IncrTransformer[A,End] {
   override def compute(input: A): List[End] = List()
 }
 
-case class Loop[A <: Identifiable]() extends IncrTransformer[A,A] {
+case class Loop[A <: Identifiable]()(implicit system: ActorSystem) extends IncrTransformer[A,A] {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
@@ -347,13 +352,14 @@ class MockFixrPipeline {
 
   // gitBuilds :--ExtractGroum--> groums
 
+  implicit val system: ActorSystem = ActorSystem()
 
 
   import Implicits._
 
-  val fixr = (gitIds :--Clone--> gitRepos :--Build--> gitBuilds) :<  {
-    (CallbackInstr--> instrAPKs :--Loop[InstrumentedAPKs]--> instrAPKs :--Stop[InstrumentedAPKs]--> end) ~
-    (ExtractGroum--> groums :--Loop[Groums]--> groums)
+  val fixr = (gitIds :--Clone()--> gitRepos :--Build()--> gitBuilds) :<  {
+    (CallbackInstr()--> instrAPKs :--Loop[InstrumentedAPKs]--> instrAPKs :--Stop[InstrumentedAPKs]--> end) ~
+    (ExtractGroum()--> groums :--Loop[Groums]--> groums)
   }
 
   fixr

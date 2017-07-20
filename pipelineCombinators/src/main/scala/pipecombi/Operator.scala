@@ -32,5 +32,4 @@ abstract class Operator[Arg1 <: Identifiable, Arg2 <: Identifiable, Output <: Id
   val errMap:  DataMap[ErrorSummary]
 
   def operate(arg1: DataMap[Arg1], arg2: DataMap[Arg2]): DataMap[Output]
-
 }

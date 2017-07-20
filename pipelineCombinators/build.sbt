@@ -12,4 +12,5 @@ libraryDependencies ++=  Seq(
   "com.typesafe.akka" %% "akka-http-testkit" % "10.0.6",
   "org.scalactic" %% "scalactic" % "3.0.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-  "org.scalaj" %% "scalaj-http" % "2.3.0")
+  "org.scalaj" %% "scalaj-http" % "2.3.0",
+  "com.typesafe.akka" %% "akka-remote" % "2.4.17")

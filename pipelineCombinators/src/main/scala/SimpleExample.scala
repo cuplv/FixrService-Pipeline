@@ -1,5 +1,6 @@
 import java.io.File
 
+import akka.actor.ActorSystem
 import com.typesafe.config.{Config, ConfigFactory}
 import pipecombi._
 
@@ -25,7 +26,7 @@ case class IDInt(i : Int) extends Identifiable {
    override def identity(): Identity = Identity(i.toString,None)
 }
 
-object PlusOne extends IncrTransformer[IDInt, IDInt] {
+case class PlusOne(name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -37,7 +38,7 @@ object PlusOne extends IncrTransformer[IDInt, IDInt] {
   override def toString: String = "_+1"
 }
 
-case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf) {
+case class Plus(n: Int, name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -49,7 +50,7 @@ case class Plus(n: Int)(implicit conf: Option[Config] = None) extends IncrTransf
   override def toString: String = s"_+$n"
 }
 
-case class PlusSleep(n: Int)(implicit conf: Option[Config] = None) extends IncrTransformer[IDInt, IDInt](conf){
+case class PlusSleep(n: Int, name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf){
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -61,7 +62,7 @@ case class PlusSleep(n: Int)(implicit conf: Option[Config] = None) extends IncrT
   override def toString: String = s"_+$n"
 }
 
-object TimesPair extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
+case class TimesPair(name: String = "", conf: Any = "")(implicit system: ActorSystem) extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -75,7 +76,7 @@ object TimesPair extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt] {
   override def toString: String = "_*_"
 
 }
-
+/*
 object BProduct extends Composer[IDInt, IDInt] {
   override val version = "0.1"
 
@@ -93,11 +94,13 @@ object BProduct extends Composer[IDInt, IDInt] {
     outMap
   }
 }
-
+*/
 object Example1 {
 
    def main(args: Array[String]): Unit = {
-     implicit val conf = Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
+     val conf = ConfigFactory.parseFile(new File("AkkaSpreadOutTest.conf"))
+     val conf2 = "AkkaLocalTest.conf" //Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
+     implicit val system = ActorSystem()
      val m0 = IDInt.mkMap(List(101,203), "m0")
      val m1 = IDInt.mkMap(List(10,27,34), "m1")
      val m2 = new InMemDataMap[IDInt](name = "m2")
@@ -115,15 +118,16 @@ object Example1 {
 
      import Implicits._
 
-     /*
-     val pipe = { ((m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3)) :--TimesPair--> m4 } :< {
-       (PlusOne--> m5) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
-     } // */
+     val pipe = { ((m0 :--PlusOne("step1", conf)--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne("step1", conf2)--> m3)) :--TimesPair()--> m4 } :< {
+       (PlusOne()--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
+     }
 
-     val pipe = m9 :--PlusSleep(1)--> m10
-     println(pipe)
+     //val pipe = m9 :--PlusSleep(1)--> m10
+     //println(pipe)
 
-     pipe.run()
+     //pipe.run()
+     pipe.run(pipe.build())
+     Thread.sleep(100)
 
      println(s"m0: ${m0.toString}")
      println(s"m1: ${m1.toString}")
