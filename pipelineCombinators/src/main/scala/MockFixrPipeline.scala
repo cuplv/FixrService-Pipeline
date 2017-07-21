@@ -94,26 +94,24 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
     }
     val jsonValue = getObject(id) match{
       case l if l.isEmpty =>
-        """{
-          |  "add": {
-          |    "doc": {
-          |      "id": """.stripMargin + id +
-          """,
-            |      """.stripMargin + "\"" + fName + "\": " + itemF +
-          """
-            |    }
-            |  },
-            |  "commit": {}
-            |}
-          """.stripMargin
+        s"""{
+           |  "add": {
+           |    "doc": {
+           |      "id": $id,
+           |      "$fName": $itemF
+           |    }
+           |  },
+           |  "commit": {}
+           |}
+         """.stripMargin
       case l =>
         val (mostOfString, needToAddValue) = l.foldLeft(
           """{
             |  "add": {
             |    "doc": {""".stripMargin, true) {
           case ((json, curr), (key, value)) => if (key.equals(fName)) {
-            (json + """
-                      |      """.stripMargin + "\"" + fName + "\": " + itemF + ",", false)
+            (json + s"""
+                      |      "$fName": $itemF,""".stripMargin, false)
           } else if (!key.equals("_version_")) {
             (json + """
                       |      """.stripMargin + "\"" + key + "\": " + (value match {

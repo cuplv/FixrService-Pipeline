@@ -350,13 +350,13 @@ class TransStepActor[Input <: Identifiable, Output <: Identifiable](t: Transform
   import context._
   def newState(dmI: DataMap[Input], dmO: DataMap[Output], aRef: ActorRef,
               acList: List[ActorRef], isReady: Boolean, jobsLeft: Int = 0, jobsDoneInBatch: Int = 0): Receive = {
-    case (aRef: ActorRef, "crashed", Some(input: Input)) if isReady =>
+    case (aRef: ActorRef, "crashed", Some(input: Input @ unchecked)) if isReady =>
       t.errMap.put(input.identity(), GeneralErrorSummary(new Exception("The actor failed to compute it.")))
       t.statMap.put(input.identity(), Error)
       if (jobsLeft-1 <= 0) self ! "checkAgain"
       become(newState(dmI, dmO, aRef, acList, true, jobsLeft-1, jobsDoneInBatch))
     case (aRef: ActorRef, "crashed", _) => ()
-      println(s"Actor ${aRef.path} crashed on the actor of ${dmI.displayName}'s input.")
+      //println(s"Actor ${aRef.path} crashed on the actor of ${dmI.displayName}'s input.")
     case (input: Input @ unchecked, e: Exception, "exception") =>
       t.errMap.put(input.identity(), GeneralErrorSummary(e))
       t.statMap.put(input.identity(), Error)
