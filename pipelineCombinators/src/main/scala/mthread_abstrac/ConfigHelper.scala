@@ -1,12 +1,25 @@
-package pipecombi
+package mthread_abstrac
 
-import com.typesafe.config.{Config, ConfigException}
+import com.typesafe.config.Config
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
+
 /**
   * Created by chanceroberts on 6/27/17.
   */
 object ConfigHelper {
+
+  def possiblyInConfig(c: Option[Config], field: String, default: Option[Config]): Option[Config] = {
+    c match{
+      case None => default
+      case Some(config) =>
+        try {
+          Some(config.getObject("field").toConfig)
+        } catch {
+          case _: Exception => default
+        }
+    }
+  }
 
   def possiblyInConfig(c: Option[Config], field: String, default: List[String]): List[String] = {
     c match{
@@ -15,8 +28,7 @@ object ConfigHelper {
         try {
           config.getStringList(field).asScala.toList
         } catch{
-          case _: ConfigException.Missing => default
-          case _: ConfigException.WrongType => default
+          case _: Exception => default
           //case e: Exception => println(e); default
         }
     }
@@ -29,8 +41,7 @@ object ConfigHelper {
         try {
           config.getString(field)
         } catch {
-          case _: ConfigException.Missing => default
-          case _: ConfigException.WrongType => default
+          case _: Exception => default
         }
     }
   }
@@ -42,8 +53,7 @@ object ConfigHelper {
         try {
           config.getInt(field)
         } catch{
-          case _: ConfigException.Missing => default
-          case _: ConfigException.WrongType => default
+          case _: Exception => default
         }
     }
   }
@@ -60,15 +70,4 @@ object ConfigHelper {
     }
   }
 
-  def possiblyInConfig(c: Option[Config], field: String, default: Integer): Integer = {
-    c match {
-      case None => default
-      case Some(config) =>
-        try {
-          config.getInt(field)
-        } catch {
-          case _: Exception => default
-        }
-    }
-  }
 }

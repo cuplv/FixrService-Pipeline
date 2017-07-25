@@ -83,7 +83,7 @@ case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
 
   override def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = {
     val acRef = aRef.value
-    nextSteps.foreach{ nextStep => acRef ! nextStep }
+    nextSteps.foreach{ nextStep => acRef ! nextStep; acRef ! (output, "dataMap"+nextStep._2) }
     input.build(List((acRef, "nextStep")), firstSteps)
   }
 }
@@ -100,7 +100,7 @@ case class CompositionPipe[InputL <: Identifiable, InputR <: Identifiable]
 
   override def build(nextSteps: List[(ActorRef, String)] = List(), firstSteps: List[(ActorRef, String)] = List()): List[(ActorRef, String)] = {
     val acRef = aRef.value
-    nextSteps.foreach{ nextStep => acRef ! nextStep }
+    nextSteps.foreach{ nextStep => acRef ! nextStep; } //acRef ! (output, "dataMap"+nextStep._2) }
     inputR.build(List((acRef, "nextStepR")), inputL.build(List((acRef, "nextStepL")), firstSteps))
   }
 

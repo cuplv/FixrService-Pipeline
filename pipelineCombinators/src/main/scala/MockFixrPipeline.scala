@@ -1,6 +1,7 @@
 import akka.actor.ActorSystem
 import pipecombi._
 import com.typesafe.config.Config
+import mthread_abstrac.ConfigHelper
 
 import scala.util.parsing.json.JSON
 import scalaj.http.Http

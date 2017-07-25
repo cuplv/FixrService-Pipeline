@@ -5,9 +5,10 @@ import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props
 import akka.util.Timeout
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory}
+import mthread_abstrac.ConfigHelper
 
 import scala.concurrent.duration._
-import scala.util.{Success}
+import scala.util.Success
 import collection.JavaConverters._
 import pipecombi._
 
@@ -18,7 +19,7 @@ import scala.concurrent.{Await, Future}
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: Any = "", name: String = "")(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
   val c: Option[Config] = conf match{
     case "" => None
     case s: String => Some(ConfigFactory.parseFile(new File(s)))
@@ -69,7 +70,7 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Transformer[Input, Output](name, conf) {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Transformer[Input, Output](conf, name) {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   implicit val executionContext = context.system.dispatcher
@@ -79,8 +80,10 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
   val errList = ConfigHelper.possiblyInConfig(c, "exceptionsBlacklist", List.empty[String])
   def addAnActor(actorsLeft: Int, actorString: List[String], actorList: List[ActorRef]): List[ActorRef] = (actorsLeft, actorString) match {
     case (x, Nil) if x <= 0 => actorList
-    case (x, Nil) => addAnActor(actorsLeft-1, Nil,
-      context.actorOf(Props(new FunctionActor(compute, timer))) :: actorList)
+    case (x, Nil) =>
+      val a = context.actorOf(Props(new FunctionActor(compute, timer)))
+      context.watch(a)
+      addAnActor(actorsLeft-1, Nil, a :: actorList)
     case (x, curr :: rest) =>
       def loopOverTheChildren(s: String, ac: ActorContext): Option[ActorRef] = s.indexOf('/') match{
         case -1 => Some(ac.actorOf(Props(new FunctionActor(compute, timer)), curr))
@@ -196,70 +199,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
       case x :: _ => startMultiCompute(newInputs, outputMap, actorList)
     }
   }
-  /*
-  def multiComputeThenStore(inputs: List[Input], outputMap: DataMap[Output]): Unit = {
-    val inputsMaxLength = math.ceil(inputs.length/(actorListLength*1.0)).toInt+1
-    //The way I wrote this, each future's index corresponds to inputs.reverse's index.
-    def divideOntoActors(inputs: List[Input], actors: List[ActorRef], futures: List[Future[Any]]): (List[Input], List[Future[Any]]) = (inputs.length, actors.length) match {
-      case (0, _) => (inputs, futures)
-      case (_, 0) => (inputs, futures)
-      case (_, x) =>
-        val fut = actors.head.ask(inputs.head)(timer*inputsMaxLength)
-        val currList = fut :: futures
-        divideOntoActors(inputs.tail, actors.tail, currList)
-    }
 
-    def getListOfFutureOutputs(inputs: List[Input], actors: List[ActorRef], futures: List[Future[Any]]): (List[Input], List[Future[Any]]) = inputs.length match {
-      case 0 => (inputs, futures)
-      case x =>
-        val (inputsLeft, fs) = divideOntoActors(inputs, actors, futures)
-        inputsLeft match{
-          case Nil => (inputsLeft, fs)
-          case _ => getListOfFutureOutputs(inputsLeft, actors, fs)
-        }
-    }
-    val (_, futures) = getListOfFutureOutputs(inputs, actorList, List.empty[Future[Any]]) //multiComputeThenStoreHelper(inputs, actorList, actorListLength, List.empty[Future[Any]])
-    futures.zip(inputs.reverse).foldRight(List.empty[Output]){
-      case ((future, input), oList) =>
-        try {
-          Await.ready(future, timer)
-          future.value match {
-            case Some(Success(e: Exception)) =>
-              errMap.put(input.identity, GeneralErrorSummary(e))
-              statMap.put(input.identity, Error)
-              oList
-            case Some(Failure(e: Exception)) =>
-              errMap.put(input.identity, GeneralErrorSummary(e))
-              statMap.put(input.identity, Error)
-              oList
-            case Some(Success(l: List[Output])) =>
-              l.foldRight(oList) {
-                (output, outList) =>
-                  provMap.put(output.identity, input.identity)
-                  outputMap.put(output)
-                  statMap.put(input.identity, Done)
-                  output :: outList
-              }
-            case None =>
-              errMap.put(input.identity, GeneralErrorSummary(new Exception("Timed out.")))
-              statMap.put(input.identity, Error)
-              oList
-            case _ =>
-              errMap.put(input.identity, GeneralErrorSummary(new Exception("what?"))) //Should NEVER occur.
-              statMap.put(input.identity, Error)
-              oList
-          }
-        }
-        catch{
-          case e: Exception =>
-            if (verbose) println(input.identity.id + " timed out.")
-            errMap.put(input.identity, GeneralErrorSummary(e))
-            statMap.put(input.identity, Error)
-            oList
-        }
-    }.reverse
-  }
-  */
   def getListofInputs(inputMap: DataMap[Input]): List[Input] = {
     inputMap.identities.flatMap(
       inputId => statMap.get(inputId) match {
