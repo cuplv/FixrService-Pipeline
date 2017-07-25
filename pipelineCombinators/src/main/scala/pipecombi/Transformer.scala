@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props
 import akka.util.Timeout
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory}
-import mthread_abstrac.ConfigHelper
+import mthread_abstrac.{ConfigHelper, MThreadAbstraction, MThreadBuilder}
 
 import scala.concurrent.duration._
 import scala.util.Success
@@ -26,6 +26,7 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: 
     case c: Config => Some(c)
     case _ => None
   }
+  val stepAbstract = MThreadBuilder.build(getListofInputs, compute, success, failure, c)
   val stepActor: ActorRef = name match{
     case "" => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this)))
     case _ => ActorSystem.apply("default", c).actorOf(Props(new TransStepActor(this, ConfigHelper.possiblyInConfig(c, "batchSize", Int.MaxValue))), "super")
@@ -47,6 +48,10 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: 
   def computeAndStore(inputs: List[Input], outputMap: DataMap[Output]): Unit = () //Override this method
 
   def getListofInputs(inputMap: DataMap[Input]): List[Input]
+
+  def success(input: Input, outputs: List[Output], outputMap: DataMap[Output]): DataMap[Output]
+
+  def failure(input: Input, exception: Exception): Any
 
   def process(iFeat: DataMap[Input], oFeat: DataMap[Output], actorList: List[ActorRef]): DataMap[Output]
   override def operate(arg1: DataMap[Input], arg2: DataMap[Output]): DataMap[Output] = process(arg1,arg2,List())
@@ -260,6 +265,20 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
     startMultiCompute(inputs, outputMap, actorList)
     //actorSys.terminate
     outputMap
+  }
+
+  override def success(input: Input, outputs: List[Output], outputMap: DataMap[Output]): DataMap[Output] = {
+    outputs.foreach{ output =>
+      provMap.put(output.identity(), input.identity())
+      outputMap.put(output)
+    }
+    statMap.put(input.identity(), Done)
+    outputMap
+  }
+
+  override def failure(input: Input, e: Exception): Unit = {
+    errMap.put(input.identity(), GeneralErrorSummary(e))
+    statMap.put(input.identity(), Error)
   }
 }
 

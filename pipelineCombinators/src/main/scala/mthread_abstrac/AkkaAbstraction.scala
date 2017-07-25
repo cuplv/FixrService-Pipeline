@@ -10,7 +10,7 @@ import scala.concurrent.duration._
   * Created by chanceroberts on 7/24/17.
   */
 class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
-                                                  succ: (Input, List[Output]) => Any, fail: (Input, Exception) => Any, config: Config) extends MThreadAbstraction {
+                                                  succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Config) extends MThreadAbstraction {
   val system: ActorSystem = ActorSystem()
   val supervisor: ActorRef = system.actorOf(Props(new AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config)))
 
@@ -19,7 +19,7 @@ class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[
 }
 
 class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
-                                             succ: (Input, List[Output]) => Any, fail: (Input, Exception) => Any, config: Config)
+                                             succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Config)
                                               extends Supervisor(getListOfInputs, compute, succ, fail) with Actor {
   val akkaConfig: Config = config.getObject("akka").toConfig
   val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(Some(config), "fixr", None)
