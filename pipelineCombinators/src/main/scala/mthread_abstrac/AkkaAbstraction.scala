@@ -10,7 +10,7 @@ import scala.concurrent.duration._
   * Created by chanceroberts on 7/24/17.
   */
 class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
-                                                  succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Config) extends MThreadAbstraction {
+                                                  succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config]) extends MThreadAbstraction {
   val system: ActorSystem = ActorSystem()
   val supervisor: ActorRef = system.actorOf(Props(new AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config)))
 
@@ -19,18 +19,19 @@ class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[
 }
 
 class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
-                                             succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Config)
+                                             succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config])
                                               extends Supervisor(getListOfInputs, compute, succ, fail) with Actor {
-  val akkaConfig: Config = config.getObject("akka").toConfig
-  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(Some(config), "fixr", None)
+  val akkaConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "akka", None)
+  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
   val n: Int = ConfigHelper.possiblyInConfig(fixrConfig, "batchSize", Int.MaxValue)
   def newState(dmI: DMIn, dmO: DMOut, pipeAct: ActorRef,
                acList: List[ActorRef] = List(), isReady: Boolean = true, jobsLeft: Int = 0, jobsDoneInBatch: Int = 0): Receive = {
     case "addedJob" => context.become(newState(dmI, dmO, pipeAct, acList, true, jobsLeft+1, jobsDoneInBatch))
     case "input" => (acList, isReady) match{
       case (Nil, _) =>
-        createWorkers(Some(akkaConfig), fixrConfig)
+        val acList = createWorkers
         giveJobsToWorkers(getListOfInputs(dmI), acList)
+        context.become(newState(dmI, dmO, pipeAct, acList))
       case (_, true) => giveJobsToWorkers(getListOfInputs(dmI), acList)
       case (_, false) => self ! "input"
     }
@@ -38,12 +39,13 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
       fail(input, new Exception("An actor has crashed trying to compute " + input + "!"))
       if (jobsLeft-1 == 0) self ! "checkAgain"
       context.become(newState(dmI, dmO, pipeAct, acList, true, jobsLeft-1, jobsDoneInBatch))
+    case ("crashed", aRef: ActorRef, _) => ()
     case ("exception", input: Input @ unchecked, e: Exception) =>
       fail(input, e)
       if (jobsLeft-1 == 0) self ! "checkAgain"
       context.become(newState(dmI, dmO, pipeAct, acList, true, jobsLeft-1, jobsDoneInBatch))
     case ("finished", input: Input @ unchecked, outputs: List[Output] @ unchecked) =>
-      succ(input, outputs)
+      succ(input, outputs, dmO)
       if (jobsLeft-1 == 0) self ! "checkAgain"
       if (jobsDoneInBatch+1 >= n){
         pipeAct ! "output"
@@ -63,7 +65,7 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
   }
 
   def receive: Receive = {
-    case ("init", dmI: DMIn, dmO: DMOut, aRef: ActorRef) => context.become(newState(dmI, dmO, aRef))
+    case ("init", dmI: DMIn @ unchecked, dmO: DMOut @ unchecked, aRef: ActorRef) => context.become(newState(dmI, dmO, aRef))
     case "context" => sender() ! context
     case other => println(other + " was sent with nothing occurring.")
   }
@@ -82,7 +84,7 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
       }
   }
 
-  def createWorkers(akkaConfig: Option[Config], fixrConfig: Option[Config]): List[ActorRef] = {
+  def createWorkers: List[ActorRef] = {
     val minActors = ConfigHelper.possiblyInConfig(fixrConfig, "minActors", 4)
     val duration = ConfigHelper.possiblyInConfig(fixrConfig, "durationInSeconds", 10).seconds
     val listOfActors: List[String] = akkaConfig match{
@@ -113,7 +115,6 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
         actors.head ! inputs.head
         divideOntoActors(inputs.tail, actors.tail)
     }
-
     val (newInputs, nextActorRef) = divideOntoActors(jobs, acList)
     newInputs match {
       case Nil => nextActorRef ::: acList.diff(nextActorRef) //This only works due to the list not having the same actors within it.

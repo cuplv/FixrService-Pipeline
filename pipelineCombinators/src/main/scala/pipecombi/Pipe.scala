@@ -1,6 +1,7 @@
 package pipecombi
 
 import Implicits.DataNode
+import mthread_abstrac.MThreadAbstraction
 //import pipecombi.Identifiable //UNNEEDED IMPORT STATEMENT
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
@@ -73,7 +74,7 @@ object Implicits {
 
 case class TransformationPipe[Input <: Identifiable, Output <: Identifiable]
       (input: Pipe[Input],  trans: Transformer[Input,Output], output: DataMap[Output])(implicit system: ActorSystem) extends Pipe[Output] {
-  override val aRef = Some(system.actorOf(Props(new PipeActor(trans.toString, trans.stepActor, output))))
+  override val aRef = Some(system.actorOf(Props(new PipeActor(trans.toString, trans.stepAbstract, output))))
   override def toString: String = s"${input.toString} :--${trans.toString}--> ${output.displayName}"
   override def run(): DataMap[Output] = {
     val map = trans.process(input.run(),output, List())
@@ -174,7 +175,7 @@ case class ParallelPartialPipes[Input <: Identifiable, Output1 <: Identifiable, 
   override def toString: String = s"\n   ${p1.toString}\n   ${p2.toString}"
 }
 
-class PipeActor[Input <: Identifiable, Output <: Identifiable](name: String, currStep: ActorRef, outputMap: DataMap[Output]) extends Actor {
+class PipeActor[Input <: Identifiable, Output <: Identifiable](name: String, currStep: MThreadAbstraction, outputMap: DataMap[Output]) extends Actor {
   import context._
   become(haveNextSteps(List()))
   def receive: Receive = {
@@ -186,7 +187,7 @@ class PipeActor[Input <: Identifiable, Output <: Identifiable](name: String, cur
     case (acRef: ActorRef, "nextStepL") => become(haveNextSteps((acRef, "L") :: nextSteps, givenMap))
     case (acRef: ActorRef, "nextStepR") => become(haveNextSteps((acRef, "R") :: nextSteps, givenMap))
     case (d: DataMap[Input], "input") =>
-      currStep ! (d, outputMap, self)
+      currStep ! ("init", d, outputMap, self)
       currStep ! "input"
     case ("input") =>
       currStep ! "input"

@@ -7,6 +7,7 @@ import com.typesafe.config.Config
   */
 abstract class MThreadAbstraction {
   def send(message: Any): Unit
+  def !(message: Any): Unit = send(message)
 }
 
 abstract class Supervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
@@ -23,7 +24,7 @@ object MThreadBuilder {
       }
     }
     firstInList(List("akka")) match{
-      case "akka" => new AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config.get)
+      case "akka" => new AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config)
       case _ => ???
     }
   }
