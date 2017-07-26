@@ -26,7 +26,7 @@ case class IDInt(i : Int) extends Identifiable {
    override def identity(): Identity = Identity(i.toString,None)
 }
 
-case class PlusOne(conf: Any = "", name: String = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
+case class PlusOne(conf: Any = "", name: String = "") extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -38,7 +38,7 @@ case class PlusOne(conf: Any = "", name: String = "")(implicit system: ActorSyst
   override def toString: String = "_+1"
 }
 
-case class Plus(n: Int, conf: Any = "", name: String = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf) {
+case class Plus(n: Int, conf: Any = "", name: String = "") extends IncrTransformer[IDInt, IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -50,7 +50,7 @@ case class Plus(n: Int, conf: Any = "", name: String = "")(implicit system: Acto
   override def toString: String = s"_+$n"
 }
 
-case class PlusSleep(n: Int, conf: Any = "", name: String = "")(implicit system: ActorSystem) extends IncrTransformer[IDInt, IDInt](name, conf){
+case class PlusSleep(n: Int, conf: Any = "", name: String = "") extends IncrTransformer[IDInt, IDInt](name, conf){
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -62,7 +62,7 @@ case class PlusSleep(n: Int, conf: Any = "", name: String = "")(implicit system:
   override def toString: String = s"_+$n"
 }
 
-case class TimesPair(conf: Any = "", name: String = "")(implicit system: ActorSystem) extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt](name, conf) {
+case class TimesPair(conf: Any = "", name: String = "") extends IncrTransformer[pipecombi.Pair[IDInt,IDInt], IDInt](name, conf) {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -127,7 +127,7 @@ object Example1 {
 
      //pipe.run()
      //pipe.run(pipe.build())
-     pipe.runConfig()
+     pipe.run()
      Thread.sleep(100)
 
      println(s"m0: ${m0.toString}")

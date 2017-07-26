@@ -14,7 +14,10 @@ class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[
   val system: ActorSystem = ActorSystem()
   val supervisor: ActorRef = system.actorOf(Props(new AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config)))
 
-  override def send(message: Any): Unit = supervisor ! message
+  override def send(message: Any): Boolean = {
+    supervisor ! message
+    true
+  }
   //override def !(message:Any): Unit = supervisor ! message
 }
 

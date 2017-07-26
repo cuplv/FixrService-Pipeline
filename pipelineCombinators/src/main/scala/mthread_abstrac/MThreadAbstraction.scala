@@ -6,8 +6,8 @@ import com.typesafe.config.Config
   * Created by chanceroberts on 7/24/17.
   */
 abstract class MThreadAbstraction {
-  def send(message: Any): Unit
-  def !(message: Any): Unit = send(message)
+  def send(message: Any): Boolean
+  def !(message: Any): Boolean = send(message)
 }
 
 abstract class Supervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
@@ -31,5 +31,8 @@ object MThreadBuilder {
 }
 
 object NoJobAbstraction extends MThreadAbstraction{
-  override def send(message: Any): Unit = ()
+  override def send(message: Any): Boolean = message match{
+    case "input" => false
+    case _ => true
+  }
 }

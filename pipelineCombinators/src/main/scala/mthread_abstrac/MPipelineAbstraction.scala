@@ -6,8 +6,10 @@ import com.typesafe.config.Config
   * Created by chanceroberts on 7/25/17.
   */
 abstract class MPipelineAbstraction[A] {
-  def build(listOfSteps: Map[String, Any], nextSteps: List[(String, A)] = List(), firstSteps: List[(String, A)] = List()): List[(String, A)]
-  def build(listOfSteps: Map[String, Any]): List[(String, Any)] = build(listOfSteps, List(), List()).asInstanceOf[List[(String, Any)]]
+  def build(listOfSteps: Map[String, Any], nextSteps: List[((String, Any), A)] = List(), firstSteps: List[((String, Any), A)] = List()): List[((String, Any), A)]
+  def build(listOfSteps: Map[String, Any]): List[(String, Any)] = build(listOfSteps, List(), List()).foldRight(List.empty[(String, Any)]){
+    case (((str, _), a), list) => (str, a) :: list
+  }
   def run(l: List[(String, A)], s: String): Unit
   def run(l: List[(String, Any)]): Unit = run(l.asInstanceOf[List[(String, A)]], "run")
 }
@@ -23,7 +25,9 @@ object MPipelineBuilder {
     }
     firstInList(List("akka"), "akka") match{
       case "akka" => new AkkaPipeline(AkkaPipelineBuilder.getSystem)
-      case _ => ???
+      //Right now the default is the Akka since I have only implemented that.
+      //Later, I may change it to a Single Threaded system or something.
+      case _ => new AkkaPipeline(AkkaPipelineBuilder.getSystem)
     }
   }
 }
