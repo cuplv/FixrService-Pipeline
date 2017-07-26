@@ -1,14 +1,12 @@
 package pipecombi
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-
 /**
   * Created by edmundlam on 6/25/17.
   */
-abstract class Composer[InputL <: Identifiable, InputR <: Identifiable](implicit system: ActorSystem) extends Operator[InputL, InputR, pipecombi.Pair[InputL,InputR]] {
+abstract class Composer[InputL <: Identifiable, InputR <: Identifiable] extends Operator[InputL, InputR, pipecombi.Pair[InputL,InputR]] {
   def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]]
 
-  def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR], currMap: DataMap[pipecombi.Pair[InputL,InputR]]): DataMap[pipecombi.Pair[InputL,InputR]]
+  def compose(lFeat: DataMap[InputL], rFeat: DataMap[InputR], currMap: Option[DataMap[pipecombi.Pair[InputL,InputR]]]): DataMap[pipecombi.Pair[InputL,InputR]]
 
   override def operate(arg1: DataMap[InputL], arg2: DataMap[InputR]): DataMap[pipecombi.Pair[InputL,InputR]] = compose(arg1,arg2)
 
@@ -17,7 +15,7 @@ abstract class Composer[InputL <: Identifiable, InputR <: Identifiable](implicit
   def *->(inputR: Pipe[InputR]): PartialCompositionPipe[InputL, InputR] = PartialCompositionPipe(this, inputR)
 }
 
-case class BatchProduct[L <: Identifiable,R <: Identifiable]()(implicit system: ActorSystem) extends Composer[L, R] {
+case class BatchProduct[L <: Identifiable,R <: Identifiable]() extends Composer[L, R] {
   override val version = "0.1"
 
   override val statMap = new InMemDataMap[Stat]()
@@ -34,35 +32,38 @@ case class BatchProduct[L <: Identifiable,R <: Identifiable]()(implicit system: 
     outMap
   }
 
-  override def compose(mapL: DataMap[L], mapR: DataMap[R], currMap: DataMap[pipecombi.Pair[L,R]]): DataMap[pipecombi.Pair[L,R]] = {
-    mapL.items.map{
-      inputL =>
-        val comp = mapR.identities.head
-        currMap.get((inputL.identity() |+| comp).identity()) match {
-          case Some(x) => true
-          case None => mapR.items.map {
-            inputR => {currMap.put(pipecombi.Pair(inputL, inputR))}
+  override def compose(mapL: DataMap[L], mapR: DataMap[R], currMap: Option[DataMap[pipecombi.Pair[L,R]]]): DataMap[pipecombi.Pair[L,R]] = currMap match{
+    case Some(currMap) =>
+      mapL.items.map {
+        inputL =>
+          val comp = mapR.identities.head
+          currMap.get((inputL.identity() |+| comp).identity()) match {
+            case Some(x) => true
+            case None => mapR.items.map {
+              inputR => currMap.put(pipecombi.Pair(inputL, inputR))
+            }
           }
-        }
-    }
-    mapR.items.map{
-      inputR =>
-        val comp = mapL.identities.head
-        currMap.get((inputR.identity() |+| comp).identity()) match{
-          case Some(x) => true
-          case None => mapL.items.map {
-            inputL => {currMap.put(pipecombi.Pair(inputL, inputR))}
+      }
+      mapR.items.map {
+        inputR =>
+          val comp = mapL.identities.head
+          currMap.get((inputR.identity() |+| comp).identity()) match {
+            case Some(x) => true
+            case None => mapL.items.map{
+              inputL => currMap.put(pipecombi.Pair(inputL, inputR))
+            }
           }
-        }
-    }
-    currMap
+      }
+      currMap
+    case None => compose(mapL, mapR)
+
   }
 
   override def toString: String = "BatchProduct"
 }
 
 object BatchProduct {
-  def composer[L <: Identifiable,R <: Identifiable]()(implicit system: ActorSystem): Composer[L,R] = BatchProduct[L,R]()(system)
+  def composer[L <: Identifiable,R <: Identifiable](): Composer[L,R] = BatchProduct[L,R]()
 }
 
 /*

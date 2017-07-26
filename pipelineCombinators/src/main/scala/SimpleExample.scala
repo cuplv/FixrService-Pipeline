@@ -100,7 +100,7 @@ object Example1 {
    def main(args: Array[String]): Unit = {
      val conf = ConfigFactory.parseFile(new File("AkkaSpreadOutTest.conf"))
      val conf2 = "AkkaLocalTest.conf" //Some(ConfigFactory.parseFile(new File("AkkaLocalTest.conf")))
-     implicit val system = ActorSystem()
+     //implicit val system = ActorSystem()
      val m0 = IDInt.mkMap(List(101,203), "m0")
      val m1 = IDInt.mkMap(List(10,27,34), "m1")
      val m2 = new InMemDataMap[IDInt](name = "m2")
@@ -126,7 +126,8 @@ object Example1 {
      //println(pipe)
 
      //pipe.run()
-     pipe.run(pipe.build())
+     //pipe.run(pipe.build())
+     pipe.runConfig()
      Thread.sleep(100)
 
      println(s"m0: ${m0.toString}")

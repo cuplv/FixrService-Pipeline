@@ -1,25 +1,19 @@
 package pipecombi
 import java.io.File
 
-import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, Terminated}
-import akka.util.Timeout
-import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory}
-import mthread_abstrac.{ConfigHelper, MThreadAbstraction, MThreadBuilder}
+import mthread_abstrac.{ConfigHelper, MThreadBuilder}
 
 import scala.concurrent.duration._
-import scala.util.Success
-import collection.JavaConverters._
 import pipecombi._
 
-import scala.concurrent.{Await, Future}
 
 /**
   * Created by edmundlam on 6/20/17.
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: Any = "", name: String = "")(implicit system: ActorSystem) extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: Any = "", name: String = "") extends Operator[Input, Output, Output] {
   val c: Option[Config] = conf match{
     case "" => None
     case s: String => Some(ConfigFactory.parseFile(new File(s)))
@@ -38,8 +32,8 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: 
 
   def failure(input: Input, exception: Exception): Any
 
-  def process(iFeat: DataMap[Input], oFeat: DataMap[Output], actorList: List[ActorRef]): DataMap[Output]
-  override def operate(arg1: DataMap[Input], arg2: DataMap[Output]): DataMap[Output] = process(arg1,arg2,List())
+  def process(iFeat: DataMap[Input], oFeat: DataMap[Output]): DataMap[Output]
+  override def operate(arg1: DataMap[Input], arg2: DataMap[Output]): DataMap[Output] = process(arg1,arg2)
 
   // def --> (output: DataMap[Output]): Transformation[Input, Output] = Transformation(this, output)
 
@@ -60,7 +54,7 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "")(implicit system: ActorSystem) extends Transformer[Input, Output](conf, name) {
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "") extends Transformer[Input, Output](conf, name) {
   //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
   //val actorSys: ActorSystem = context.system
   val timer = 5 seconds
@@ -162,7 +156,7 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](n
     )
   }
 
-  override def process(inputMap: DataMap[Input], outputMap : DataMap[Output], actorList: List[ActorRef]): DataMap[Output] = {
+  override def process(inputMap: DataMap[Input], outputMap : DataMap[Output]): DataMap[Output] = {
     // println("Process started: " + inputMap.identities)
     val inputs = getListofInputs(inputMap)
     // println(inputs)
