@@ -26,6 +26,8 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
   val n: Int = ConfigHelper.possiblyInConfig(fixrConfig, "batchSize", Int.MaxValue)
   def newState(dmI: DMIn, dmO: DMOut, pipeAct: ActorRef,
                acList: List[ActorRef] = List(), isReady: Boolean = true, jobsLeft: Int = 0, jobsDoneInBatch: Int = 0): Receive = {
+    case ("init", dmI: DMIn @ unchecked, dmO: DMOut @ unchecked, aRef: ActorRef) if acList.isEmpty =>
+      context.become(newState(dmI, dmO, aRef))
     case "addedJob" => context.become(newState(dmI, dmO, pipeAct, acList, true, jobsLeft+1, jobsDoneInBatch))
     case "input" => (acList, isReady) match{
       case (Nil, _) =>

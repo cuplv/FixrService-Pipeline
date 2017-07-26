@@ -29,3 +29,7 @@ object MThreadBuilder {
     }
   }
 }
+
+object NoJobAbstraction extends MThreadAbstraction{
+  override def send(message: Any): Unit = ()
+}
