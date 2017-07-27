@@ -16,7 +16,7 @@ abstract class MPipelineAbstraction[A] {
 }
 
 object MPipelineBuilder {
-  def build(conf: Option[Config]): MPipelineAbstraction[_] = {
+  def build(conf: Option[Config], default: String = ""): MPipelineAbstraction[_] = {
     def firstInList(l: List[String], default: String): String = l match{
       case Nil => default
       case field :: rest => ConfigHelper.possiblyInConfig(conf, field, None) match{
@@ -24,7 +24,7 @@ object MPipelineBuilder {
         case Some(_) => field
       }
     }
-    firstInList(List("akka"), "akka") match{
+    firstInList(List("akka"), default) match{
       case "akka" => new AkkaPipeline(AkkaPipelineBuilder.getSystem)
       //Right now the default is the Akka since I have only implemented that.
       //Later, I may change it to a Single Threaded system or something.

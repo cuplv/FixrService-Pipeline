@@ -21,7 +21,7 @@ abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: 
     case _ => None
   }
 
-  val stepAbstract = MThreadBuilder.build(getListofInputs, compute, success, failure, c, "akka")
+  val stepAbstract = MThreadBuilder.build(getListofInputs, compute, success, failure, c)
 
   def compute(input: Input): List[Output]
 

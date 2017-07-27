@@ -19,7 +19,6 @@ class SingleThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn 
         case (Some(dIn), Some(dOut)) =>
           val listOfInputs = getListOfInputs(dIn)
           listOfInputs.foreach(input => succ(input, compute(input), dOut))
-          ???
         case _ => ()
       }
       case other => println(s"$other was sent with nothing occurring.")
