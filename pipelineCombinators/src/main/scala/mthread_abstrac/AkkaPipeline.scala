@@ -20,15 +20,15 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case Some(m: Map[String @ unchecked, _]) => build(m, List(), List())
           case _ => List()
         }
-        val (nextSteps, newFirstSteps) = l.foldRight((List.empty[(String, ActorRef)], firstSteps)){
-          case ((("" | "?", dMap), aRef), (next, first)) => (next, ("?", aRef) :: first)
-          case ((("P", dMap), aRef), (next, first)) => (("nextStep", aRef) :: next, first)
-          case ((("LP", dMap), aRef), (next, first)) => (("nextStepL", aRef) :: next, first)
-          case ((("RP", dMap), aRef), (next, first)) => (("nextStepR", aRef) :: next, first)
+        val nextSteps = l.foldRight(List.empty[(String, ActorRef)]){
+          case (("" | "?", aRef), next) => ("nextStep?", aRef) :: next
+          case (("P", aRef), next) => ("nextStep", aRef) :: next
+          case (("LP", aRef), next) => ("nextStepL", aRef) :: next
+          case (("RP", aRef), next) => ("nextStepR", aRef) :: next
         }
         listOfSteps.get("input") match{
-          case Some(m: Map[String @ unchecked, _]) => build(m, nextSteps, newFirstSteps)
-          case _ => newFirstSteps
+          case Some(m: Map[String @ unchecked, _]) => build(m, nextSteps, firstSteps)
+          case _ => firstSteps
         }
       case Some("TransformationPipe") =>
         val mTA = listOfSteps.get("StepAbstraction") match{
@@ -56,6 +56,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
           case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
           case ("nextStepR", a) => act ! ("nextStepR", a); a ! ("initR", dataMap)
+          case ("nextStep?", a) => act ! ("nextStep", a)
           case _ => ()
         }
         listOfSteps.get("input") match{
@@ -68,11 +69,11 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case _ => return firstSteps //Please fix?
         }
         val act = system.actorOf(Props(new AkkaComposPipePiece(compute)))
-        nextSteps.foreach{case ((nextStep, _), str) => act ! (nextStep, str)}
+        nextSteps.foreach{case (nextStep, str) => act ! (nextStep, str)}
         listOfSteps.get("inputL") match{
           case Some(mL: Map[String @ unchecked, _]) => listOfSteps.get("inputR") match{
             case Some(mR: Map[String @ unchecked, _]) =>
-              build(mR, List((("nextStepR", None), act)), build(mL, List((("nextStepL", None), act)), firstSteps))
+              build(mR, List(("nextStepR", act)), build(mL, List(("nextStepL", act)), firstSteps))
             case _ => firstSteps
           }
           case _ => firstSteps
@@ -90,17 +91,19 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case Some(dataMap) =>
             val act = system.actorOf(Props(new AkkaPipePiece(NoJobAbstraction, dataMap)))
             nextSteps.foreach{
-              case (("nextStep", _), a) => act ! ("nextStep", a); a ! ("init", dataMap)
-              case (("nextStepL", _), a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
-              case (("nextStepR", _), a) => act ! ("nextStepR", a); a ! ("initR", dataMap)
+              case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
+              case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
+              case ("nextStepR", a) => act ! ("nextStepR", a); a ! ("initR", dataMap)
+              case ("nextStep?", a) => act ! ("nextStep", a)
               case _ => ()
             }
-            (("", dataMap), act) :: firstSteps
+            ("", act) :: firstSteps
           case None =>
             nextSteps.foldRight(firstSteps){
-              case ((("nextStep", dMap), acRef), list) => (("P", dMap), acRef) :: list
-              case ((("nextStepL", dMap), acRef), list) => (("LP", dMap), acRef) :: list
-              case ((("nextStepR", dMap), acRef), list) => (("RP", dMap), acRef) :: list
+              case (("nextStep", acRef), list) => ("P", acRef) :: list
+              case (("nextStepL", acRef), list) => ("LP", acRef) :: list
+              case (("nextStepR", acRef), list) => ("RP", acRef) :: list
+              case (("nextStep?", acRef), list) => ("?", acRef) :: list
             }
         }
       case other =>
