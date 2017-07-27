@@ -38,7 +38,9 @@ abstract class Pipe[Data <: Identifiable] {
   def stRun(): DataMap[Data]
   def run(): Unit = {
     val pipeline = MPipelineBuilder.build(None)
-    pipeline.run(pipeline.build(build))
+    if (!pipeline.isSingleThreaded) {
+      pipeline.run(pipeline.build(build))
+    } else stRun()
   }
   def build: Map[String, Any]
 }

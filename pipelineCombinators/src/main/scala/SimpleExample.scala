@@ -117,7 +117,7 @@ object Example1 {
 
      import Implicits._
 
-     val pipe = { ((m0 :--PlusOne(conf, "step1")--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne(conf2)--> m3)) :--TimesPair()--> m4 } :< {
+     val pipe = { ((m0 :--PlusOne(conf)--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne(conf2)--> m3)) :--TimesPair()--> m4 } :< {
        (PlusOne()--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
      }
 

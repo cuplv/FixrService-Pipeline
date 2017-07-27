@@ -6,6 +6,7 @@ import com.typesafe.config.Config
   * Created by chanceroberts on 7/25/17.
   */
 abstract class MPipelineAbstraction[A] {
+  def isSingleThreaded = false
   def build(listOfSteps: Map[String, Any], nextSteps: List[(String, A)] = List(), firstSteps: List[(String, A)] = List()): List[(String, A)]
   def build(listOfSteps: Map[String, Any]): List[(String, Any)] = build(listOfSteps, List(), List()).foldRight(List.empty[(String, Any)]){
     case ((str, a), list) => (str, a) :: list

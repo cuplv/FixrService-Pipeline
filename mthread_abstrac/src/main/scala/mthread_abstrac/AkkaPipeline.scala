@@ -32,7 +32,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
         }
       case Some("TransformationPipe") =>
         val mTA = listOfSteps.get("StepAbstraction") match{
-          case Some(m: MThreadAbstraction) => m
+          case Some(m: MThreadAbstraction[_, _, _, _]) => m
           case _ => return firstSteps //Please fix?
         }
         val dataMap = listOfSteps.get("OutputMap") match{
@@ -40,18 +40,6 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case None => return firstSteps //Please fix?
         }
         val act = system.actorOf(Props(new AkkaPipePiece(mTA, dataMap)))
-        /*
-        val newFirstSteps = firstSteps.foldRight(List.empty[((String, Any), ActorRef)]){
-          case ((("?", dMap), a), list) =>
-            if (dMap.equals(dataMap)){
-              act ! ("nextStep", a)
-              list
-            } else {
-              (("?", dMap), a) :: list
-            }
-          case (other, list) => other :: list
-        }
-        */
         nextSteps.foreach{
           case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
           case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
@@ -117,7 +105,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
 
 }
 
-class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction, dataMapOut: DMOut) extends Actor{
+class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction[_, _, _, _], dataMapOut: DMOut) extends Actor{
   context.become(state())
   def state(dmIn: Option[DMIn] = None, nextSteps: List[(ActorRef, String)] = List()): Receive = {
     case "input" => if (!(mTA ! "input")) nextSteps.foreach{ case (aRef, _) => aRef ! "input" }
