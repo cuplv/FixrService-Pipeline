@@ -13,13 +13,14 @@ import pipecombi._
   */
 
 
-abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: Any = "", name: String = "") extends Operator[Input, Output, Output] {
+abstract class Transformer[Input <: Identifiable, Output <: Identifiable](conf: Any = "") extends Operator[Input, Output, Output] {
   val c: Option[Config] = conf match{
     case "" => None
     case s: String => Some(ConfigFactory.parseFile(new File(s)))
     case c: Config => Some(c)
     case _ => None
   }
+
   val stepAbstract = MThreadBuilder.build(getListofInputs, compute, success, failure, c, "akka")
 
   def compute(input: Input): List[Output]
@@ -54,35 +55,11 @@ case class Transformation[Input <: Identifiable,Output <: Identifiable](proc: Tr
 
 
 
-abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](name: String = "", conf: Any = "") extends Transformer[Input, Output](conf, name) {
-  //val actorSys: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(c, "ActorSystemName", "Increment"), c)
-  //val actorSys: ActorSystem = context.system
+abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](conf: Any = "") extends Transformer[Input, Output](conf) {
   val timer = 5 seconds
-  val verbose = //ConfigHelper.possiblyInConfig(c, name+"_verbosity", default = false) ||
-                ConfigHelper.possiblyInConfig(c, "verbosity", default = false)
-  val errList = ConfigHelper.possiblyInConfig(c, "exceptionsBlacklist", List.empty[String])
-  /*
-  def makeNestedMapAList(map: Map[String, Any], prefix: String = ""): List[String] = map.foldRight(List.empty[String]){
-    case ((str, res), list) => res match {
-      case "/" => println("Prefix: " + prefix+str); prefix+str :: list
-      case m: Map[String @ unchecked, Any] =>
-        println("Looping through " + str)
-        val anotherList = makeNestedMapAList(m)
-        list ::: anotherList
-      case _ => list
-    }
-  }
-  def addToNestedMap(map: Map[String, Any], str: String): Map[String, Any] = str.indexOf('/') match{
-    case -1 => map + (str -> "/")
-    case num => val newStr = str.substring(num+1)
-      map.get(str.substring(0, num)) match {
-        case Some("/") => map + (str -> addToNestedMap(Map[String, Any]() + ("/" -> ""), newStr.substring(0, str.indexOf('/'))))
-        case None => map + (str -> addToNestedMap(Map[String, Any](), newStr.substring(0, str.indexOf('/'))))
-      }
-  }
-  */
-
-  //def computeThenStore(input: List[Input], outputMap: DataMap[Output], actorList: List[ActorRef]): Unit = startMultiCompute(input, outputMap, actorList)
+  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(c, "fixr", None)
+  val verbose = ConfigHelper.possiblyInConfig(fixrConfig, "verbosity", default = false)
+  val errList = ConfigHelper.possiblyInConfig(fixrConfig, "exceptionsBlacklist", List.empty[String])
 
   def computeThenStore(input: Input, outputMap: DataMap[Output]): List[Output] = {
     try {

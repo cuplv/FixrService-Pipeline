@@ -14,7 +14,7 @@ object ConfigHelper {
       case None => default
       case Some(config) =>
         try {
-          Some(config.getObject("field").toConfig)
+          Some(config.getObject(field).toConfig)
         } catch {
           case _: Exception => default
         }
