@@ -1,6 +1,8 @@
-name := "pipelineCombinators"
+name := "mthread_abstrac"
 
-version := "1.0"
+organization := "edu.colorado.plv.fixr"
+
+version := "1.0-SNAPSHOT"
 
 scalaVersion := "2.12.2"
 
@@ -14,5 +16,5 @@ libraryDependencies ++=  Seq(
   "org.scalactic" %% "scalactic" % "3.0.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "org.scalaj" %% "scalaj-http" % "2.3.0",
-  "com.typesafe.akka" %% "akka-remote" % "2.4.17",
-  "edu.colorado.plv.fixr" %% "mthread_abstrac" % "1.0-SNAPSHOT")
+  "com.typesafe.akka" %% "akka-remote" % "2.4.17")
+

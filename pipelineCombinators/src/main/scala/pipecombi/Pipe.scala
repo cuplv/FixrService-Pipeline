@@ -1,7 +1,7 @@
 package pipecombi
 
-import Implicits.DataNode
 import mthread_abstrac.MPipelineBuilder
+import Implicits.DataNode
 //import pipecombi.Identifiable //UNNEEDED IMPORT STATEMENT
 
 /**
