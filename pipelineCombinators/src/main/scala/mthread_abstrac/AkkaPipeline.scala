@@ -13,18 +13,18 @@ object AkkaPipelineBuilder{
 }
 
 class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
-  override def build(listOfSteps: Map[String, Any], nextSteps: List[((String, Any), ActorRef)] = List(), firstSteps: List[((String, Any), ActorRef)] = List()): List[((String, Any), ActorRef)] = {
+  override def build(listOfSteps: Map[String, Any], nextSteps: List[(String, ActorRef)] = List(), firstSteps: List[(String, ActorRef)] = List()): List[(String, ActorRef)] = {
     listOfSteps.get("PipeType") match {
       case Some("JunctionPipe") =>
-        val l: List[((String, Any), ActorRef)] = listOfSteps.get("OutputPipes") match{
+        val l: List[(String, ActorRef)] = listOfSteps.get("OutputPipes") match{
           case Some(m: Map[String @ unchecked, _]) => build(m, List(), List())
           case _ => List()
         }
-        val (nextSteps, newFirstSteps) = l.foldRight((List.empty[((String, Any), ActorRef)], firstSteps)){
-          case ((("" | "?", dMap), aRef), (next, first)) => (next, (("?", dMap), aRef) :: first)
-          case ((("P", dMap), aRef), (next, first)) => ((("nextStep", dMap), aRef) :: next, first)
-          case ((("LP", dMap), aRef), (next, first)) => ((("nextStepL", dMap), aRef) :: next, first)
-          case ((("RP", dMap), aRef), (next, first)) => ((("nextStepR", dMap), aRef) :: next, first)
+        val (nextSteps, newFirstSteps) = l.foldRight((List.empty[(String, ActorRef)], firstSteps)){
+          case ((("" | "?", dMap), aRef), (next, first)) => (next, ("?", aRef) :: first)
+          case ((("P", dMap), aRef), (next, first)) => (("nextStep", aRef) :: next, first)
+          case ((("LP", dMap), aRef), (next, first)) => (("nextStepL", aRef) :: next, first)
+          case ((("RP", dMap), aRef), (next, first)) => (("nextStepR", aRef) :: next, first)
         }
         listOfSteps.get("input") match{
           case Some(m: Map[String @ unchecked, _]) => build(m, nextSteps, newFirstSteps)
@@ -53,13 +53,13 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
         }
         */
         nextSteps.foreach{
-          case (("nextStep", _), a) => act ! ("nextStep", a); a ! ("init", dataMap)
-          case (("nextStepL", _), a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
-          case (("nextStepR", _), a) => act ! ("nextStepR", a); a ! ("initR", dataMap)
+          case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
+          case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
+          case ("nextStepR", a) => act ! ("nextStepR", a); a ! ("initR", dataMap)
           case _ => ()
         }
         listOfSteps.get("input") match{
-          case Some(m: Map[String @ unchecked, _]) => build(m, List((("nextStep", dataMap), act)), newFirstSteps)
+          case Some(m: Map[String @ unchecked, _]) => build(m, List(("nextStep", act)), firstSteps)
           case _ => firstSteps
         }
       case Some("CompositionPipe") =>
@@ -68,7 +68,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case _ => return firstSteps //Please fix?
         }
         val act = system.actorOf(Props(new AkkaComposPipePiece(compute)))
-        nextSteps.foreach{act ! _}
+        nextSteps.foreach{case ((nextStep, _), str) => act ! (nextStep, str)}
         listOfSteps.get("inputL") match{
           case Some(mL: Map[String @ unchecked, _]) => listOfSteps.get("inputR") match{
             case Some(mR: Map[String @ unchecked, _]) =>
