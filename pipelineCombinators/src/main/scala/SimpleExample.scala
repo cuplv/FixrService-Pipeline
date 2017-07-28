@@ -126,7 +126,7 @@ object Example1 {
 
      //pipe.run()
      //pipe.run(pipe.build())
-     pipe.run()
+     pipe.run("akka")
      Thread.sleep(100)
 
      println(s"m0: ${m0.toString}")

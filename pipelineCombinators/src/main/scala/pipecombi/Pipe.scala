@@ -36,8 +36,8 @@ abstract class Pipe[Data <: Identifiable] {
     JunctionPipe(this, p)
   }
   def stRun(): DataMap[Data]
-  def run(): Unit = {
-    val pipeline = MPipelineBuilder.build(None, "akka")
+  def run(s: String = ""): Unit = {
+    val pipeline = MPipelineBuilder.build(None, s)
     if (!pipeline.isSingleThreaded) {
       pipeline.run(pipeline.build(build))
     } else stRun()
