@@ -79,10 +79,14 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
   def addWorkers(list: List[String], minActors: Int, timeout: Duration): List[ActorRef] = (list, minActors) match{
     case (Nil, x) if x <= 0 => List()
     case (Nil, x) =>
-      context.actorOf(Props(new AkkaWorker[Input, Output](compute, timeout))) :: addWorkers(Nil, x - 1, timeout)
+      val aRef = context.actorOf(Props(new AkkaWorker[Input, Output](compute, timeout)))
+      context.watch(aRef)
+      aRef :: addWorkers(Nil, x - 1, timeout)
     case (head :: rest, x) =>
       try {
-        context.actorOf(Props(new AkkaWorker[Input, Output](compute, timeout))) :: addWorkers(rest, x - 1, timeout)
+        val aRef = context.actorOf(Props(new AkkaWorker[Input, Output](compute, timeout)))
+        context.watch(aRef)
+        aRef :: addWorkers(rest, x - 1, timeout)
       } catch {
         case e: Exception =>
           println(s"Exception $e occurred when attempting to create worker $head.")

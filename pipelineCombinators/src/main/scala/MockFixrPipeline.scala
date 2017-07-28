@@ -98,8 +98,8 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
         s"""{
            |  "add": {
            |    "doc": {
-           |      "id": $id,
-           |      "$fName": $itemF
+           |      "id": \"$id\",
+           |      "$fName": \"$itemF\"
            |    }
            |  },
            |  "commit": {}
@@ -143,10 +143,10 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
           """.stripMargin
     }
     //Find a way to POST Request this into Solr
-    val json = Http(url).postData(jsonValue.getBytes).header("Content-Type", "application/json").asString.body
+    val json = Http(url+"update").postData(jsonValue.getBytes).header("Content-Type", "application/json").asString.body
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
-        parsed("error") match{
+        parsed.get("error") match{
           case Some(_) => false
           case _ => true
         }
@@ -368,4 +368,12 @@ class MockFixrPipeline {
     (CallbackInstr--> instrAPKs :--Stop[InstrumentedAPKs]()--> end) ~
     (ExtractGroum--> groums :--Stop[Groums]()--> end)
   } */
+}
+
+object Test{
+  def main(args: Array[String]): Unit = {
+    val test = SolrMap[Identifiable]("status")
+    test.put(Identity("a", None), Done)
+    test.put(Identity("b", None), NotDone)
+  }
 }
