@@ -41,6 +41,7 @@ class SupervisedActor extends Actor {
       destroyedActor ! ("createState", "345")
       destroyedActor ! ("createState", "211")
       destroyedActor ! PoisonPill
+      destroyedActor ! "whatwillhappen?"
     case "remove" =>
       println("You CAN change the state of the actors if they crashed. (and/or do other things as needed...)")
     case ("state", s: String) => as = s; become(state(s))

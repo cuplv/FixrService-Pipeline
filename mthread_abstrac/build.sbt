@@ -2,7 +2,7 @@ name := "mthread_abstrac"
 
 organization := "edu.colorado.plv.fixr"
 
-version := "0.11-SNAPSHOT"
+version := "0.10-SNAPSHOT"
 
 scalaVersion := "2.12.2"
 

@@ -12,18 +12,38 @@ import scala.concurrent.duration._
 class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
                                                   succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config]) extends MThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config) {
   val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
-  val system: ActorSystem = ActorSystem.apply(ConfigHelper.possiblyInConfig(fixrConfig, "name", "default"), config)
-  val supervisor: ActorRef = system.actorOf(Props(new AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config)))
+  var system: Option[ActorSystem] = None //ActorSystem.apply(ConfigHelper.possiblyInConfig(fixrConfig, "name", "default"), config)
+  var supervisor: Option[ActorRef] = None //system.actorOf(Props(new AkkaSupervisor(getListOfInputs, compute, succ, fail, config, this)), "super")
+  var canSendMessage = false
+  var dataMapIn: Option[DMIn] = None
+  var dataMapOut: Option[DMOut] = None
+  var pipeActor: Option[ActorRef] = None
+
+  def initialize() : Unit = {
+    system = Some(ActorSystem.apply(ConfigHelper.possiblyInConfig(fixrConfig, "name", "default"), config))
+    supervisor = Some(system.get.actorOf(Props(new AkkaSupervisor(getListOfInputs, compute, succ, fail, config, this)), "super"))
+    if (dataMapIn.isDefined) supervisor.get ! ("init", dataMapIn.get, dataMapOut.get, pipeActor.get)
+  }
 
   override def send(message: Any): Boolean = {
-    supervisor ! message
+    message match{
+      case ("init", dmI: DMIn @ unchecked, dmO: DMOut @ unchecked, aRef: ActorRef) if dataMapIn.isEmpty =>
+        dataMapIn = Some(dmI)
+        dataMapOut = Some(dmO)
+        pipeActor = Some(aRef)
+      case _ => if (!canSendMessage) initialize()
+        supervisor.get ! message
+    }
+
+
     true
   }
   //override def !(message:Any): Unit = supervisor ! message
 }
 
 class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
-                                             succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config])
+                                             succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config],
+                                                mTA: AkkaAbstraction[DMIn, DMOut, Input, Output])
                                               extends Supervisor(getListOfInputs, compute, succ, fail) with Actor {
   val akkaConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "akka", None)
   val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
@@ -39,7 +59,7 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
         giveJobsToWorkers(getListOfInputs(dmI), acList)
         context.become(newState(dmI, dmO, pipeAct, acList))
       case (_, true) => giveJobsToWorkers(getListOfInputs(dmI), acList)
-      case (_, false) => self ! "input"
+      case (_, false) => mTA ! "input"
     }
     case ("crashed", aRef: ActorRef, Some(input: Input @ unchecked)) if isReady =>
       fail(input, new Exception("An actor has crashed trying to compute " + input + "!"))
@@ -63,10 +83,13 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
       if (jobsDoneInBatch > 0) pipeAct ! "output"
       //Unbuild everything.
       acList.foreach{ actor => actor ! PoisonPill }
+      mTA.canSendMessage = false
       context.become(newState(dmI, dmO, pipeAct, List(), false))
     }
     case Terminated(aRef: ActorRef) =>
-      context.become(newState(dmI, dmO, pipeAct, acList.diff(List(aRef)), false))
+      val newList = acList.diff(List(aRef))
+      if (newList.isEmpty) context.system.terminate()
+      context.become(newState(dmI, dmO, pipeAct, newList, false))
     case other => println(other + " was sent with nothing occuring.")
   }
 
