@@ -8,8 +8,12 @@ import com.typesafe.config.Config
 abstract class MThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
                                                               succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit,
                                                               config: Option[Config]) {
+  var pipeline: Option[MPipelineAbstraction[_]] = None
   def send(message: Any): Boolean
   def !(message: Any): Boolean = send(message)
+  def sendBack(message: Any): Boolean
+  def !!(message: Any): Boolean = sendBack(message)
+  def sendAPipeline(mPipelineAbstraction: MPipelineAbstraction[_]): Unit = { pipeline = Some(mPipelineAbstraction) }
 }
 
 abstract class Supervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
@@ -37,4 +41,6 @@ object NoJobAbstraction extends MThreadAbstraction(null, null, null, null, None)
     case "input" => false
     case _ => true
   }
+
+  override def sendBack(message: Any): Boolean = false
 }

@@ -37,4 +37,8 @@ class SingleThreadPipeline[A] extends MPipelineAbstraction[A] {
   override def run(l: List[(String, A)], s: String): Unit = {
     println("Shouldn't ever get here! :\\")
   }
+
+  override def sendBack(message: Any, to: A, u: Unit): Unit = {
+    println("Shouldn't ever get here yet! :\\")
+  }
 }

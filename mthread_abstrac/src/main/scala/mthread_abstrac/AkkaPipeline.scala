@@ -1,7 +1,6 @@
 package mthread_abstrac
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.typesafe.config.Config
 
 /**
   * Created by chanceroberts on 7/25/17.
@@ -39,7 +38,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case Some(x) => x
           case None => return firstSteps //Please fix?
         }
-        val act = system.actorOf(Props(new AkkaPipePiece(mTA, dataMap)))
+        val act = system.actorOf(Props(new AkkaPipePiece(mTA, dataMap, this)))
         nextSteps.foreach{
           case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
           case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
@@ -56,7 +55,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
           case Some(a: ((Any, Any, Option[Any]) => Any)) => a
           case _ => return firstSteps //Please fix?
         }
-        val act = system.actorOf(Props(new AkkaComposPipePiece(compute)))
+        val act = system.actorOf(Props(new AkkaComposPipePiece(compute, this)))
         nextSteps.foreach{case (nextStep, str) => act ! (nextStep, str)}
         listOfSteps.get("inputL") match{
           case Some(mL: Map[String @ unchecked, _]) => listOfSteps.get("inputR") match{
@@ -77,7 +76,7 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
       case Some("DataNode") =>
         listOfSteps.get("OutputMap") match{
           case Some(dataMap) =>
-            val act = system.actorOf(Props(new AkkaPipePiece(NoJobAbstraction, dataMap)))
+            val act = system.actorOf(Props(new AkkaPipePiece(NoJobAbstraction, dataMap, this)))
             nextSteps.foreach{
               case ("nextStep", a) => act ! ("nextStep", a); a ! ("init", dataMap)
               case ("nextStepL", a) => act ! ("nextStepL", a); a ! ("initL", dataMap)
@@ -103,10 +102,12 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
     case (_, aRef) => aRef ! "output"
   }
 
+  override def sendBack(message: Any, to: ActorRef, u: Unit): Unit = { to ! message }
 }
 
-class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction[_, _, _, _], dataMapOut: DMOut) extends Actor{
+class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction[_, _, _, _], dataMapOut: DMOut, ap: AkkaPipeline) extends Actor{
   context.become(state())
+  mTA.sendAPipeline(ap)
   def state(dmIn: Option[DMIn] = None, nextSteps: List[(ActorRef, String)] = List()): Receive = {
     case "input" => if (!(mTA ! "input")) nextSteps.foreach{ case (aRef, _) => aRef ! "input" }
     case "output" => nextSteps.foreach{case (aRef, _) => aRef ! "input" }
@@ -125,7 +126,7 @@ class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction[_, _, _, _], dataMapOut
   }
 }
 
-class AkkaComposPipePiece[DMInL, DMInR, DMOut](compute: (DMInL, DMInR, Option[DMOut]) => DMOut) extends Actor{
+class AkkaComposPipePiece[DMInL, DMInR, DMOut](compute: (DMInL, DMInR, Option[DMOut]) => DMOut, ap: AkkaPipeline) extends Actor{
   context.become(state())
   def state(dmL: Option[DMInL] = None, dmR: Option[DMInR] = None,
             dMComb: Option[DMOut] = None, nextSteps: List[(ActorRef, String)] = List()): Receive = {

@@ -13,7 +13,10 @@ abstract class MPipelineAbstraction[A] {
   }
   def run(l: List[(String, A)], s: String): Unit
   def run(l: List[(String, Any)]): Unit = run(l.asInstanceOf[List[(String, A)]], "run")
+  def sendBack(message: Any, to: A, u: Unit): Unit
+  def sendBack(message: Any, to: Any, s: String = ""): Unit = { sendBack(message, to.asInstanceOf[A], ()) }
 }
+
 
 object MPipelineBuilder {
   def build(conf: Option[Config], default: String = ""): MPipelineAbstraction[_] = {

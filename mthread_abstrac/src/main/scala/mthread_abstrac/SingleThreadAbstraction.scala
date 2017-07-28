@@ -25,4 +25,6 @@ class SingleThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn 
     }
     false
   }
+
+  override def sendBack(message: Any): Boolean = true
 }
