@@ -3,6 +3,10 @@ package mthread_abstrac
 /**
   * Created by chanceroberts on 7/27/17.
   */
+/*
+(Right now, this is taken care of by the pipecombi library, given the isSingleThreaded variable.
+ If you decide to implement this, get rid of the isSingleThreaded variable.)
+ */
 class SingleThreadPipeline[A] extends MPipelineAbstraction[A] {
   override val isSingleThreaded = true
   override def build(listOfSteps: Map[String, Any], nextSteps: List[(String, A)] = List(), firstSteps: List[(String, A)] = List()): List[(String, A)] = {
@@ -25,7 +29,9 @@ class SingleThreadPipeline[A] extends MPipelineAbstraction[A] {
           case (List(("inputMap", dMap: A))) => mTA ! ("init", dMap, dataMap); mTA ! "input"
         }
 
-        ???
+        List()
+      case Some("ComposerPipe") =>
+
       case _ => ???
     }
     */

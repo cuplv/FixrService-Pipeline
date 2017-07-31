@@ -1,6 +1,9 @@
 package mthread_abstrac
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import com.typesafe.config.Config
+import scala.concurrent.duration._
+
 
 /**
   * Created by chanceroberts on 7/25/17.
@@ -108,6 +111,9 @@ class AkkaPipeline(system: ActorSystem) extends MPipelineAbstraction[ActorRef] {
 class AkkaPipePiece[DMIn, DMOut](mTA: MThreadAbstraction[_, _, _, _], dataMapOut: DMOut, ap: AkkaPipeline) extends Actor{
   context.become(state())
   mTA.sendAPipeline(ap)
+  val fixrConfig: Option[Config] = mTA.fixrConfig
+  val wakeupTime: Int = ConfigHelper.possiblyInConfig(fixrConfig, "wakeTimer", 0)
+  if (wakeupTime > 0) context.system.scheduler.schedule(wakeupTime.seconds, wakeupTime.seconds, self, "input")(context.system.dispatcher)
   def state(dmIn: Option[DMIn] = None, nextSteps: List[(ActorRef, String)] = List()): Receive = {
     case "input" => if (!(mTA ! "input")) nextSteps.foreach{ case (aRef, _) => aRef ! "input" }
     case "output" => nextSteps.foreach{case (aRef, _) => aRef ! "input" }
@@ -156,3 +162,4 @@ class AkkaComposPipePiece[DMInL, DMInR, DMOut](compute: (DMInL, DMInR, Option[DM
     case other => println(s"$other somehow got to the incorrect state.")
   }
 }
+

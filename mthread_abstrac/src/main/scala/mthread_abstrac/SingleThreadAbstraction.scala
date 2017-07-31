@@ -7,7 +7,6 @@ import com.typesafe.config.Config
   */
 class SingleThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
                               succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config]) extends MThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config) {
-  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
   var dataMapIn: Option[DMIn] = None
   var dataMapOut: Option[DMOut] = None
   override def send(message: Any): Boolean = {

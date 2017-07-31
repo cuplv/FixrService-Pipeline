@@ -11,7 +11,6 @@ import scala.concurrent.duration._
   */
 class AkkaAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[Input], compute: Input => List[Output],
                                                   succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit, config: Option[Config]) extends MThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs, compute, succ, fail, config) {
-  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
   var system: Option[ActorSystem] = None //ActorSystem.apply(ConfigHelper.possiblyInConfig(fixrConfig, "name", "default"), config)
   var supervisor: Option[ActorRef] = None //system.actorOf(Props(new AkkaSupervisor(getListOfInputs, compute, succ, fail, config, this)), "super")
   var canSendMessage = false
