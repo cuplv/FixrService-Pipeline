@@ -56,7 +56,8 @@ case class PlusSleep(n: Int, conf: Any = "") extends IncrTransformer[IDInt, IDIn
   override val provMap = new InMemDataMap[Identity]()
   override val errMap = new InMemDataMap[ErrorSummary]()
 
-  override def compute(input: IDInt): List[IDInt] = List(IDInt{Thread.sleep(input.i*1000); input.i + n})
+  override def compute(input: IDInt): List[IDInt] = List(
+    if (input.i > 0) IDInt{Thread.sleep(input.i*1000); input.i + n} else IDInt{while(true){}; 1})
 
   override def toString: String = s"_+$n"
 }
@@ -110,18 +111,20 @@ object Example1 {
      val m6 = new InMemDataMap[IDInt](name = "m6")
      val m7 = new InMemDataMap[IDInt](name = "m7")
      val m8 = new InMemDataMap[IDInt](name = "m8")
-     val m9 = IDInt.mkMap(List(6,2,4), "m9")
+     val m9 = IDInt.mkMap(List(6,-2,4), "m9")
      val m10 = new InMemDataMap[IDInt](name = "m10")
 
      // { (m0 :--PlusOne--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne--> m3) } :--TimesPair--> m4
 
      import Implicits._
 
+
      val pipe = { ((m0 :--PlusOne(conf)--> m2) <-*BatchProduct.composer[IDInt,IDInt]*-> (m1 :--PlusOne(conf2)--> m3)) :--TimesPair()--> m4 } :< {
        (PlusOne()--> m5 :--Plus(-10)--> m10) ~ (Plus(10)--> m6 :--Plus(100)--> m7 :--Plus(-12)--> m8)
      }
 
-     //val pipe = m9 :--PlusSleep(1)--> m10
+
+     //val pipe = m9 :--PlusSleep(1, "AkkaLocalTest.conf")--> m10
      //println(pipe)
 
      //pipe.run()

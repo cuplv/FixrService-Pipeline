@@ -1,10 +1,16 @@
+
+import java.io._
+import scala.sys.process._
+
 import akka.actor.ActorSystem
 import pipecombi._
 import com.typesafe.config.Config
 import mthread_abstrac.ConfigHelper
 
+import scala.io.{BufferedSource, Source}
 import scala.util.parsing.json.JSON
 import scalaj.http.Http
+
 
 /**
   * Created by edmundlam on 6/23/17.
@@ -12,6 +18,34 @@ import scalaj.http.Http
 
 
 // Mock Feature Declarations
+
+object CreateIdentifiables {
+  def createGitIdentifiablesFromString(string: String, id: Option[Identifiable] = None): Identifiable = id match {
+    case None => string.indexOf('/') match {
+      case -1 => new Identifiable {
+        override def identity(): Identity = Identity(string, None)
+      }
+      case x =>
+        val user = string.substring(0, x)
+        val next = string.substring(x + 1)
+        val endOfString = {
+          val nextPortion = next.indexOf(':')
+          if (nextPortion < 0) next.length else nextPortion
+        }
+        val repoHash = next.substring(0, endOfString)
+        val gitID = repoHash.indexOf('/') match {
+          case -1 => GitID(user, repoHash, None)
+          case y => GitID(user, repoHash.substring(0, y), Some(repoHash.substring(y + 1)))
+        }
+        next.indexOf(':') match {
+          case -1 => gitID
+          case y => createGitIdentifiablesFromString(next.substring(y + 1), Some(gitID))
+        }
+    }
+    case Some(g: GitID) =>
+      ???
+  }
+}
 
 case class GitID(user: String, repo: String, hashOpt: Option[String]) extends Identifiable {
   override def identity(): Identity = {
@@ -62,15 +96,26 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   val fName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Field", name)
   val delimiter = "`#**#`"
 
+  def checkDocument(list: List[Map[String, Any] @ unchecked], id: String): Map[String, Any] = list match{
+    case Nil => Map.empty
+    case (first: Map[String @ unchecked, Any @ unchecked]) :: last =>
+      first.get("id") match{
+        case Some(str: String) if str.equals(id) => first
+        case _ => checkDocument(last, id)
+      }
+    case first :: last => checkDocument(last, id)
+  }
+
   def getObject(k: String = ""): List[(String, Any)] = {
-    val queryURL = url + "select?wt=json&q=key:" + k
+    val queryURL = url+"select?wt=json&q=id=\"" + k + "\""//s"${url}select?wt=json&q=id=\"$k\""
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     JSON.parseFull(json) match {
       case Some(parsed: Map[String@unchecked, Any@unchecked]) =>
         parsed.get("response") match {
           case Some(resp: Map[String@unchecked, Any@unchecked]) =>
             resp.get("docs") match {
-              case Some((first: Map[String@unchecked, Any@unchecked]) :: list) =>
+              case Some(list: List[Map[String, Any] @ unchecked]) =>
+                val first = checkDocument(list, k)
                 first.foldRight(List.empty[(String, Any)]) {
                   case ((key, value), l) =>
                     (key, value) :: l
@@ -112,7 +157,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
             |    "doc": {""".stripMargin, true) {
           case ((json, curr), (key, value)) => if (key.equals(fName)) {
             (json + s"""
-                      |      "$fName": $itemF,""".stripMargin, false)
+                      |      "$fName": "$itemF",""".stripMargin, false)
           } else if (!key.equals("_version_")) {
             (json + """
                       |      """.stripMargin + "\"" + key + "\": " + (value match {
@@ -130,7 +175,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
         }
         val mostOfString2 = if (needToAddValue){
           mostOfString + """
-                           |      """.stripMargin + "\"" + fName + "\": " + itemF + ","
+                           |      """.stripMargin + "\"" + fName + "\": \"" + itemF + "\","
         } else {
           mostOfString + ""
         }
@@ -154,14 +199,14 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
     }
   }
 
-  def getSDoc(s: String): SDoc = {
+  def getSDoc(s: String): Identifiable = {
     s.indexOf(delimiter) match{
       case -1 => new Identifiable{
-        def identity() = Identity(s, None)
-      }.asInstanceOf[SDoc]
+        override def identity() = Identity(s, None)
+      }
       case x => new Identifiable{
-        def identity() = Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
-      }.asInstanceOf[SDoc]
+        override def identity() = Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
+      }
     }
   }
 
@@ -187,9 +232,12 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
               case Some(resp2: List[Map[String, Any] @ unchecked]) => resp2 match{
                 case first :: list =>
                   first.get(fName) match{
-                    case Some(List(x)) => Some(getSDoc(x.toString))
-                    case Some(x :: more) => Some(getSDoc(x.toString))
-                    case Some(x) => Some(getSDoc(x.toString))
+                    case Some(List(x)) =>
+                      val ident: SDoc = getSDoc(x.toString).asInstanceOf[SDoc]
+                      println(ident)
+                      Some(ident)
+                    case Some(x :: more) => Some(getSDoc(x.toString).asInstanceOf[SDoc])
+                    case Some(x) => Some(getSDoc(x.toString).asInstanceOf[SDoc])
                     case None => None
                   }
                 case _ => None
@@ -241,9 +289,9 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
                 resp2.foldRight(List.empty[SDoc]) {
                   case (map, l) => map.get("id") match {
                     case Some(List(v)) => map.get(fName) match{
-                      case Some(List(v2)) => getSDoc(v2.toString) :: l
-                      case Some(v2 :: more) => getSDoc(v2.toString) :: l
-                      case Some(v2) => getSDoc(v2.toString) :: l
+                      case Some(List(v2)) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
+                      case Some(v2 :: more) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
+                      case Some(v2) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
                     }
                     case _ => l
                   }
@@ -259,16 +307,157 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   override def displayName: String = name
 }
 
+case class TextMap[GDoc <: Identifiable](name: String) extends DataMap[GDoc] {
+  val file = new File(name)
+  override def put(item: GDoc): Boolean = put(item.identity(), item)
+
+  override def put(identity: Identity, item: GDoc): Boolean = {
+    try {
+      val writer = new BufferedWriter(new FileWriter(file, true))
+      get(identity) match {
+        case None =>
+          writer.append(s"${identity.id.toString}\n")
+          writer.close()
+          true
+        case Some(x) =>
+          true
+      }
+    }
+    catch{
+      case e: Exception => false
+    }
+  }
+
+  override def get(identity: Identity): Option[GDoc] = {
+    try {
+      val src: BufferedSource = Source.fromFile(file)
+      val id = identity
+      def checkIfInFile(lines: List[String]): Option[GDoc] = lines match{
+        case Nil => None
+        case line :: rest =>
+          if (line.equals(identity.id))
+            Some(CreateIdentifiables.createGitIdentifiablesFromString(line).asInstanceOf[GDoc])
+          else checkIfInFile(rest)
+      }
+      val returnValue = checkIfInFile(src.getLines().toList)
+      returnValue
+    } catch {
+      case e: Exception => None
+    }
+  }
+
+  override def identities: List[Identity] = {
+    val src: BufferedSource = Source.fromFile(file)
+    src.getLines().toList.foldRight(List.empty[Identity]){
+      case (str, list) => Identity(str, None) :: list
+    }
+  }
+
+  override def items: List[GDoc] = {
+    val src: BufferedSource = Source.fromFile(file)
+    src.getLines().toList.foldRight(List.empty[GDoc]){
+      case (str, list) => CreateIdentifiables.createGitIdentifiablesFromString(str).asInstanceOf[GDoc] :: list
+    }
+  }
+}
+
+case class FileSystemMap[GDoc <: Identifiable](subdirectory: String) extends DataMap[GDoc] {
+  override def put(identity: Identity, item: GDoc): Boolean = {
+    try {
+      def mkDirs(path: String, currPath: String = ""): Unit = {
+        path.indexOf("/") match {
+          case -1 => ()
+          case 1 if path.charAt(0) == '/' => ()
+          case 2 if path.substring(0,2).equals("..") => ()
+          case x =>
+            val file = new File(s"$currPath${path.substring(0,x)}")
+            file.mkdir()
+            mkDirs(path.substring(x+1), s"$currPath${path.substring(0,x+1)}")
+        }
+      }
+      mkDirs(s"$subdirectory/${identity.id}")
+      val writer = new BufferedWriter(new FileWriter(s"$subdirectory/${identity.id}", false))
+      writer.write(item.identity().id)
+      writer.close()
+      true
+    }
+    catch{
+      case e: Exception => false
+    }
+  }
+
+  override def get(identity: Identity): Option[GDoc] = {
+    try {
+      if (new File(s"$subdirectory/${identity.id}").exists()){
+        val str = Source.fromFile(s"$subdirectory/${identity.id}").getLines().foldRight(""){
+          case (line, fileContent) => s"$line\n$fileContent"
+        }
+        Some(CreateIdentifiables.createGitIdentifiablesFromString(str).asInstanceOf[GDoc])
+      } else {
+        None
+      }
+    }
+    catch {
+      case e: Exception => None
+    }
+  }
+
+  override def identities: List[Identity] = {
+    def getFilesOutOfSubdirectory(name: String, prefix: String = ""): List[Identity] = {
+      def file = new File(name)
+      file.listFiles().toList.foldRight(List.empty[Identity]){
+        case (fl, list) =>
+          val fileName = fl.getName
+          if (fl.isDirectory) getFilesOutOfSubdirectory(s"$name/$fileName", s"$prefix$fileName/") ::: list
+          else Identity(s"$prefix$fileName", None) :: list
+      }
+    }
+    getFilesOutOfSubdirectory(subdirectory)
+  }
+
+  override def items: List[GDoc] = {
+    def getStuffOutOfSubdirectory(name: String, start: String = ""): List[GDoc] = {
+      //WARNING: This could break the JVM with an OOM error, and probably will with large files.
+      //Use at own risk.
+      def file = new File(name)
+      file.listFiles().toList.foldRight(List.empty[GDoc]) {
+        case (fl, list) =>
+          val fileName = fl.getName
+          if (fl.isDirectory && start.equals("")) getStuffOutOfSubdirectory(s"$name/$fileName", name) ::: list
+          else if (fl.isDirectory) getStuffOutOfSubdirectory(s"$name/$fileName", start) ::: list
+          else {
+            (if (start.equals("")) get(Identity(fileName, None))
+            else get(Identity(s"${name.substring(start.length)}/$fileName", None))) match {
+              case Some(x) => x :: list
+              case None => list
+            }
+          }
+      }
+    }
+    getStuffOutOfSubdirectory(subdirectory)
+  }
+}
+
 // Mock feature transformers
 
-case class Clone() extends IncrTransformer[GitID, GitRepo] {
+case class Clone(str: String = "") extends IncrTransformer[GitID, GitRepo](str) {
   override val version = "0.1"
 
   override val statMap = SolrMap[Stat]("StatMap")
   override val provMap = SolrMap[Identity]("ProvMap")
   override val errMap = SolrMap[ErrorSummary]("ErrorMap")
 
-  override def compute(input: GitID): List[GitRepo] = ???
+  override def compute(input: GitID): List[GitRepo] = {
+    val repoLocation = input.identity().id
+    val repos = new File("repos")
+    if (!repos.isDirectory) repos.mkdir()
+    val secondRepos = new File(s"repos/${input.user}")
+    if (!secondRepos.isDirectory) secondRepos.mkdir()
+    val thirdRepos = new File(s"repos/${input.user}/${input.repo}")
+    if (!(thirdRepos.isDirectory && thirdRepos.listFiles().length > 0))
+      s"git clone https://github.com/$repoLocation repos/${input.user}/${input.repo}".!
+    List(GitRepo(input, s"repos/${input.user}/${input.repo}"))
+  }
 }
 
 case class Build() extends IncrTransformer[GitRepo, GitBuilds] {
@@ -372,8 +561,8 @@ class MockFixrPipeline {
 
 object Test{
   def main(args: Array[String]): Unit = {
-    val test = SolrMap[Identifiable]("status")
-    test.put(Identity("a", None), Done)
-    test.put(Identity("b", None), NotDone)
+    import Implicits._
+    val pipe = TextMap[GitID]("first50.txt") :-- Clone("AkkaLocalTest.conf") --> SolrMap[GitRepo]("GitRepos")
+    pipe.run()
   }
 }

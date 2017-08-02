@@ -159,7 +159,7 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
 }
 
 class AkkaWorker[Input, Output](compute: Input => List[Output], timeout: Duration) extends Actor {
-  context.setReceiveTimeout(timeout)
+  //context.setReceiveTimeout(timeout)
   var currInput: Option[Input] = None
   override def postStop(): Unit = {
     super.postStop()
@@ -167,6 +167,8 @@ class AkkaWorker[Input, Output](compute: Input => List[Output], timeout: Duratio
   }
   def receive: Receive = {
     case "context" => sender() ! context
+    //case ReceiveTimeout =>
+    //  throw new Exception("A worker has timed out! :(")
     case i: Input@unchecked =>
       try {
         currInput = Some(i)

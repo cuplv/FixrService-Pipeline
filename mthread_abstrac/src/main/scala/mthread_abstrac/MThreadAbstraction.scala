@@ -9,7 +9,7 @@ abstract class MThreadAbstraction[DMIn, DMOut, Input, Output](getListOfInputs: D
                                                               succ: (Input, List[Output], DMOut) => DMOut, fail: (Input, Exception) => Unit,
                                                               config: Option[Config]) {
   var pipeline: Option[MPipelineAbstraction[_]] = None
-  val fixrConfig = ConfigHelper.possiblyInConfig(config, "fixr", None)
+  val fixrConfig: Option[Config] = ConfigHelper.possiblyInConfig(config, "fixr", None)
   def send(message: Any): Boolean
   def !(message: Any): Boolean = send(message)
   def sendBack(message: Any): Boolean
