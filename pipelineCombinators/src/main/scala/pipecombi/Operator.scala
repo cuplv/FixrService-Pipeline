@@ -4,7 +4,13 @@ package pipecombi
   * Created by edmundlam on 6/23/17.
   */
 
-abstract class Stat extends Identifiable
+abstract class Stat extends Identifiable{
+  override def apply(s: String): Stat = s match {
+    case "Done" => Done
+    case "Error" => Error
+    case _ => NotDone
+  }
+}
 
 object Done extends Stat {
   override def identity(): Identity = Identity("Done", None)
@@ -22,6 +28,13 @@ abstract class ErrorSummary extends Identifiable
 
 case class GeneralErrorSummary(ex: Exception) extends ErrorSummary  {
   override def identity(): Identity = Identity(s"GenError:${ex.toString}", None)
+  override def apply(s: String): ErrorSummary = s.length match{
+    case x if x >= 9 => s.substring(0,9) match{
+      case "GenError:" => GeneralErrorSummary(new Exception(s.substring(9)))
+      case _ => ???
+    }
+    case _ => ???
+  }
 }
 
 abstract class Operator[Arg1 <: Identifiable, Arg2 <: Identifiable, Output <: Identifiable] {

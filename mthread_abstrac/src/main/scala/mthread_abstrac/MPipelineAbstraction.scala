@@ -31,7 +31,7 @@ object MPipelineBuilder {
       case "akka" => new AkkaPipeline(AkkaPipelineBuilder.getSystem)
       //Right now the default is the Akka since I have only implemented that.
       //Later, I may change it to a Single Threaded system or something.
-      case _ => new AkkaPipeline(AkkaPipelineBuilder.getSystem)
+      case _ => new SingleThreadPipeline[Unit]()
     }
   }
 }

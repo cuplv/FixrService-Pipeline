@@ -2,7 +2,6 @@
 import java.io._
 import scala.sys.process._
 
-import akka.actor.ActorSystem
 import pipecombi._
 import com.typesafe.config.Config
 import mthread_abstrac.ConfigHelper
@@ -19,34 +18,6 @@ import scalaj.http.Http
 
 // Mock Feature Declarations
 
-object CreateIdentifiables {
-  def createGitIdentifiablesFromString(string: String, id: Option[Identifiable] = None): Identifiable = id match {
-    case None => string.indexOf('/') match {
-      case -1 => new Identifiable {
-        override def identity(): Identity = Identity(string, None)
-      }
-      case x =>
-        val user = string.substring(0, x)
-        val next = string.substring(x + 1)
-        val endOfString = {
-          val nextPortion = next.indexOf(':')
-          if (nextPortion < 0) next.length else nextPortion
-        }
-        val repoHash = next.substring(0, endOfString)
-        val gitID = repoHash.indexOf('/') match {
-          case -1 => GitID(user, repoHash, None)
-          case y => GitID(user, repoHash.substring(0, y), Some(repoHash.substring(y + 1)))
-        }
-        next.indexOf(':') match {
-          case -1 => gitID
-          case y => createGitIdentifiablesFromString(next.substring(y + 1), Some(gitID))
-        }
-    }
-    case Some(g: GitID) =>
-      ???
-  }
-}
-
 case class GitID(user: String, repo: String, hashOpt: Option[String]) extends Identifiable {
   override def identity(): Identity = {
     val hashStr = hashOpt match {
@@ -55,12 +26,34 @@ case class GitID(user: String, repo: String, hashOpt: Option[String]) extends Id
     }
     Identity(s"$user/$repo$hashStr",None)
   }
+
+  override def apply(s: String): GitID = s.indexOf('/') match {
+      case -1 => throw new Exception(s"The string $s doesn't match GitID.")
+      case x =>
+        val user = s.substring(0, x)
+        val next = s.substring(x + 1)
+        val endOfString = {
+          val nextPortion = next.indexOf(':')
+          if (nextPortion < 0) next.length else nextPortion
+        }
+        val repoHash = next.substring(0, endOfString)
+        repoHash.indexOf('/') match {
+          case -1 => GitID(user, repoHash, None)
+          case y => GitID(user, repoHash.substring(0, y), Some(repoHash.substring(y + 1)))
+        }
+  }
 }
 
 case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable {
   override def identity(): Identity = Identity(s"${gitID.identity.id}:$repoPath",None)
+  override def apply(s: String): GitRepo = s.indexOf(':') match{
+    case -1 => throw new Exception(s"The string $s doesn't match GitRepo.")
+    case x =>
+      val gID = gitID.apply(s.substring(0, x))
+      GitRepo(gID, s.substring(x+1))
+  }
 }
-
+/*
 case class GitBuilds(gitRepo: GitRepo, buildPath: String) extends Identifiable {
   override def identity(): Identity = Identity(s"${gitRepo.identity.id}:$buildPath", None)
 }
@@ -76,14 +69,14 @@ case class Groums(gitID: GitID, methodName: String, dot: String) extends Identif
 case class End() extends Identifiable {
   override def identity(): Identity = Identity("", None)
 }
-
+*/
 // Mock Database Maps
-
+/*
 case class SolrDoc() extends Identifiable {
   override def identity(): Identity = ???
 }
-
-case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) extends DataMap[SDoc] {
+*/
+case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Config = null) extends DataMap[SDoc](Some(template)) {
   val databaseLocation: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Location", "http://localhost:8983/solr/")
   val collectionName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"CollectionName","gettingstarted")
   val url: String = databaseLocation+collectionName+"/"
@@ -107,7 +100,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   }
 
   def getObject(k: String = ""): List[(String, Any)] = {
-    val queryURL = url+"select?wt=json&q=id=\"" + k + "\""//s"${url}select?wt=json&q=id=\"$k\""
+    val queryURL = url+"select?wt=json&q=id=\"" + k + "\""
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     JSON.parseFull(json) match {
       case Some(parsed: Map[String@unchecked, Any@unchecked]) =>
@@ -143,8 +136,8 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
         s"""{
            |  "add": {
            |    "doc": {
-           |      "id": \"$id\",
-           |      "$fName": \"$itemF\"
+           |      "id": "$id",
+           |      "$fName": "$itemF"
            |    }
            |  },
            |  "commit": {}
@@ -199,14 +192,11 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
     }
   }
 
-  def getSDoc(s: String): Identifiable = {
+  def getSDoc(s: String): SDoc = {
+    //new SDoc(s)
     s.indexOf(delimiter) match{
-      case -1 => new Identifiable{
-        override def identity() = Identity(s, None)
-      }
-      case x => new Identifiable{
-        override def identity() = Identity(s.substring(0,x), Some(s.substring(x+delimiter.length)))
-      }
+      case -1 => template.apply(s).asInstanceOf[SDoc]
+      case x => template.apply(s.substring(0, x)).asInstanceOf[SDoc]
     }
   }
 
@@ -222,7 +212,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
       case Some(y) => identity.id+delimiter+y
       case None => identity.id
     }
-    val queryURL = url+"select?q=id:"+id+"&wt=json"
+    val queryURL = url+"select?wt=json&q=id=\"" + id + "\"%20AND%20" + name + ":[*%20TO%20*]"
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
@@ -232,12 +222,9 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
               case Some(resp2: List[Map[String, Any] @ unchecked]) => resp2 match{
                 case first :: list =>
                   first.get(fName) match{
-                    case Some(List(x)) =>
-                      val ident: SDoc = getSDoc(x.toString).asInstanceOf[SDoc]
-                      println(ident)
-                      Some(ident)
-                    case Some(x :: more) => Some(getSDoc(x.toString).asInstanceOf[SDoc])
-                    case Some(x) => Some(getSDoc(x.toString).asInstanceOf[SDoc])
+                    case Some(List(x)) => Some(getSDoc(x.toString))
+                    case Some(x :: more) => Some(getSDoc(x.toString))
+                    case Some(x) => Some(getSDoc(x.toString))
                     case None => None
                   }
                 case _ => None
@@ -251,7 +238,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   }
 
   override def identities: List[Identity] = {
-    val queryURL = url+"select?wt=json&rows=1000000&q=*:*"
+    val queryURL = url+"select?wt=json&rows=1000000&q="+name+":[*%20TO%20*]"
     val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
@@ -262,7 +249,14 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
                 resp2.foldRight(List.empty[Identity]) {
                   case (map, l) => map.get("id") match {
                     case Some(List(v)) => map.get(fName) match{
-                      case Some(List(v2)) => getIdentity(v.toString) :: l
+                      case Some(List(v2)) =>
+                        getIdentity(v.toString) :: l
+                      case Some(v2 :: more) => getIdentity(v.toString) :: l
+                      case Some(v2) => getIdentity(v.toString) :: l
+                    }
+                    case Some(v) => map.get(fName) match{
+                      case Some(List(v2)) =>
+                        getIdentity(v.toString) :: l
                       case Some(v2 :: more) => getIdentity(v.toString) :: l
                       case Some(v2) => getIdentity(v.toString) :: l
                     }
@@ -278,7 +272,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   }
 
   override def items: List[SDoc] = {
-    val queryURL = url+"select?wt=json&rows=1000000&q=*:*"
+    val queryURL = url+"select?wt=json&rows=1000000&q="+name+":[*%20TO%20*]"
     val json: String = Http(queryURL).asString.body //Find a way to Query the Database using a URL
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
@@ -289,9 +283,9 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
                 resp2.foldRight(List.empty[SDoc]) {
                   case (map, l) => map.get("id") match {
                     case Some(List(v)) => map.get(fName) match{
-                      case Some(List(v2)) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
-                      case Some(v2 :: more) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
-                      case Some(v2) => getSDoc(v2.toString).asInstanceOf[SDoc] :: l
+                      case Some(List(v2)) => getSDoc(v2.toString) :: l
+                      case Some(v2 :: more) => getSDoc(v2.toString) :: l
+                      case Some(v2) => getSDoc(v2.toString) :: l
                     }
                     case _ => l
                   }
@@ -307,7 +301,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, conf: Config = null) exte
   override def displayName: String = name
 }
 
-case class TextMap[GDoc <: Identifiable](name: String) extends DataMap[GDoc] {
+case class TextMap[GDoc <: Identifiable](name: String, template: GDoc) extends DataMap[GDoc](Some(template)) {
   val file = new File(name)
   override def put(item: GDoc): Boolean = put(item.identity(), item)
 
@@ -336,7 +330,7 @@ case class TextMap[GDoc <: Identifiable](name: String) extends DataMap[GDoc] {
         case Nil => None
         case line :: rest =>
           if (line.equals(identity.id))
-            Some(CreateIdentifiables.createGitIdentifiablesFromString(line).asInstanceOf[GDoc])
+            Some(template.apply(line).asInstanceOf[GDoc])
           else checkIfInFile(rest)
       }
       val returnValue = checkIfInFile(src.getLines().toList)
@@ -356,12 +350,12 @@ case class TextMap[GDoc <: Identifiable](name: String) extends DataMap[GDoc] {
   override def items: List[GDoc] = {
     val src: BufferedSource = Source.fromFile(file)
     src.getLines().toList.foldRight(List.empty[GDoc]){
-      case (str, list) => CreateIdentifiables.createGitIdentifiablesFromString(str).asInstanceOf[GDoc] :: list
+      case (str, list) => template.apply(str).asInstanceOf[GDoc] :: list
     }
   }
 }
 
-case class FileSystemMap[GDoc <: Identifiable](subdirectory: String) extends DataMap[GDoc] {
+case class FileSystemMap[GDoc <: Identifiable](subdirectory: String, template: GDoc) extends DataMap[GDoc](Some(template)) {
   override def put(identity: Identity, item: GDoc): Boolean = {
     try {
       def mkDirs(path: String, currPath: String = ""): Unit = {
@@ -392,7 +386,7 @@ case class FileSystemMap[GDoc <: Identifiable](subdirectory: String) extends Dat
         val str = Source.fromFile(s"$subdirectory/${identity.id}").getLines().foldRight(""){
           case (line, fileContent) => s"$line\n$fileContent"
         }
-        Some(CreateIdentifiables.createGitIdentifiablesFromString(str).asInstanceOf[GDoc])
+        Some(template.apply(str).asInstanceOf[GDoc])
       } else {
         None
       }
@@ -443,9 +437,9 @@ case class FileSystemMap[GDoc <: Identifiable](subdirectory: String) extends Dat
 case class Clone(str: String = "") extends IncrTransformer[GitID, GitRepo](str) {
   override val version = "0.1"
 
-  override val statMap = SolrMap[Stat]("StatMap")
-  override val provMap = SolrMap[Identity]("ProvMap")
-  override val errMap = SolrMap[ErrorSummary]("ErrorMap")
+  override val statMap = SolrMap[Stat]("StatMap", Done)
+  override val provMap = SolrMap[Identity]("ProvMap", Identity("", None))
+  override val errMap = SolrMap[ErrorSummary]("ErrorMap", GeneralErrorSummary(new Exception("")))
 
   override def compute(input: GitID): List[GitRepo] = {
     val repoLocation = input.identity().id
@@ -460,6 +454,22 @@ case class Clone(str: String = "") extends IncrTransformer[GitID, GitRepo](str) 
   }
 }
 
+case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, GitRepo](str) {
+  override val version = "0.1"
+  override val statMap = SolrMap[Stat]("StatMap", Done)
+  override val provMap = SolrMap[Identity]("ProvMap", Identity("", None))
+  override val errMap = SolrMap[ErrorSummary]("ErrorMap", GeneralErrorSummary(new Exception("")))
+
+  override def compute(input: GitRepo): List[GitRepo] = {
+    println(s"I have started with $input.")
+    println(s"git -C ${input.repoPath} log --pretty=format:%H")
+    val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
+    println(lisCommits)
+    
+    ???
+  }
+}
+/*
 case class Build() extends IncrTransformer[GitRepo, GitBuilds] {
   override val version = "0.1"
 
@@ -509,29 +519,30 @@ case class Loop[A <: Identifiable]() extends IncrTransformer[A,A] {
 
   override def compute(input: A): List[A] = List(input)
 }
-
+*/
 object Fixr {
 
-  def Stop[A <: Identifiable](): IncrTransformer[A,End] = Stop[A]()
+  //def Stop[A <: Identifiable](): IncrTransformer[A,End] = Stop[A]()
 
   def Loop[A <: Identifiable](): IncrTransformer[A,A] = Loop[A]()
 
 }
 
 // The Pipeline
-
+/*
 class MockFixrPipeline {
 
   // Pipeline Input Features
-  val gitIds = SolrMap[GitID]("GitIDs")
+  val gitIds = SolrMap[GitID]("GitIDs", GitID("","",None))
 
   // Computed Features
-  val gitRepos = SolrMap[GitRepo]("GitRepos")
-  val gitBuilds = SolrMap[GitBuilds]("GitBuilds")
+  val gitRepos = SolrMap[GitRepo]("GitRepos", GitRepo(GitID("","",None), ""))
+  /*val gitBuilds = SolrMap[GitBuilds]("GitBuilds")
   val instrAPKs = SolrMap[InstrumentedAPKs]("InstrAPKs")
   val groums    = SolrMap[Groums]("Groums")
 
   val end = SolrMap[End]("End")
+  */
 
   // Pipeline
   // {gitIds :--{ Clone--> gitRepos } } :--Build--> gitBuilds
@@ -544,13 +555,15 @@ class MockFixrPipeline {
 
 
   import Implicits._
-
+  /*
   val fixr = (gitIds :--Clone()--> gitRepos :--Build()--> gitBuilds) :<  {
     (CallbackInstr()--> instrAPKs :--Loop[InstrumentedAPKs]--> instrAPKs :--Stop[InstrumentedAPKs]--> end) ~
     (ExtractGroum()--> groums :--Loop[Groums]--> groums)
   }
 
+
   fixr
+  */
 
   /*
   || {
@@ -558,11 +571,15 @@ class MockFixrPipeline {
     (ExtractGroum--> groums :--Stop[Groums]()--> end)
   } */
 }
+*/
 
 object Test{
   def main(args: Array[String]): Unit = {
     import Implicits._
-    val pipe = TextMap[GitID]("first50.txt") :-- Clone("AkkaLocalTest.conf") --> SolrMap[GitRepo]("GitRepos")
-    pipe.run()
+    val repos = TextMap("first50.txt", GitID("", "", None))
+    val cloned = SolrMap("GitRepos", GitRepo(GitID("", "", None), ""))
+    val whatsNext = SolrMap("NoClue", GitRepo(GitID("", "", None), ""))
+    val pipe = repos :--Clone()--> cloned :--CommitExtraction()--> whatsNext
+    pipe.run("akka")
   }
 }

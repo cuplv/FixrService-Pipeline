@@ -153,7 +153,6 @@ abstract class IncrTransformer[Input <: Identifiable , Output <: Identifiable](c
   }
 
   override def failure(input: Input, e: Exception): Unit = {
-    println("This is where it belongs! :)")
     errMap.put(input.identity(), GeneralErrorSummary(e))
     statMap.put(input.identity(), Error)
   }

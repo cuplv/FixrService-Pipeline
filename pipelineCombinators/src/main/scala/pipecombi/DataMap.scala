@@ -9,7 +9,7 @@ object DataMap {
   def injectVersion(identity: Identity, version: String): Identity = identity.copy(version = Some(version))
 }
 
-abstract class DataMap[Item <: Identifiable] {
+abstract class DataMap[Item <: Identifiable](template: Option[Item] = None) {
   def put(identity: Identity, item: Item): Boolean
   def get(identity: Identity): Option[Item]
   def identities: List[Identity]
@@ -57,6 +57,7 @@ case class EitherDataMap[Left <: Identifiable, Right <: Identifiable](mapL:DataM
 
 class Bot extends Identifiable {
   override def identity(): Identity = Identity("",None)
+  override def apply(s: String): Bot = new Bot()
 }
 class BotMap extends DataMap[Bot] {
   override def get(identity: Identity): Option[Bot] = None

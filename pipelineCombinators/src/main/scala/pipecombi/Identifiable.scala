@@ -10,6 +10,7 @@ abstract class Identifiable {
    def getId(): String = identity().id
    def getVersion(): Option[String] = identity().version
    def |+| (other: Identifiable): Identifiable = identity() |+| other.identity()
+   def apply(s: String): Identifiable
 }
 
 case class Identity(id: String, version: Option[String]) extends Identifiable {
@@ -26,11 +27,15 @@ case class Identity(id: String, version: Option[String]) extends Identifiable {
       }
    }
 
+   override def apply(s: String): Identity = Identity(s, None)
+
    override def identity(): Identity = this
 }
 
 
-abstract class Either[L <: Identifiable, R <: Identifiable] extends Identifiable
+abstract class Either[L <: Identifiable, R <: Identifiable] extends Identifiable{
+   override def apply(s: String): Identifiable = ??? 
+}
 
 case class Left[L <: Identifiable, R <: Identifiable](left: L) extends Either[L,R] {
    override def identity(): Identity = left.identity()
@@ -43,4 +48,5 @@ case class Right[L <: Identifiable, R <: Identifiable](right: R) extends Either[
 
 case class Pair[L <: Identifiable,R <: Identifiable](left: L, right: R) extends Identifiable {
    override def identity(): Identity = (left |+| right).identity
+   override def apply(s: String): Identifiable = ???
 }

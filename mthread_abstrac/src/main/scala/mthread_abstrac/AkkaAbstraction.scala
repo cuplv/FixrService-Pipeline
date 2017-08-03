@@ -58,7 +58,9 @@ class AkkaSupervisor[DMIn, DMOut, Input, Output](getListOfInputs: DMIn => List[I
     case "input" => (acList, isReady) match{
       case (Nil, _) =>
         val acList = createWorkers
-        giveJobsToWorkers(getListOfInputs(dmI), acList)
+        val list = getListOfInputs(dmI)
+        if (list.isEmpty) mTA !! "output"
+        else giveJobsToWorkers(list, acList)
         context.become(newState(dmI, dmO, acList))
       case (_, true) => giveJobsToWorkers(getListOfInputs(dmI), acList)
       case (_, false) => mTA ! "input"

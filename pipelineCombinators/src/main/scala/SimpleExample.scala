@@ -23,6 +23,7 @@ object IDInt {
 
 case class IDInt(i : Int) extends Identifiable {
    override def identity(): Identity = Identity(i.toString,None)
+   override def apply(s: String): IDInt = IDInt(s.toInt)
 }
 
 case class PlusOne(conf: Any = "") extends IncrTransformer[IDInt, IDInt](conf) {
