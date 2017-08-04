@@ -53,6 +53,17 @@ case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable {
       GitRepo(gID, s.substring(x+1))
   }
 }
+
+case class GitCommitInfo(gitRepo: GitRepo) extends Identifiable {
+  val dMap = SolrDocMap(gitRepo.identity().id, Identity("", None))
+  override def identity(): Identity = gitRepo.identity()
+  override def apply(s: String): GitCommitInfo = {
+    GitCommitInfo(gitRepo(s))
+  }
+  def putInDataMap(map: Map[String, String]): Unit = map.foreach{
+    case (field, value) => dMap.put(Identity(field, None), Identity(value, None))
+  }
+}
 /*
 case class GitBuilds(gitRepo: GitRepo, buildPath: String) extends Identifiable {
   override def identity(): Identity = Identity(s"${gitRepo.identity.id}:$buildPath", None)
@@ -76,16 +87,158 @@ case class SolrDoc() extends Identifiable {
   override def identity(): Identity = ???
 }
 */
+case class SolrDocMap[Field <: Identifiable](name: String, template: Field, docID: String = "default", conf: Config = null) extends DataMap[Field](Some(template)) {
+  val databaseLocation: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Location", "http://localhost:8983/solr/")
+  val collectionName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"CollectionName","gettingstarted")
+  val documentID: String = ConfigHelper.possiblyInConfig(Some(conf), name+"DocumentID", docID)
+  val url: String = databaseLocation+collectionName+"/"
+  val delimiter = "`#**#`"
+
+  override def put(identity: Identity, item: Field): Boolean = {
+    val fName = identity.version match{
+      case None => identity.id
+      case Some(x) => identity.id + delimiter + identity.version.get
+    }
+    val itemF = item.identity().version match{
+      case None => item.identity().id
+      case Some(x) => item.identity().id + delimiter + item.identity().version.get
+    }
+    val jsonValue = getObject match{
+      case Nil =>
+        s"""{
+           |  "add": {
+           |    "doc": {
+           |      "id": "$documentID",
+           |      "$fName": "$itemF"
+           |    }
+           |  },
+           |  "commit": {}
+           |}
+         """.stripMargin
+      case l =>
+        val (mostOfString, needToAddValue) = l.foldLeft(
+          """{
+            |  "add": {
+            |    "doc": {""".stripMargin, true) {
+          case ((json, curr), (key, value)) => if (key.equals(fName)) {
+            (json + s"""
+                       |      "$fName": "$itemF",""".stripMargin, false)
+          } else if (!key.equals("_version_")) {
+            (json + """
+                      |      """.stripMargin + "\"" + key + "\": " + (value match {
+              case s: String => "\"" + value + "\""
+              case vL: List[_] => val tBC = "[ " +  vL.foldLeft(""){
+                case (j: String, s: String) => j + "\"" + s + "\", "
+                case (j: String, va) => j + va.toString + ", "
+              }
+                tBC.substring(0,tBC.length-2) + " ]"
+              case _ => value.toString
+            }) + ",", curr)
+          } else{
+            (json,curr)
+          }
+        }
+        val mostOfString2 = if (needToAddValue){
+          mostOfString + """
+                           |      """.stripMargin + "\"" + fName + "\": \"" + itemF + "\","
+        } else {
+          mostOfString + ""
+        }
+        mostOfString2.substring(0, mostOfString2.length-1) +
+          """
+            |    }
+            |  },
+            |  "commit": {}
+            |}
+          """.stripMargin
+    }
+    val json = Http(url+"update").postData(jsonValue.getBytes).header("Content-Type", "application/json").asString.body
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("error") match{
+          case Some(_) => false
+          case _ => true
+        }
+      case _ => false
+    }
+  }
+
+  def getObject: List[(String, Any)] = {
+    val queryURL = url+"select?wt=json&q=id=\"" + documentID + "\""
+    val json = Http(queryURL).asString.body //Query the Database Using the URL
+    JSON.parseFull(json) match {
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String@unchecked, Any@unchecked]) =>
+            resp.get("docs") match {
+              case Some(list: List[Map[String, Any] @ unchecked]) =>
+                val first = checkDocument(list, documentID)
+                first.foldRight(List.empty[(String, Any)]) {
+                  case ((key, value), l) =>
+                    (key, value) :: l
+                }
+              case _ => List.empty[(String, Any)]
+            }
+          case _ => List.empty[(String, Any)]
+        }
+      case _ => List.empty[(String, Any)]
+    }
+  }
+
+  def checkDocument(list: List[Map[String, Any] @ unchecked], id: String): Map[String, Any] = list match{
+    case Nil => Map.empty
+    case (first: Map[String @ unchecked, Any @ unchecked]) :: last =>
+      first.get("id") match{
+        case Some(str: String) if str.equals(id) => first
+        case _ => checkDocument(last, id)
+      }
+    case first :: last => checkDocument(last, id)
+  }
+
+  override def get(identity: Identity): Option[Field] = {
+    val queryURL = url+"select?wt=json&q=id=\"" + documentID + "\""
+    val json = Http(queryURL).asString.body
+    JSON.parseFull(json) match {
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("response") match {
+          case Some(resp: Map[String @unchecked, Any @unchecked]) =>
+            resp.get("docs") match {
+              case Some(list: List[Map[String, Any] @unchecked]) =>
+                val first = checkDocument(list, documentID)
+                first.get(identity.id) match{
+                  case Some(List(x)) => Some(template.apply(x.toString).asInstanceOf[Field])
+                  case Some(x :: more) => Some(template.apply(x.toString).asInstanceOf[Field])
+                  case Some(x) => Some(template.apply(x.toString).asInstanceOf[Field])
+                  case _ => None
+                }
+              case _ => None
+            }
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
+  override def identities: List[Identity] = {
+    getObject.foldRight(List.empty[Identity]){
+      case ((fName, value), list) => fName.indexOf(delimiter) match{
+        case -1 => Identity(fName, None) :: list
+        case x => Identity(fName.substring(0,x), Some(fName.substring(x+delimiter.length))) :: list
+      }
+    }
+  }
+
+  override def items: List[Field] = {
+    getObject.foldRight(List.empty[Field]){
+      case ((fName, value), list) => template.apply(value.toString).asInstanceOf[Field] :: list
+    }
+  }
+}
+
 case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Config = null) extends DataMap[SDoc](Some(template)) {
   val databaseLocation: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Location", "http://localhost:8983/solr/")
   val collectionName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"CollectionName","gettingstarted")
   val url: String = databaseLocation+collectionName+"/"
-  /*
-  val (verti, field) = if (ConfigHelper.possiblyInConfig(conf, name+"Vertical", default = true)){
-    (true, ConfigHelper.possiblyInConfig(conf, name+"Field", name))
-  } else {
-    (false, ConfigHelper.possiblyInConfig(conf, name+"Document", name))
-  }*/
   val fName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Field", name)
   val delimiter = "`#**#`"
 
@@ -454,19 +607,57 @@ case class Clone(str: String = "") extends IncrTransformer[GitID, GitRepo](str) 
   }
 }
 
-case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, GitRepo](str) {
+case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, GitCommitInfo](str) {
   override val version = "0.1"
   override val statMap = SolrMap[Stat]("StatMap", Done)
   override val provMap = SolrMap[Identity]("ProvMap", Identity("", None))
   override val errMap = SolrMap[ErrorSummary]("ErrorMap", GeneralErrorSummary(new Exception("")))
 
-  override def compute(input: GitRepo): List[GitRepo] = {
-    println(s"I have started with $input.")
-    println(s"git -C ${input.repoPath} log --pretty=format:%H")
+  override def compute(input: GitRepo): List[GitCommitInfo] = {
+    //s"git -C ${input.repoPath} pull".!
+    println(s"Starting with ${input.identity().id}!")
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
-    println(lisCommits)
-    
-    ???
+    lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]){
+      case (commit, listOfCommits) =>
+        val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --shortstat $commit".!!.split("\n")
+        //Stupid way of doing this. Fix later!
+        val comm = commitInfo(0).substring("commit ".length)
+        val checkForMerges = commitInfo(1) match{
+          case s if s.substring(0,7).equals("Merge: ") => 1
+          case _ => 0
+        }
+        println(checkForMerges)
+        val (author, authorEmail) = commitInfo(1+checkForMerges).substring("Author:     ".length) match{
+          case s => s.indexOf('<') match{
+            case -1 => (s, "")
+            case x => (s.substring(0, x-1), s.substring(x))
+          }
+        }
+        val authorDate = commitInfo(2+checkForMerges).substring("AuthorDate: ".length)
+        val (blame, blameEmail) = commitInfo(3+checkForMerges).substring("Commit:     ".length) match{
+          case s => s.indexOf('<') match{
+            case -1 => (s, "")
+            case x => (s.substring(0, x-1), s.substring(x))
+          }
+        }
+        val commitDate = commitInfo(4+checkForMerges).substring("CommitDate: ".length)
+        val startMap = Map[String, String]("commit"->comm, "author"->author, "authorEmail"->authorEmail,
+        "authorDate"->authorDate, "commiter"->blame, "commiterEmail"->blameEmail)
+        def findCommitMessage(message: Array[String], line: Int, currString: String = ""): (String, Int) = message(line) match {
+          case s if s.length > 4 && s.substring(0, 4).equals("    ") => currString match {
+            case "" => findCommitMessage(message, line + 1, message(line).substring(4))
+            case _ => findCommitMessage(message, line + 1, s"$currString\n${message(line).substring(4)}")
+          }
+          case _ => (currString, line)
+        }
+        val gID = input.gitID
+        val gCI = GitCommitInfo(GitRepo(GitID(gID.user, gID.repo, Some(comm)), input.repoPath))
+        val (title, nextLine) = findCommitMessage(commitInfo, 6+checkForMerges)
+        val (message, lineAfter) = findCommitMessage(commitInfo, nextLine+1)
+        val titleMap = startMap + ("title" -> title)
+        val messageMap = titleMap + ("message" -> message)
+        gCI :: listOfCommits
+    }
   }
 }
 /*
@@ -576,9 +767,11 @@ class MockFixrPipeline {
 object Test{
   def main(args: Array[String]): Unit = {
     import Implicits._
-    val repos = TextMap("first50.txt", GitID("", "", None))
-    val cloned = SolrMap("GitRepos", GitRepo(GitID("", "", None), ""))
-    val whatsNext = SolrMap("NoClue", GitRepo(GitID("", "", None), ""))
+    val templateID = GitID("", "", None)
+    val templateRepo = GitRepo(templateID, "")
+    val repos = TextMap("first50.txt", templateID)
+    val cloned = SolrMap("GitRepos", templateRepo)
+    val whatsNext = SolrMap("NoClue", GitCommitInfo(templateRepo))
     val pipe = repos :--Clone()--> cloned :--CommitExtraction()--> whatsNext
     pipe.run("akka")
   }
