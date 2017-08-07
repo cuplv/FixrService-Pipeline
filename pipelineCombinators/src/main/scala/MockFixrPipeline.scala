@@ -87,10 +87,10 @@ case class SolrDoc() extends Identifiable {
   override def identity(): Identity = ???
 }
 */
-case class SolrDocMap[Field <: Identifiable](name: String, template: Field, docID: String = "default", conf: Config = null) extends DataMap[Field](Some(template)) {
+case class SolrDocMap[Field <: Identifiable](name: String, template: Field, conf: Config = null) extends DataMap[Field](Some(template)) {
   val databaseLocation: String = ConfigHelper.possiblyInConfig(Some(conf), name+"Location", "http://localhost:8983/solr/")
   val collectionName: String = ConfigHelper.possiblyInConfig(Some(conf), name+"CollectionName","gettingstarted")
-  val documentID: String = ConfigHelper.possiblyInConfig(Some(conf), name+"DocumentID", docID)
+  val documentID: String = ConfigHelper.possiblyInConfig(Some(conf), name+"DocumentID", name)
   val url: String = databaseLocation+collectionName+"/"
   val delimiter = "`#**#`"
 
@@ -626,7 +626,6 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
           case s if s.substring(0,7).equals("Merge: ") => 1
           case _ => 0
         }
-        println(checkForMerges)
         val (author, authorEmail) = commitInfo(1+checkForMerges).substring("Author:     ".length) match{
           case s => s.indexOf('<') match{
             case -1 => (s, "")
@@ -643,19 +642,21 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
         val commitDate = commitInfo(4+checkForMerges).substring("CommitDate: ".length)
         val startMap = Map[String, String]("commit"->comm, "author"->author, "authorEmail"->authorEmail,
         "authorDate"->authorDate, "commiter"->blame, "commiterEmail"->blameEmail)
-        def findCommitMessage(message: Array[String], line: Int, currString: String = ""): (String, Int) = message(line) match {
+        def findCommitMessage(message: Array[String], line: Int, currString: String = ""): (String, Int) = if (message.length > line) message(line) match {
           case s if s.length > 4 && s.substring(0, 4).equals("    ") => currString match {
             case "" => findCommitMessage(message, line + 1, message(line).substring(4))
             case _ => findCommitMessage(message, line + 1, s"$currString\n${message(line).substring(4)}")
           }
           case _ => (currString, line)
-        }
+        } else (currString, line)
         val gID = input.gitID
         val gCI = GitCommitInfo(GitRepo(GitID(gID.user, gID.repo, Some(comm)), input.repoPath))
         val (title, nextLine) = findCommitMessage(commitInfo, 6+checkForMerges)
-        val (message, lineAfter) = findCommitMessage(commitInfo, nextLine+1)
+        val (message, lineAfter) = findCommitMessage(commitInfo, nextLine)
         val titleMap = startMap + ("title" -> title)
         val messageMap = titleMap + ("message" -> message)
+        gCI.putInDataMap(messageMap)
+        println(s"Finished with ${gCI.identity()}!")
         gCI :: listOfCommits
     }
   }
@@ -772,7 +773,7 @@ object Test{
     val repos = TextMap("first50.txt", templateID)
     val cloned = SolrMap("GitRepos", templateRepo)
     val whatsNext = SolrMap("NoClue", GitCommitInfo(templateRepo))
-    val pipe = repos :--Clone()--> cloned :--CommitExtraction()--> whatsNext
+    val pipe = repos :--Clone()--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> whatsNext
     pipe.run("akka")
   }
 }
