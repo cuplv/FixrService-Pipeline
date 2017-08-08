@@ -1,5 +1,6 @@
 
 import java.io._
+import java.util.Base64
 import scala.sys.process._
 
 import pipecombi._
@@ -55,10 +56,11 @@ case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable {
 }
 
 case class GitCommitInfo(gitRepo: GitRepo) extends Identifiable {
-  val dMap = SolrDocMap(gitRepo.identity().id, Identity("", None))
-  override def identity(): Identity = gitRepo.identity()
-  override def apply(s: String): GitCommitInfo = {
-    GitCommitInfo(gitRepo(s))
+  val dMap = SolrDocMap("!" + gitRepo.identity().id, Identity("", None))
+  override def identity(): Identity = Identity("!"+gitRepo.identity().id, gitRepo.identity().version)
+  override def apply(s: String): GitCommitInfo = s.indexOf('!') match {
+    case 0 => GitCommitInfo(gitRepo(s.substring(1)))
+    case _ => throw new Exception(s"The string $s doesn't match GitCommitInfo.")
   }
   def putInDataMap(map: Map[String, String]): Unit = map.foreach{
     case (field, value) => dMap.put(Identity(field, None), Identity(value, None))
@@ -156,7 +158,7 @@ case class SolrDocMap[Field <: Identifiable](name: String, template: Field, conf
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("error") match{
-          case Some(_) => false
+          case Some(x) => false
           case _ => true
         }
       case _ => false
@@ -307,9 +309,10 @@ case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Con
           } else if (!key.equals("_version_")) {
             (json + """
                       |      """.stripMargin + "\"" + key + "\": " + (value match {
-              case s: String => "\"" + value + "\""
+              case s: String => "\"" + s.replaceAll("\"", "\\\"") + "\""
               case vL: List[_] => val tBC = "[ " +  vL.foldLeft(""){
-                case (j: String, s: String) => j + "\"" + s + "\", "
+                case (j: String, s: String) =>
+                  j + "\"" + s.replaceAll("\\\"", "\\\\\"") + "\", "
                 case (j: String, va) => j + va.toString + ", "
               }
                 tBC.substring(0,tBC.length-2) + " ]"
@@ -338,10 +341,10 @@ case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Con
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("error") match{
-          case Some(_) => false
+          case Some(x) => println(x); false
           case _ => true
         }
-      case _ => false
+      case x => println(x); false
     }
   }
 
@@ -365,7 +368,7 @@ case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Con
       case Some(y) => identity.id+delimiter+y
       case None => identity.id
     }
-    val queryURL = url+"select?wt=json&q=id=\"" + id + "\"%20AND%20" + name + ":[*%20TO%20*]"
+    val queryURL = url+"select?wt=json&rows=1000&q=id=\"" + id + "\"%20AND%20" + name + ":[*%20TO%20*]"
     val json = Http(queryURL).asString.body //Query the Database Using the URL
     JSON.parseFull(json) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
@@ -374,7 +377,8 @@ case class SolrMap[SDoc <: Identifiable](name: String, template: SDoc, conf: Con
             resp.get("docs") match{
               case Some(resp2: List[Map[String, Any] @ unchecked]) => resp2 match{
                 case first :: list =>
-                  first.get(fName) match{
+                  val doc = checkDocument(first :: list, id)
+                  doc.get(fName) match{
                     case Some(List(x)) => Some(getSDoc(x.toString))
                     case Some(x :: more) => Some(getSDoc(x.toString))
                     case Some(x) => Some(getSDoc(x.toString))
@@ -619,7 +623,8 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]){
       case (commit, listOfCommits) =>
-        val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --shortstat $commit".!!.split("\n")
+        println(s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit")
+        val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit".!!.split("\n")
         //Stupid way of doing this. Fix later!
         val comm = commitInfo(0).substring("commit ".length)
         val checkForMerges = commitInfo(1) match{
@@ -649,15 +654,58 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
           }
           case _ => (currString, line)
         } else (currString, line)
+        def findFiles(message: Array[String], line: Int, files: String = "[ "): String = if (message.length > line) message(line) match{
+          case s if s.length > 4 && s.substring(0,4).equals("    ") => findFiles(message, line+2) //Should never happen, but just in case...
+          case "" => findFiles(message, line+1, files)
+          case x => findFiles(message, line+1, files + (files match{
+            case "[ " => "\\\"" + x + "\\\""
+            case _ => ", \\\""  + x + "\\\""
+          }))
+        } else files + " ]"
         val gID = input.gitID
         val gCI = GitCommitInfo(GitRepo(GitID(gID.user, gID.repo, Some(comm)), input.repoPath))
         val (title, nextLine) = findCommitMessage(commitInfo, 6+checkForMerges)
-        val (message, lineAfter) = findCommitMessage(commitInfo, nextLine)
+        val (message, lineAfter) = findCommitMessage(commitInfo, nextLine+1)
         val titleMap = startMap + ("title" -> title)
         val messageMap = titleMap + ("message" -> message)
-        gCI.putInDataMap(messageMap)
+        val filesMap = messageMap + ("files" -> findFiles(commitInfo, lineAfter))
+        gCI.putInDataMap(filesMap)
         println(s"Finished with ${gCI.identity()}!")
         gCI :: listOfCommits
+    }
+  }
+}
+
+case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommitInfo, GitCommitInfo](str) {
+  override val version = "0.1"
+  override val statMap = SolrMap[Stat]("StatMap", Done)
+  override val provMap = SolrMap[Identity]("ProvMap", Identity("", None))
+  override val errMap = SolrMap[ErrorSummary]("ErrorMap", GeneralErrorSummary(new Exception("")))
+  override def compute(input: GitCommitInfo): List[GitCommitInfo] = {
+    val files = input.dMap.get(Identity("files", None)) match{
+      case Some(i: Identity) => i.id
+      case _ => ""
+    }
+    println(s"Starting with ${input.identity().id}!")
+    println(files)
+    val listOfFiles = JSON.parseFull(files) match{
+      case Some(l: List[String @ unchecked]) => l
+      case _ => List()
+    }
+    println(listOfFiles)
+    listOfFiles.foldRight(List.empty[GitCommitInfo]){
+      case (file, list) =>
+        val len = file.length
+        file.substring(len-5, len) match{
+          case ".java" =>
+            val f = s"git -C ${input.gitRepo.repoPath} show ${input.gitRepo.gitID.hashOpt.get}:$file".!!
+            val fEncoded = Base64.getEncoder.encodeToString(f.getBytes())
+            println(fEncoded)
+            val json = Http("http://52.15.135.195:9002/features/batch/json").postData(fEncoded).asString.body
+            println(json)
+            ???
+          case _ => list
+        }
     }
   }
 }
@@ -770,10 +818,11 @@ object Test{
     import Implicits._
     val templateID = GitID("", "", None)
     val templateRepo = GitRepo(templateID, "")
-    val repos = TextMap("first50.txt", templateID)
+    val repos = TextMap("firstOne.txt", templateID)
     val cloned = SolrMap("GitRepos", templateRepo)
-    val whatsNext = SolrMap("NoClue", GitCommitInfo(templateRepo))
-    val pipe = repos :--Clone()--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> whatsNext
+    val commitInfo = SolrMap("CommitInfo", GitCommitInfo(templateRepo))
+    val whatsNext = SolrMap("Features", GitCommitInfo(templateRepo))
+    val pipe = repos :--Clone()--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> commitInfo :--FeatureExtraction()--> whatsNext
     pipe.run("akka")
   }
 }
