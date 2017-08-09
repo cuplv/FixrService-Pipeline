@@ -10,7 +10,7 @@ import mthread_abstrac.ConfigHelper
 import scala.io.{BufferedSource, Source}
 import scala.util.parsing.json.JSON
 import scalaj.http.Http
-
+//import feature.FeatureOuterClass
 
 /**
   * Created by edmundlam on 6/23/17.
@@ -59,11 +59,23 @@ case class GitCommitInfo(gitRepo: GitRepo) extends Identifiable {
   val dMap = SolrDocMap("!" + gitRepo.identity().id, Identity("", None))
   override def identity(): Identity = Identity("!"+gitRepo.identity().id, gitRepo.identity().version)
   override def apply(s: String): GitCommitInfo = s.indexOf('!') match {
-    case 0 => GitCommitInfo(gitRepo(s.substring(1)))
+    case 0 => if (s.charAt(1) != '!') GitCommitInfo(gitRepo(s.substring(1)))
+    else throw new Exception(s"The string $s doesn't match GitCommitInfo.")
     case _ => throw new Exception(s"The string $s doesn't match GitCommitInfo.")
   }
   def putInDataMap(map: Map[String, String]): Unit = map.foreach{
     case (field, value) => dMap.put(Identity(field, None), Identity(value, None))
+  }
+}
+
+case class GitFeatures(gitRepo: GitRepo, featureInfo: String) extends Identifiable {
+  override def identity(): Identity = Identity(s"!!${gitRepo.identity().id}!$featureInfo", None)
+
+  override def apply(s: String): Identifiable = s.indexOf("!!") match {
+    case 0 =>
+      val split = s.substring(2).indexOf('!')+2
+      GitFeatures(gitRepo(s.substring(2,split)), s.substring(split+1))
+    case _ => throw new Exception(s"The string $s doesn't match GitFeatures")
   }
 }
 /*
@@ -623,7 +635,6 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]){
       case (commit, listOfCommits) =>
-        println(s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit")
         val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit".!!.split("\n")
         //Stupid way of doing this. Fix later!
         val comm = commitInfo(0).substring("commit ".length)
@@ -676,12 +687,12 @@ case class CommitExtraction(str: String = "") extends IncrTransformer[GitRepo, G
   }
 }
 
-case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommitInfo, GitCommitInfo](str) {
+case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommitInfo, GitFeatures](str) {
   override val version = "0.1"
   override val statMap = SolrMap[Stat]("StatMap", Done)
   override val provMap = SolrMap[Identity]("ProvMap", Identity("", None))
   override val errMap = SolrMap[ErrorSummary]("ErrorMap", GeneralErrorSummary(new Exception("")))
-  override def compute(input: GitCommitInfo): List[GitCommitInfo] = {
+  override def compute(input: GitCommitInfo): List[GitFeatures] = {
     val files = input.dMap.get(Identity("files", None)) match{
       case Some(i: Identity) => i.id
       case _ => ""
@@ -693,17 +704,42 @@ case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommit
       case _ => List()
     }
     println(listOfFiles)
-    listOfFiles.foldRight(List.empty[GitCommitInfo]){
+    listOfFiles.foldRight(List.empty[GitFeatures]){
       case (file, list) =>
         val len = file.length
         file.substring(len-5, len) match{
           case ".java" =>
             val f = s"git -C ${input.gitRepo.repoPath} show ${input.gitRepo.gitID.hashOpt.get}:$file".!!
             val fEncoded = Base64.getEncoder.encodeToString(f.getBytes())
-            println(fEncoded)
-            val json = Http("http://52.15.135.195:9002/features/batch/json").postData(fEncoded).asString.body
-            println(json)
-            ???
+            val data = "{ \"srcs\": [{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }] }"
+            println(data)
+            val json = Http("http://52.15.135.195:9002/features/batch/json").postData("{ \"srcs\": [{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }] }").asString.body
+            JSON.parseFull(json) match{
+              case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("results") match{
+                case Some(l: List[_]) => l.head match {
+                  case m: Map[String @ unchecked, Any @ unchecked] => m.get("status") match {
+                    case Some("ok") => m.get("output") match {
+                      case Some(bytes: String) =>
+                        val decodedBytes = Base64.getDecoder.decode(bytes)
+                        //val features = FeatureOuterClass.Feature.parseFrom(decodedBytes)
+                        //
+                        GitFeatures(input.gitRepo, decodedBytes.foldLeft(""){
+                          case (string, byte) => string+byte
+                        }) :: list
+                      case _ => throw new Exception("Output didn't match expected output.")
+                    }
+                    case Some(s: String) if s.substring(0, 5).equals("error") => m.get("output") match{
+                      case Some(exception: String) => throw new Exception(exception)
+                      case _ => throw new Exception(s.substring(6))
+                    }
+                    case _ => throw new Exception("Invalid status code.")
+                  }
+                  case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
+                }
+                case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
+              }
+              case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
+            }
           case _ => list
         }
     }
@@ -821,7 +857,7 @@ object Test{
     val repos = TextMap("firstOne.txt", templateID)
     val cloned = SolrMap("GitRepos", templateRepo)
     val commitInfo = SolrMap("CommitInfo", GitCommitInfo(templateRepo))
-    val whatsNext = SolrMap("Features", GitCommitInfo(templateRepo))
+    val whatsNext = SolrMap("Features", GitFeatures(templateRepo, ""))
     val pipe = repos :--Clone()--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> commitInfo :--FeatureExtraction()--> whatsNext
     pipe.run("akka")
   }
