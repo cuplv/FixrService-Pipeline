@@ -6,6 +6,7 @@ import scala.sys.process._
 import pipecombi._
 import com.typesafe.config.Config
 import mthread_abstrac.ConfigHelper
+import feature.feature.BatchRequest
 
 import scala.io.{BufferedSource, Source}
 import scala.util.parsing.json.JSON
@@ -68,13 +69,13 @@ case class GitCommitInfo(gitRepo: GitRepo) extends Identifiable {
   }
 }
 
-case class GitFeatures(gitRepo: GitRepo, featureInfo: String) extends Identifiable {
-  override def identity(): Identity = Identity(s"!!${gitRepo.identity().id}!$featureInfo", None)
-
+case class GitFeatures(gitRepo: GitRepo, featureInfo: feature.feature.Features) extends Identifiable {
+  val id: String = Base64.getEncoder.encodeToString(featureInfo.toByteArray)
+  override def identity(): Identity = Identity(s"!!${gitRepo.identity().id}!$id", None)
   override def apply(s: String): Identifiable = s.indexOf("!!") match {
     case 0 =>
       val split = s.substring(2).indexOf('!')+2
-      GitFeatures(gitRepo(s.substring(2,split)), s.substring(split+1))
+      GitFeatures(gitRepo(s.substring(2,split)), feature.feature.Features.parseFrom(Base64.getDecoder.decode(s.substring(split+1))))
     case _ => throw new Exception(s"The string $s doesn't match GitFeatures")
   }
 }
@@ -698,7 +699,6 @@ case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommit
       case _ => ""
     }
     println(s"Starting with ${input.identity().id}!")
-    println(files)
     val listOfFiles = JSON.parseFull(files) match{
       case Some(l: List[String @ unchecked]) => l
       case _ => List()
@@ -711,32 +711,23 @@ case class FeatureExtraction(str: String = "") extends IncrTransformer[GitCommit
           case ".java" =>
             val f = s"git -C ${input.gitRepo.repoPath} show ${input.gitRepo.gitID.hashOpt.get}:$file".!!
             val fEncoded = Base64.getEncoder.encodeToString(f.getBytes())
-            val data = "{ \"srcs\": [{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }] }"
-            println(data)
-            val json = Http("http://52.15.135.195:9002/features/batch/json").postData("{ \"srcs\": [{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }] }").asString.body
-            JSON.parseFull(json) match{
-              case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("results") match{
-                case Some(l: List[_]) => l.head match {
-                  case m: Map[String @ unchecked, Any @ unchecked] => m.get("status") match {
-                    case Some("ok") => m.get("output") match {
-                      case Some(bytes: String) =>
-                        val decodedBytes = Base64.getDecoder.decode(bytes)
-                        //val features = FeatureOuterClass.Feature.parseFrom(decodedBytes)
-                        //
-                        GitFeatures(input.gitRepo, decodedBytes.foldLeft(""){
-                          case (string, byte) => string+byte
-                        }) :: list
-                      case _ => throw new Exception("Output didn't match expected output.")
-                    }
-                    case Some(s: String) if s.substring(0, 5).equals("error") => m.get("output") match{
-                      case Some(exception: String) => throw new Exception(exception)
-                      case _ => throw new Exception(s.substring(6))
-                    }
-                    case _ => throw new Exception("Invalid status code.")
-                  }
-                  case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
+            val data = "{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }"
+            val json = Http("http://52.15.135.195:9002/features/single/json").postData("{ \"name\": \"" + file + "\", \"src\": \"" + fEncoded + "\" }").asString.body
+            JSON.parseFull(json) match {
+              case Some(m: Map[String@unchecked, Any@unchecked]) => m.get("status") match {
+                case Some("ok") => m.get("output") match {
+                  case Some(bytes: String) =>
+                    val decodedBytes = Base64.getDecoder.decode(bytes)
+                    //decodedBytes.foreach(print(_))
+                    val features = feature.feature.Features.parseFrom(decodedBytes)
+                    GitFeatures(input.gitRepo, features) :: list
+                  case _ => throw new Exception("Output didn't match expected output.")
                 }
-                case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
+                case Some(s: String) if s.substring(0, 5).equals("error") => m.get("output") match {
+                  case Some(exception: String) => println(new Exception(exception)); list
+                  case _ => println(new Exception(s.substring(6))); list
+                }
+                case _ => throw new Exception("Invalid status code.")
               }
               case _ => throw new Exception("Returned values on Feature Extraction are not in the correct format.")
             }
@@ -854,11 +845,11 @@ object Test{
     import Implicits._
     val templateID = GitID("", "", None)
     val templateRepo = GitRepo(templateID, "")
-    val repos = TextMap("firstOne.txt", templateID)
+    val repos = TextMap("first50.txt", templateID)
     val cloned = SolrMap("GitRepos", templateRepo)
     val commitInfo = SolrMap("CommitInfo", GitCommitInfo(templateRepo))
-    val whatsNext = SolrMap("Features", GitFeatures(templateRepo, ""))
-    val pipe = repos :--Clone()--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> commitInfo :--FeatureExtraction()--> whatsNext
+    val whatsNext = SolrMap("Features", GitFeatures(templateRepo, feature.feature.Features()))
+    val pipe = repos :--Clone("AkkaSpreadOutTest.conf")--> cloned :--CommitExtraction("AkkaSpreadOutTest.conf")--> commitInfo :--FeatureExtraction("AkkaSpreadOutTest.conf")--> whatsNext
     pipe.run("akka")
   }
 }
