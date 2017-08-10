@@ -13,6 +13,8 @@ project/plugins/project/
 pipelineCombinators/repos/*
 
 # IntelliJ
+.DS_Store
+**/.DS_Store
 .idea
 .idea/**
 **/.idea/**
