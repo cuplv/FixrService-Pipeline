@@ -64,13 +64,15 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output] extends Platfo
     }
   }
 
+  def getInputs(): Seq[Input] = getUpstreamConnector().retrieveUp()
+
 }
 
-/*
 abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifiable[InputR],Output] extends Platform {
 
   var upstreamLConnectorOpt: Option[Connector[InputL]] = None
   var upstreamRConnectorOpt: Option[Connector[InputR]] = None
+  var pairConnectorOpt: Option[Connector[protopipes.data.Pair[InputL,InputR]]] = None
   var inputLMapOpt: Option[DataStore[InputL]] = None
   var inputRMapOpt: Option[DataStore[InputR]] = None
   var outputMapOpt: Option[DataStore[Output]] = None
@@ -83,12 +85,15 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   }
 
   def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
-    val upstreamLConnector = builder.connector[InputL]("unary-platform-connector-left")
+    val upstreamLConnector = builder.connector[InputL]("binary-platform-connector-left")
     upstreamLConnector.init(conf)
     upstreamLConnectorOpt = Some(upstreamLConnector)
-    val upstreamRConnector = builder.connector[InputR]("unary-platform-connector-right")
+    val upstreamRConnector = builder.connector[InputR]("binary-platform-connector-right")
     upstreamRConnector.init(conf)
     upstreamRConnectorOpt = Some(upstreamRConnector)
+    val pairConnector = builder.connector[protopipes.data.Pair[InputL,InputR]]("binary-platform-connector-pair")
+    pairConnector.init(conf)
+    pairConnectorOpt = Some(pairConnector)
   }
 
   def getUpstreamLConnector(): Connector[InputL] = upstreamLConnectorOpt match {
@@ -101,6 +106,14 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
 
   def getUpstreamRConnector(): Connector[InputR] = upstreamRConnectorOpt match {
     case Some(upstreamConnector) => upstreamConnector
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getPairConnector(): Connector[protopipes.data.Pair[InputL,InputR]] = pairConnectorOpt match {
+    case Some(pairConnector) => pairConnector
     case None => {
       // TODO: Throw exception
       ???
@@ -131,4 +144,29 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
     }
   }
 
-}*/
+  def getInputs(): (Seq[InputL],Seq[InputR],Seq[protopipes.data.Pair[InputL,InputR]]) = {
+
+     val inputLs = getUpstreamLConnector().retrieveUp()
+     val inputRs = getUpstreamRConnector().retrieveUp()
+
+     val inputPairs = (
+       inputLs.map(
+         inputL => getInputRMap().all().map(
+           inputR => protopipes.data.Pair(inputL,inputR)
+         )
+       ) ++
+       inputRs.map(
+         inputR => getInputLMap().all().map(
+           inputL => protopipes.data.Pair(inputL,inputR)
+         )
+       )
+     ).flatten.toSet
+
+     getPairConnector().sendDown(inputPairs.toSeq)
+
+     val newInputPairs = getPairConnector().retrieveUp()
+
+    (inputLs,inputRs,newInputPairs)
+  }
+
+}

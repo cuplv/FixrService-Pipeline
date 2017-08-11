@@ -6,7 +6,7 @@ package protopipes.data
 
 abstract class Identifiable[A] {
   def identity(): Identity[A]
-  def getId(): String = identity().id
+  def getId(): Any = identity().id
   def getVersion(): Option[String] = identity().version
 }
 
@@ -18,7 +18,7 @@ object Identity {
 
 }
 
-case class Identity[A](id: String, version: Option[String]) extends Identifiable[A] {
+case class Identity[A](id: Any, version: Option[String]) extends Identifiable[A] {
 
   val delimiter = "-:**:-"
 
@@ -27,7 +27,7 @@ case class Identity[A](id: String, version: Option[String]) extends Identifiable
 
 object PairIdentity {
 
-  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): String = id1.id ++ "::" ++ id2.id
+  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): Any = (id1.id,id2.id)
 
   def mergeVersions[A,B](id1: Identity[A], id2: Identity[B]): Option[String] = {
     (id1.identity().version,id2.identity().version) match {

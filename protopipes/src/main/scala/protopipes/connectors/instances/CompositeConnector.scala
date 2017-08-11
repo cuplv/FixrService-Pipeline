@@ -27,11 +27,12 @@ case class CompositeConnector[Data](headConnector:Connector[Data], endConnector:
      endConnector.terminate()
   }
 
+  /*
   override def registerStore(datastore: DataStore[Data]): Unit = {
     super.registerStore(datastore)
     headConnector.registerStore(datastore)
     endConnector.registerStore(datastore)
-  }
+  } */
 
   override def registerDownstreamConnector(connector: Connector[Data]): Unit = {
     super.registerDownstreamConnector(connector)
@@ -49,7 +50,7 @@ case class CompositeConnector[Data](headConnector:Connector[Data], endConnector:
 
   override def retrieveUp(): Seq[Data] = endConnector.retrieveUp()
 
-  override def reportUp(status: Status, ids: Seq[Identity[Data]]): Unit = endConnector.reportUp(status, ids)
+  override def reportUp(status: Status, data: Seq[Data]): Unit = endConnector.reportUp(status, data)
 
   override def size(): Int = headConnector.size() + endConnector.size()
 

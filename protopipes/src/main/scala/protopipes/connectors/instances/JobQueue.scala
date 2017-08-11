@@ -30,7 +30,7 @@ class JobQueue[Data] extends Connector[Data] {
 
   override def retrieveUp(): Seq[Data] = queue.extract()
 
-  override def reportUp(status:Status, data: Seq[Identity[Data]]): Unit = { }
+  override def reportUp(status:Status, data: Seq[Data]): Unit = { }
 
   override def size(): Int = queue.size()
 
@@ -40,26 +40,27 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   // var currId: Id = 0L
   // val history: DataMap[Id, Identity[Data]] = new InMemDataMap[Id, Identity[Data]]
-  val statusMap: DataMultiMap[Status, Identity[Data]] = new InMemDataMultiMap[Status, Identity[Data]]
+  val statusMap: DataMultiMap[Status, Data] = new InMemDataMultiMap[Status, Data]
 
-  def getMap(): IdDataMap[Data] = datastoreOpt match {
-    case Some(dataStore) => dataStore.asInstanceOf[IdDataMap[Data]]
+  /*
+  def getMap(): DataMap[Identity[Data],Data] = datastoreOpt match {
+    case Some(dataStore) => dataStore.asInstanceOf[DataMap[Identity[Data],Data]]
     case None => {
       // TODO: Throw exception
       ???
     }
-  }
+  } */
 
-  def getStatusMap(): DataMultiMap[Status, Identity[Data]] = statusMap
+  def getStatusMap(): DataMultiMap[Status, Data] = statusMap
 
   override def sendDown(data: Seq[Data]): Unit = {
-    val newData = data.filterNot( d => statusMap.contains(Status.Done, d.asInstanceOf[Identifiable[Data]].identity()) )
-    statusMap.put(Status.NotDone, newData.map( _.identity() ).toSet)
+    val newData = data.filterNot( d => statusMap.contains(Status.Done, d) )
+    statusMap.put(Status.NotDone, newData.toSet)
     super.sendDown(newData)
   }
 
   override def retrieveUp(): Seq[Data] = {
-    queue.extract() ++ (statusMap.get(Status.Error) ++ statusMap.get(Status.Modified)).flatMap( getMap().get(_) )
+    queue.extract() ++ (statusMap.get(Status.Error) ++ statusMap.get(Status.Modified))
      /*
      (previous ++ queue.extract()) foreach {
        d => {
@@ -71,9 +72,9 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
      out */
   }
 
-  override def reportUp(status: Status, ids: Seq[Identity[Data]]): Unit = {
-    statusMap.remove( ids.toSet )
-    statusMap.put(status, ids.toSet )
+  override def reportUp(status: Status, data: Seq[Data]): Unit = {
+    statusMap.remove( data.toSet )
+    statusMap.put(status, data.toSet )
     // history.remove(ids)
   }
 

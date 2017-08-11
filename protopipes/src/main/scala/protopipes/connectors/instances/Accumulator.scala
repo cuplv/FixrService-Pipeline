@@ -34,8 +34,8 @@ case class Accumulator[Data](limit: Int = 50) extends Connector[Data] {
      dataStore.extract()
   }
 
-  override def reportUp(status: Status, ids: Seq[Identity[Data]]): Unit = upstreamConnectorOpt match {
-    case Some(upstreamConnector) => upstreamConnector.reportUp(status, ids)
+  override def reportUp(status: Status, data: Seq[Data]): Unit = upstreamConnectorOpt match {
+    case Some(upstreamConnector) => upstreamConnector.reportUp(status, data)
     case None => // Do nothing
   }
 

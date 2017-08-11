@@ -26,7 +26,7 @@ object ActorConnectorActor {
 
   case class RetrieveUp()
 
-  case class ReportUp[Data](status: Status, ids: Seq[Identity[Data]])
+  case class ReportUp[Data](status: Status, ids: Seq[Data])
 
   case class Size()
 
@@ -40,7 +40,7 @@ class ActorConnectorActor[Data](connector: Connector[Data]) extends Actor {
 
     case RetrieveUp() => sender() ! connector.retrieveUp()
 
-    case ReportUp(status: Status, ids: Seq[Identity[Data]]) => connector.reportUp(status, ids)
+    case ReportUp(status: Status, ids: Seq[Data]) => connector.reportUp(status, ids)
 
     case Size() => sender() ! connector.size()
   }
@@ -85,7 +85,7 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
     Await.result(future, timeout.duration).asInstanceOf[Seq[Data]]
   }
 
-  override def reportUp(status: Status, ids: Seq[Identity[Data]]): Unit = getActor ! ReportUp(status, ids)
+  override def reportUp(status: Status, data: Seq[Data]): Unit = getActor ! ReportUp(status, data)
 
   override def size(): Int = {
     implicit val timeout: Timeout = 60 seconds

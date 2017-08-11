@@ -33,7 +33,7 @@ object Connector {
 
 abstract class Connector[Input] {
 
-  var datastoreOpt: Option[DataStore[Input]] = None
+  // var datastoreOpt: Option[DataStore[Input]] = None
   //  var platformOpt: Option[Platform] = None
 
   var upstreamConnectorOpt: Option[Connector[Input]] = None
@@ -42,7 +42,7 @@ abstract class Connector[Input] {
   def init(conf: Config): Unit
   def terminate(): Unit
 
-  def registerStore(datastore: DataStore[Input]): Unit = datastoreOpt = Some(datastore)
+  // def registerStore(datastore: DataStore[Input]): Unit = datastoreOpt = Some(datastore)
   def registerUpstreamConnector(connector: Connector[Input]): Unit = upstreamConnectorOpt = Some(connector)
   def registerDownstreamConnector(connector: Connector[Input]): Unit = downstreamConnectorOpt = Some(connector)
   def registerPlatform(platform: Platform): Unit = {
@@ -90,8 +90,8 @@ abstract class Connector[Input] {
   def retrieveUp(): Seq[Input]
 
   // Send status report upstream
-  def reportUp(status: Status, data: Seq[Identity[Input]]): Unit
-  def reportUp(status: Status, data: Identity[Input]): Unit = reportUp(status, Seq(data))
+  def reportUp(status: Status, data: Seq[Input]): Unit
+  def reportUp(status: Status, data: Input): Unit = reportUp(status, Seq(data))
 
   def size(): Int
 

@@ -14,7 +14,7 @@ import com.typesafe.config.Config
   */
 
 
-abstract class MapperPlatform[Input <: Identifiable[Input], Output] extends UnaryPlatform[Input, Output] {
+abstract class MapperPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryPlatform[Input, Output] {
 
   var mapperOpt: Option[Mapper[Input,Output]] = None
 
@@ -43,7 +43,7 @@ abstract class MapperPlatform[Input <: Identifiable[Input], Output] extends Unar
           output
         }
       )
-      getUpstreamConnector().reportUp(Status.Done, input.identity())
+      getUpstreamConnector().reportUp(Status.Done, input)
       outputs
     } catch {
       case ex:Exception => {

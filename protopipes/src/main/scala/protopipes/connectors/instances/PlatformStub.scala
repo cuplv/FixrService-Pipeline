@@ -26,7 +26,7 @@ case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
     ???
   }
 
-  override def reportUp(status: Status, ids: Seq[Identity[Data]]): Unit = {
+  override def reportUp(status: Status, ids: Seq[Data]): Unit = {
     // TODO Throw exception: Not allowed
     ???
   }

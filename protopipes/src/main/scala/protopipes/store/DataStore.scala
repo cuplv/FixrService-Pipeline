@@ -33,10 +33,11 @@ abstract class DataStore[Data] extends Upstream[Data]  {
 
   def size(): Int
 
+  /*
   override def registerConnector(connector: Connector[Data]): Unit = {
     super.registerConnector(connector)
-    connector.registerStore(this)
-  }
+    // connector.registerStore(this)
+  } */
 
 }
 

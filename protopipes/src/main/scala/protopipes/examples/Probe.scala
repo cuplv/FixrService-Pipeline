@@ -13,7 +13,7 @@ import protopipes.store.instances.InMemDataMultiMap
   */
 object Probe {
 
-  def extractStatusMap[Input <: Identifiable[Input], Output](mapper: Mapper[Input,Output]): DataMultiMap[Status,Identity[Input]] = {
+  def extractStatusMap[Input <: Identifiable[Input], Output <: Identifiable[Output]](mapper: Mapper[Input,Output]): DataMultiMap[Status,Input] = {
     mapper.platformOpt.get.asInstanceOf[UnaryPlatform[Input,Input]].getUpstreamConnector()
       .asInstanceOf[ActorConnector[Input]].innerConnector.asInstanceOf[IncrTrackerJobQueue[Input]].statusMap
   }

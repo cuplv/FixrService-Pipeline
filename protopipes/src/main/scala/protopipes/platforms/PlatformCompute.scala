@@ -1,6 +1,6 @@
 package protopipes.platforms
 
-import protopipes.computations.Mapper
+import protopipes.computations.{Mapper, PairwiseComposer}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.{Connector, Status}
 import protopipes.data.Identifiable
@@ -9,7 +9,7 @@ import protopipes.store.DataStore
 /**
   * Created by edmundlam on 8/8/17.
   */
-trait ComputesMap[Input <: Identifiable[Input], Output] {
+trait ComputesMap[Input <: Identifiable[Input], Output <: Identifiable[Output]] {
 
   var mapperOpt: Option[Mapper[Input,Output]] = None
 
@@ -37,13 +37,43 @@ trait ComputesMap[Input <: Identifiable[Input], Output] {
           output
         }
       )
-      upstreamConnector.reportUp(Status.Done, input.identity() )
+      upstreamConnector.reportUp(Status.Done, input )
       outputs
     } catch {
       case ex:Exception => {
         // Compute exception occurred, log this in error store
         // errors.put(input.identity, GeneralErrorSummary(ex))
         List()
+      }
+    }
+  }
+
+}
+
+trait ComputesPairwiseCompose[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]] {
+
+  var composerOpt: Option[PairwiseComposer[InputL,InputR,Output]] = None
+
+  def setPairwiseComposer(composer: PairwiseComposer[InputL,InputR,Output]): Unit = composerOpt = Some(composer)
+
+  def getComposer(): PairwiseComposer[InputL,InputR,Output] = composerOpt match {
+    case Some(composer) => composer
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def tryComposeThenStore(pairConnector: Connector[protopipes.data.Pair[InputL,InputR]], composer: PairwiseComposer[InputL,InputR,Output],
+                          pair: protopipes.data.Pair[InputL,InputR], outputMap: DataStore[Output]): Option[Output] = {
+    try {
+      val output = if(composer.filter(pair.left, pair.right)) Some(composer.compose(pair.left,pair.right)) else None
+      pairConnector.reportUp(Status.Done, pair)
+      output
+    } catch {
+      case ex: Exception => {
+        // TODO Log error
+        None
       }
     }
   }
