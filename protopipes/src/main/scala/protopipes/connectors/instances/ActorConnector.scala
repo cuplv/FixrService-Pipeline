@@ -80,12 +80,18 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
   override def sendDown(data: Seq[Data]): Unit = getActor ! SendDown(data)
 
   override def retrieveUp(): Seq[Data] = {
+    println(s"$name retrieving upstream...")
     implicit val timeout: Timeout = 60 seconds
     val future = getActor ? RetrieveUp()
-    Await.result(future, timeout.duration).asInstanceOf[Seq[Data]]
+    val res = Await.result(future, timeout.duration).asInstanceOf[Seq[Data]]
+    println(s"$name retrieved results: $res")
+    res
   }
 
-  override def reportUp(status: Status, data: Seq[Data]): Unit = getActor ! ReportUp(status, data)
+  override def reportUp(status: Status, data: Seq[Data]): Unit = {
+    println(s"$name reporting $status -> $data")
+    getActor ! ReportUp(status, data)
+  }
 
   override def size(): Int = {
     implicit val timeout: Timeout = 60 seconds

@@ -1,6 +1,6 @@
 package protopipes.computations
 
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.data.Identifiable
 import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
@@ -92,6 +92,7 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
 
   def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
      val platform: BinaryPlatform[InputL,InputR,Output] with ComputesPairwiseCompose[InputL,InputR,Output] = builder.pairwiseComposerPlatform[InputL,InputR,Output]
+     platform.init(conf, inputLMap, inputRMap, outputMap, builder)
      platform.setPairwiseComposer(this)
      init(conf, inputLMap, inputRMap, outputMap, platform)
   }
@@ -113,3 +114,4 @@ class CartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[In
   override def compose(inputL: InputL, inputR: InputR): data.Pair[InputL, InputR] = protopipes.data.Pair(inputL,inputR)
   
 }
+

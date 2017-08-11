@@ -1,7 +1,7 @@
 package protopipes.platforms.instances
 
 import protopipes.connectors.Connector.Id
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.computations.Mapper
 import protopipes.connectors.Status
 import protopipes.data.Identifiable

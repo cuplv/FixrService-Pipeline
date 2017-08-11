@@ -1,7 +1,7 @@
-package protopipes.builders.instances
+package protopipes.configurations.instances
 
 import akka.actor.ActorSystem
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector
 import protopipes.connectors.instances.{ActorIncrTrackerJobQueue, IncrTrackerJobQueue}
 import protopipes.data.Identifiable

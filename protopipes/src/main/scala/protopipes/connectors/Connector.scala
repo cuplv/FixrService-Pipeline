@@ -1,6 +1,6 @@
 package protopipes.connectors
 
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.{CompositeConnector, PlatformStub}
@@ -78,7 +78,10 @@ abstract class Connector[Input] {
   /* Incoming methods, from upstream */
 
   // Signal downstream connector that new data are available
-  def signalDown(): Unit = getDownstream().signalDown()
+  def signalDown(): Unit = downstreamConnectorOpt match {
+    case Some(downstreamConnector) => downstreamConnector.signalDown()
+    case None =>
+  }
 
   // Send new data downstream
   def sendDown(data: Seq[Input]): Unit

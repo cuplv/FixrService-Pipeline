@@ -1,4 +1,4 @@
-package protopipes.builders
+package protopipes.configurations
 
 import protopipes.connectors.Connector
 import protopipes.data.Identifiable

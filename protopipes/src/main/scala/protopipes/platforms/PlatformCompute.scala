@@ -67,8 +67,13 @@ trait ComputesPairwiseCompose[InputL <: Identifiable[InputL], InputR <: Identifi
   def tryComposeThenStore(pairConnector: Connector[protopipes.data.Pair[InputL,InputR]], composer: PairwiseComposer[InputL,InputR,Output],
                           pair: protopipes.data.Pair[InputL,InputR], outputMap: DataStore[Output]): Option[Output] = {
     try {
-      val output = if(composer.filter(pair.left, pair.right)) Some(composer.compose(pair.left,pair.right)) else None
+      val output = if(composer.filter(pair.left, pair.right)) {
+        val output = composer.compose(pair.left,pair.right)
+        outputMap.put(output)
+        Some(output)
+      } else None
       pairConnector.reportUp(Status.Done, pair)
+
       output
     } catch {
       case ex: Exception => {

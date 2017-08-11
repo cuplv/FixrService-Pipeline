@@ -1,6 +1,6 @@
 package protopipes.platforms
 
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector
 import protopipes.data.Identifiable
 import protopipes.store.DataStore

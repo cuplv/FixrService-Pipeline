@@ -1,6 +1,6 @@
 package protopipes.connectors.instances
 
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
@@ -25,7 +25,8 @@ class JobQueue[Data] extends Connector[Data] {
   override def sendDown(data: Seq[Data]): Unit = {
     queue.enqueue(data)
     // getPlatform().wake()
-    getDownstream().signalDown()
+    // getDownstream().signalDown()
+    super.signalDown()
   }
 
   override def retrieveUp(): Seq[Data] = queue.extract()

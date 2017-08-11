@@ -1,7 +1,7 @@
 package protopipes.platforms.instances
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import protopipes.builders.PlatformBuilder
+import protopipes.configurations.PlatformBuilder
 import protopipes.computations.Mapper
 import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.Connector.Id
@@ -35,7 +35,7 @@ class ThinActorPlatformActor(platform: Platform) extends Actor {
 }
 
 
-abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output](name: String = ThinActorPlatform.NAME) extends UnaryPlatform[Input, Output] {
+abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output](name: String = ThinActorPlatform.NAME + s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] {
 
   var actorRefOpt: Option[ActorRef] = None
 
@@ -72,7 +72,7 @@ abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output](name
 }
 
 abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output]
-   (name: String = ThinActorPlatform.NAME) extends BinaryPlatform[InputL,InputR, Output] {
+   (name: String = ThinActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL,InputR, Output] {
 
   var actorRefOpt: Option[ActorRef] = None
 
@@ -94,23 +94,23 @@ abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <:
 
   override def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
     // println("Called this")
-    val upstreamLConnector = new ActorConnector[InputL] {
+    val upstreamLConnector = new ActorConnector[InputL]("binary-platform-connector-left")(actorSystem) {
       override val innerConnector: Connector[InputL] = builder.connector[InputL]("binary-platform-connector-left")
     }
     upstreamLConnector.init(conf)
     upstreamLConnector.registerPlatform(this)
     upstreamLConnectorOpt = Some(upstreamLConnector)
-    val upstreamRConnector = new ActorConnector[InputR] {
+    val upstreamRConnector = new ActorConnector[InputR]("binary-platform-connector-right")(actorSystem) {
       override val innerConnector: Connector[InputR] = builder.connector[InputR]("binary-platform-connector-right")
     }
     upstreamRConnector.init(conf)
     upstreamRConnector.registerPlatform(this)
     upstreamRConnectorOpt = Some(upstreamRConnector)
-    val pairConnector = new ActorConnector[protopipes.data.Pair[InputL,InputR]] {
+    val pairConnector = new ActorConnector[protopipes.data.Pair[InputL,InputR]]("binary-platform-connector-pair")(actorSystem) {
       override val innerConnector: Connector[protopipes.data.Pair[InputL,InputR]] = builder.connector[protopipes.data.Pair[InputL,InputR]]("binary-platform-connector-pair")
     }
     pairConnector.init(conf)
-    pairConnector.registerPlatform(this)
+    // pairConnector.registerPlatform(this)
     pairConnectorOpt = Some(pairConnector)
   }
 
