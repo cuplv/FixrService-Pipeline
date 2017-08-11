@@ -5,6 +5,8 @@ import protopipes.data.Identifiable
 import protopipes.pipes.Implicits.PairPipes
 import protopipes.store.instances.{BothDataStore, InMemIdDataMap}
 import protopipes.store.{DataMap, IdDataMap}
+
+import scala.collection.parallel.ParIterable
 // import bigpipes.pipes.Implicits.PairPipes
 import protopipes.store.DataStore
 import com.typesafe.config.Config
@@ -144,7 +146,7 @@ case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], En
 
 }
 
-abstract class PartialPipe[Input, End <: Identifiable[End]] {
+abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End]] {
 
   def init(conf: Config, input: DataStore[Input]): Unit
 
@@ -154,6 +156,10 @@ abstract class PartialPipe[Input, End <: Identifiable[End]] {
 
   def ~[Other <: Identifiable[Other]](other: PartialPipe[Input,Other]): PartialPipe[Input, protopipes.data.Either[End,Other]] = {
     ParallelPartialPipes(this, other)
+  }
+
+  def :--[Next <: Identifiable[Next]](other: PartialPipe[End,Next]): PartialPipe[Input,Next] = {
+    SequencedPartialPipes(this, other)
   }
 
 }
@@ -174,8 +180,25 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
 
 }
 
+case class SequencedPartialPipes[Input <: Identifiable[Input], Mid <: Identifiable[Mid], Output <: Identifiable[Output]]
+     (pi: PartialPipe[Input,Mid], po: PartialPipe[Mid,Output]) extends PartialPipe[Input,Output] {
 
-case class ParallelPartialPipes[Input, LEnd <: Identifiable[LEnd], REnd <: Identifiable[REnd]](p1: PartialPipe[Input,LEnd], p2: PartialPipe[Input,REnd]) extends PartialPipe[Input, protopipes.data.Either[LEnd,REnd]] {
+  override def init(conf: Config, input: DataStore[Input]): Unit = {
+    pi.init(conf, input)
+    po.init(conf, pi.end())
+  }
+
+  override def end(): DataStore[Output] = po.end()
+
+  override def terminate(): Unit = {
+    pi.terminate()
+    po.terminate()
+  }
+
+}
+
+
+case class ParallelPartialPipes[Input <: Identifiable[Input], LEnd <: Identifiable[LEnd], REnd <: Identifiable[REnd]](p1: PartialPipe[Input,LEnd], p2: PartialPipe[Input,REnd]) extends PartialPipe[Input, protopipes.data.Either[LEnd,REnd]] {
 
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     p1.init(conf, input)
