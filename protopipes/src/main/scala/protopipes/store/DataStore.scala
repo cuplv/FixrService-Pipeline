@@ -66,6 +66,11 @@ abstract class DataMap[Key,Data] extends DataStore[Data] {
     transmitDownstream(data)
   }
 
+  def getOrElse(key: Key, default: Data): Data = get(key) match {
+    case Some(data) => data
+    case None => default
+  }
+
 }
 
 abstract class DataMultiMap[Key,Data] extends DataStore[Set[Data]] {

@@ -1,8 +1,8 @@
 package protopipes.computations
 
 import protopipes.configurations.PlatformBuilder
-import protopipes.data.Identifiable
-import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, Pipe}
+import protopipes.data.{Identifiable, Identity}
+import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, PartialReducerPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
 import protopipes.platforms._
 import protopipes.store.DataStore
@@ -71,6 +71,25 @@ abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Outpu
   def compute(input: Input): List[Output]
 
   def -->[End <: Identifiable[End]](p: Pipe[Output,End]): PartialMapperPipe[Input,Output,End] = PartialMapperPipe(this, p)
+
+}
+
+abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]](implicit builder: PlatformBuilder) extends UnaryComputation[Input,Output] {
+
+  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+    val platform: UnaryPlatform[Input, Output] with ComputesReduce[Input,Output] = builder.reducerPlatform[Input,Output]()
+    platform.init(conf, inputMap, outputMap, builder)
+    platform.setReducer(this)
+    init(conf, inputMap, outputMap, platform)
+  }
+
+  def group(input: Input): Identity[Output]
+
+  def fold(input: Input, output: Output): Output
+
+  def zero(): Output
+
+  def +->[End <: Identifiable[End]](p: Pipe[Output,End]): PartialReducerPipe[Input,Output,End] = PartialReducerPipe(this, p)
 
 }
 

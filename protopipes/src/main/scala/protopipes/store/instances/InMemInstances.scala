@@ -21,6 +21,11 @@ object InMemDataStore {
     map
   }
 
+  def createLinearStore[Data](name: String): DataStore[Data] = {
+    val store = new InMemLinearStore[Data]
+    store.setName(name)
+    store
+  }
 
 }
 

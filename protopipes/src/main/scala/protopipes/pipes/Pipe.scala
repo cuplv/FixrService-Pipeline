@@ -1,6 +1,6 @@
 package protopipes.pipes
 
-import protopipes.computations.{Mapper, PairwiseComposer}
+import protopipes.computations.{Mapper, PairwiseComposer, Reducer}
 import protopipes.data.Identifiable
 import protopipes.pipes.Implicits.PairPipes
 import protopipes.store.instances.{BothDataStore, InMemIdDataMap}
@@ -29,6 +29,10 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
   def :--[Next <: Identifiable[Next], Mid <: Identifiable[Mid]](headMapper: PartialMapperPipe[End,Mid,Next]): Pipe[Head,Next] = {
     MapperPipe(this, headMapper.mapper, headMapper.p)
+  }
+
+  def :-+[Next <: Identifiable[Next], Mid <: Identifiable[Mid]](headReducer: PartialReducerPipe[End,Mid,Next]): Pipe[Head,Next] = {
+    ReducerPipe(this, headReducer.reducer, headReducer.p)
   }
 
   def :<[Next <: Identifiable[Next]](parPipes: PartialPipe[End,Next]): Pipe[Head,Next] = {
@@ -97,6 +101,27 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 
 }
 
+case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
+(p1: Pipe[Head,Input], reducer: Reducer[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
+
+  override def init(conf: Config): Unit = {
+    p1.init(conf)
+    reducer.init(conf, p1.end(), p2.head())
+    p2.init(conf)
+  }
+
+  override def head(): DataStore[Head] = p1.head()
+
+  override def end(): DataStore[End] = p2.end()
+
+  override def terminate(): Unit = {
+    p1.terminate()
+    reducer.terminate()
+    p2.terminate()
+  }
+
+}
+
 case class CompositionPipe[HeadL <: Identifiable[HeadL], HeadR <: Identifiable[HeadR], InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]
                           ,Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[HeadL,InputL], composer: PairwiseComposer[InputL,InputR,Output], p2: Pipe[HeadR,InputR], o: Pipe[Output,End]) extends Pipe[protopipes.data.Either[HeadL,HeadR],End] {
@@ -158,13 +183,18 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
     ParallelPartialPipes(this, other)
   }
 
-  def :--[Next <: Identifiable[Next]](other: PartialPipe[End,Next]): PartialPipe[Input,Next] = {
+  def :--[Next <: Identifiable[Next],Mid <: Identifiable[Mid]](other: PartialMapperPipe[End,Mid,Next]): PartialPipe[Input,Next] = {
+    SequencedPartialPipes(this, other)
+  }
+
+  def :-+[Next <: Identifiable[Next],Mid <: Identifiable[Mid]](other: PartialReducerPipe[End,Mid,Next]): PartialPipe[Input,Next] = {
     SequencedPartialPipes(this, other)
   }
 
 }
 
-case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]](mapper: Mapper[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
+case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
+(mapper: Mapper[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
 
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     mapper.init(conf, input, p.head())
@@ -175,6 +205,23 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
 
   override def terminate(): Unit = {
     mapper.terminate()
+    p.terminate()
+  }
+
+}
+
+case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
+(reducer: Reducer[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
+
+  override def init(conf: Config, input: DataStore[Input]): Unit = {
+    reducer.init(conf, input, p.head())
+    p.init(conf)
+  }
+
+  override def end(): DataStore[End] = p.end()
+
+  override def terminate(): Unit = {
+    reducer.terminate()
     p.terminate()
   }
 
