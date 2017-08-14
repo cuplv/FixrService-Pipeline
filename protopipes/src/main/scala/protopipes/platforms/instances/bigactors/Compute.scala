@@ -1,8 +1,8 @@
+package protopipes.platforms.instances.bigactors
+
 import protopipes.connectors.Status
 import protopipes.data.{Identifiable, Identity}
 import protopipes.platforms.{ComputesMap, ComputesPairwiseCompose, ComputesReduce}
-import protopipes.platforms.instances.bigactors.{BigActorBinaryPlatform, BigActorPlatform, BigActorUnaryPlatform}
-import protopipes.platforms.instances.thinactors.ThinActorBinaryPlatform
 import protopipes.store.DataMap
 
 import scala.util.Random
