@@ -5,8 +5,8 @@ import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector
 import protopipes.connectors.instances.{ActorIncrTrackerJobQueue, IncrTrackerJobQueue}
 import protopipes.curators.{ErrorCurator, ProvenanceCurator, StandardErrorCurator, StandardProvenanceCurator}
-import protopipes.data.Identifiable
-import protopipes.platforms.instances.thinactors.{ThinActorMapperPlatform, ThinActorPairwiseComposerPlatform, ThinActorReducerPlatform}
+import protopipes.data.{I, Identifiable}
+import protopipes.platforms.instances.thinactors.{ThinActorMapperPlatform, ThinActorPairwiseComposerPlatform, ThinActorReducerPlatform, ThinActorUnaryPlatform}
 import protopipes.platforms._
 
 /**
@@ -35,7 +35,14 @@ object ThinActorPlatformBuilder extends PlatformBuilder {
 
   override def reducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]](): UnaryPlatform[Input, Output]
         = {
-    new ThinActorReducerPlatform[Input,Output]()
+    val constructor = Class.forName("protopipes.platforms.instances.thinactors.ThinActorReducerPlatform")
+      .getConstructors()(0)
+    println(constructor)
+    val args = Array[AnyRef]("testABC")
+    val platform = constructor.newInstance( args:_* ).asInstanceOf[UnaryPlatform[Input,Output]]
+    println(platform)
+    platform
+    // new ThinActorReducerPlatform[Input,Output]()
   }
 
 

@@ -25,6 +25,8 @@ class ThinActorMapperPlatform[Input <: Identifiable[Input], Output <: Identifiab
     }
   } */
 
+  override def toString: String = "Thin-Actor-Mapper-Platform"
+
 }
 
 class ThinActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]

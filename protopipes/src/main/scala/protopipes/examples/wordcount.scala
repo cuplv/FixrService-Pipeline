@@ -31,12 +31,12 @@ object wordcount {
 
   def main(args: Array[String]): Unit = {
 
-    implicit val defaultPlatformBuilder: PlatformBuilder = ThinActorPlatformBuilder
+    val config = ConfigFactory.load()
+
+    implicit val defaultPlatformBuilder: PlatformBuilder = PlatformBuilder.load(config) // ThinActorPlatformBuilder
 
     import protopipes.data.Implicits._
     import protopipes.pipes.Implicits._
-
-    val config = ConfigFactory.load()
 
     val words  = InMemDataStore.createLinearStore[I[String]]("words")
     val counts = InMemDataStore.createIdDataMap[Count]("counts")
