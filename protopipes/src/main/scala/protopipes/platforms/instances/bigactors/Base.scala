@@ -73,7 +73,7 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
   }
 }
 
-class BigActorWorkerActor[Input <: Identifiable[Input], Output](platform: BigActorUnaryPlatform[Input, Output]) extends Actor{
+class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: BigActorUnaryPlatform[Input, Output]) extends Actor{
   def receive: Receive = {
     case job: Input @ unchecked =>
       platform.compute(job)
@@ -85,7 +85,7 @@ trait Computeable[Input]{
   def compute(input: Input): Unit = ()
 }
 
-abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output](name: String = BigActorPlatform.NAME) extends UnaryPlatform[Input, Output] with Computeable[Input] {
+abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]](name: String = BigActorPlatform.NAME) extends UnaryPlatform[Input, Output] with Computeable[Input] {
   implicit val actorSystem = ActorSystem(name)
   var superActorOpt: Option[ActorRef] = None
 
@@ -120,7 +120,7 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output](name:
   }
 }
 
-abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output]
+abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL, InputR, Output] with Computeable[protopipes.data.Pair[InputL, InputR]] {
   implicit val actorSystem = ActorSystem(name)
   var superActorOpt: Option[ActorRef] = None
