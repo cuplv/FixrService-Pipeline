@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{ConfigOption, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.{Identifiable, Identity}
 import protopipes.pipes.{PartialReducerPipe, Pipe}
@@ -13,14 +13,21 @@ import protopipes.store.{DataMap, DataStore}
   */
 
 
-abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]](implicit builder: PlatformBuilder) extends UnaryComputation[Input,Output] {
+abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
+
+  def withConfig(newConfigOption: ConfigOption): Reducer[Input,Output] = {
+    configOption = newConfigOption
+    this
+  }
 
   def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+    val rconf = PipeConfig.resolveOptions(conf, configOption)
+    val builder = PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input, Output] = builder.reducerPlatform[Input,Output]()
-    platform.init(conf, inputMap, outputMap, builder)
+    platform.init(rconf, inputMap, outputMap, builder)
     // platform.setReducer(this)
     platform.setComputation(this)
-    init(conf, inputMap, outputMap, platform)
+    init(rconf, inputMap, outputMap, platform)
   }
 
   def groupBy(input: Input): Identity[Output]

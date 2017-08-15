@@ -17,7 +17,7 @@ case class Count(word: String, count: Int) extends Identifiable[Count] {
 
 }
 
-case class CountOccurrence(implicit builder: PlatformBuilder) extends Reducer[I[String],Count] {
+case class CountOccurrence() extends Reducer[I[String],Count] {
 
   override def groupBy(input: I[String]): Identity[Count] = Identity(input.a, None)
 
@@ -33,7 +33,7 @@ object wordcount {
 
     val config = ConfigFactory.load()
 
-    implicit val defaultPlatformBuilder: PlatformBuilder = PlatformBuilder.load(config) // ThinActorPlatformBuilder
+    // implicit val defaultPlatformBuilder: PlatformBuilder = PlatformBuilder.load(config) // ThinActorPlatformBuilder
 
     import protopipes.data.Implicits._
     import protopipes.pipes.Implicits._

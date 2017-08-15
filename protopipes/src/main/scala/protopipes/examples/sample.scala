@@ -38,7 +38,7 @@ object sample {
 
   def main(args: Array[String]) : Unit = {
 
-    implicit val defaultPlatformBuilder: PlatformBuilder = ThinActorPlatformBuilder
+    // implicit val defaultPlatformBuilder: PlatformBuilder = ThinActorPlatformBuilder
 
     import protopipes.data.Implicits._
     import protopipes.pipes.Implicits._

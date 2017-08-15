@@ -6,6 +6,8 @@ package protopipes.configurations
 object Constant {
 
   val PROTOPIPES = "protopipes"
+
+  val PLATFORM = "platform"
   val CONNECTOR  = "connector"
   val PROVENANCE = "provenance-curator"
   val ERROR   = "error-curator"

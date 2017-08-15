@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{ConfigOption, DefaultOption, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.Identifiable
 import protopipes.pipes.{PartialMapperPipe, Pipe}
@@ -12,14 +12,21 @@ import protopipes.store.DataStore
   * Created by edmundlam on 8/14/17.
   */
 
-abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]](implicit builder: PlatformBuilder) extends UnaryComputation[Input,Output] {
+abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
+
+  def withConfig(newConfigOption: ConfigOption): Mapper[Input,Output] = {
+    configOption = newConfigOption
+    this
+  }
 
   def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+    val rconf = PipeConfig.resolveOptions(conf, configOption)
+    val builder = PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input,Output] = builder.mapperPlatform[Input,Output]()
-    platform.init(conf, inputMap, outputMap, builder)
+    platform.init(rconf, inputMap, outputMap, builder)
     // platform.setMapper(this)
     platform.setComputation(this)
-    init(conf, inputMap, outputMap, platform)
+    init(rconf, inputMap, outputMap, platform)
   }
 
   def compute(input: Input): List[Output]

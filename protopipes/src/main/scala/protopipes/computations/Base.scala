@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{ConfigOption, DefaultOption, PlatformBuilder}
 import protopipes.data.Identifiable
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import protopipes.store.DataStore
@@ -15,6 +15,7 @@ import scala.util.Random
 abstract class Computation  {
 
   var platformOpt: Option[Platform] = None
+  var configOption: ConfigOption = DefaultOption
 
   def init(config: Config, platform: Platform): Unit = platformOpt match {
     case None => {
@@ -44,7 +45,7 @@ abstract class Computation  {
 
 }
 
-abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifiable[Output]](implicit builder: PlatformBuilder) extends Computation {
+abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends Computation {
 
   var name: String = s"UnaryComputation-${Random.nextInt(99999)}"
   var unaryPlatformOpt: Option[UnaryPlatform[Input,Output]] = None
@@ -67,8 +68,7 @@ abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifi
 
 }
 
-abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
-(implicit builder: PlatformBuilder) extends Computation {
+abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]] extends Computation {
 
   var name: String = s"BinaryComputation-${Random.nextInt(99999)}"
   var binaryPlatformOpt: Option[BinaryPlatform[InputL, InputR, Output]] = None

@@ -1,6 +1,6 @@
 package protopipes.computations
 
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{ConfigOption, PipeConfig, PlatformBuilder}
 import protopipes.data.{Identifiable, Identity}
 import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, PartialReducerPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
@@ -16,14 +16,22 @@ import scala.util.Random
   * Created by edmundlam on 8/8/17.
   */
 
-abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]](implicit builder: PlatformBuilder) extends BinaryComputation[InputL,InputR,Output] {
+abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
+     extends BinaryComputation[InputL,InputR,Output] {
+
+  def withConfig(newConfigOption: ConfigOption): PairwiseComposer[InputL, InputR, Output] = {
+    configOption = newConfigOption
+    this
+  }
 
   def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
+     val rconf = PipeConfig.resolveOptions(conf, configOption)
+     val builder = PlatformBuilder.load(rconf)
      val platform: BinaryPlatform[InputL,InputR,Output] = builder.pairwiseComposerPlatform[InputL,InputR,Output]
-     platform.init(conf, inputLMap, inputRMap, outputMap, builder)
+     platform.init(rconf, inputLMap, inputRMap, outputMap, builder)
      // platform.setPairwiseComposer(this)
      platform.setComputation(this)
-     init(conf, inputLMap, inputRMap, outputMap, platform)
+     init(rconf, inputLMap, inputRMap, outputMap, platform)
   }
 
   def filter(inputL: InputL, inputR: InputR): Boolean
