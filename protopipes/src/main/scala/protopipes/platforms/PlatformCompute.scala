@@ -3,6 +3,7 @@ package protopipes.platforms
 import protopipes.computations.{Mapper, PairwiseComposer, Reducer}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.{Connector, Status}
+import protopipes.curators.{ErrorCurator, ProvenanceCurator}
 import protopipes.data.{Identifiable, Identity}
 import protopipes.store.DataStore
 
@@ -43,7 +44,6 @@ trait ComputesMap[Input <: Identifiable[Input], Output <: Identifiable[Output]] 
     } catch {
       case ex:Exception => {
         // Compute exception occurred, log this in error store
-        // errors.put(input.identity, GeneralErrorSummary(ex))
         List()
       }
     }
@@ -65,27 +65,30 @@ trait ComputesReduce[Input <: Identifiable[Input], Output <: Identifiable[Output
     }
   }
 
-  def tryGroup(upstreamConnector: Connector[Input], reducer: Reducer[Input,Output], input: Input): Option[Identity[Output]] = {
+  def tryGroup(upstreamConnector: Connector[Input], // errorCurator: ErrorCurator[Input],
+               reducer: Reducer[Input,Output], input: Input): Option[Identity[Output]] = {
      try {
-       val outputId = reducer.group(input)
+       val outputId = reducer.groupBy(input)
        upstreamConnector.reportUp(Status.Done, input)
        Some(outputId)
      } catch {
        case ex: Exception => {
-         // TODO: Throw exception
+         // errorCurator.reportError(input, ex, Some("Reducer \'groupBy\' operation failed."))
          None
        }
      }
   }
 
-  def tryFold(upstreamConnector: Connector[Input], reducer: Reducer[Input,Output], input: Input, output: Output): Output = {
+  def tryFold(upstreamConnector: Connector[Input], // errorCurator: ErrorCurator[Input], provenanceCurator: ProvenanceCurator[Input,Output],
+              reducer: Reducer[Input,Output], input: Input, output: Output): Output = {
     try {
       val newOutput = reducer.fold(input, output)
       upstreamConnector.reportUp(Status.Done, input)
+      // provenanceCurator.reportProvenance(input, output)
       newOutput
     } catch {
       case ex: Exception => {
-        // TODO: Throw exception
+        // errorCurator.reportError(input, ex, Some("Reducer \'fold\' operation failed."))
         output
       }
     }

@@ -45,6 +45,8 @@ class InMemLinearStore[Data] extends DataStore[Data] {
 
   override def size(): Int = ls.size
 
+  override def toString: String = ls.mkString("{",",","}")
+
 }
 
 class InMemDataQueue[Data] extends DataQueue[Data] {

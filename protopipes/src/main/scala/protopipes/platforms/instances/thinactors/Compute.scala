@@ -13,8 +13,9 @@ import scala.util.Random
 
 
 class ThinActorMapperPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
-(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorUnaryPlatform[Input, Output] with ComputesMap[Input, Output] {
+(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorUnaryPlatform[Input, Output] { // with ComputesMap[Input, Output] {
 
+  /*
   override def run(): Unit = {
     val mapper = getMapper()
     val upstreamConnector = getUpstreamConnector()
@@ -22,17 +23,19 @@ class ThinActorMapperPlatform[Input <: Identifiable[Input], Output <: Identifiab
     getInputs() foreach {
       input => tryCompute(upstreamConnector, mapper, input, outputMap)
     }
-
-  }
+  } */
 
 }
 
 class ThinActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
-(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorUnaryPlatform[Input, Output] with ComputesReduce[Input,Output] {
+(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorUnaryPlatform[Input, Output] { // } with ComputesReduce[Input,Output] {
 
+   /*
    override def run(): Unit = {
      val reducer = getReducer()
      val upstreamConnector = getUpstreamConnector()
+     val errorCurator = getErrorCurator()
+     val provenanceCurator = getProvenanceCurator()
      val outputMap = getOutputMap().asInstanceOf[DataMap[Identity[Output],Output]]
 
      var mergals = Map.empty[Identity[Output],Seq[Input]]
@@ -40,7 +43,7 @@ class ThinActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifia
        input => {
          tryGroup(upstreamConnector, reducer, input) match {
            case Some(outputId) => mergals = mergals + (outputId -> (mergals.getOrElse (outputId, Seq.empty[Input]) :+ input) )
-           case None => // Error occurred. Ignore
+           case None => // error logged by tryGroup. Ignoring.
          }
        }
      }
@@ -53,13 +56,14 @@ class ThinActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifia
        }
      }
 
-   }
+   } */
 
 }
 
 class ThinActorPairwiseComposerPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR],Output <: Identifiable[Output]]
-(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorBinaryPlatform[InputL,InputR,Output]  with ComputesPairwiseCompose[InputL,InputR,Output] {
+(name: String = ThinActorPlatform.NAME + Random.nextInt(99999)) extends ThinActorBinaryPlatform[InputL,InputR,Output] { // with ComputesPairwiseCompose[InputL,InputR,Output] {
 
+  /*
   override def run(): Unit = {
     val composer = getComposer()
     val pairConnector = getPairConnector()
@@ -70,6 +74,6 @@ class ThinActorPairwiseComposerPlatform[InputL <: Identifiable[InputL], InputR <
     }
     getUpstreamLConnector().reportUp(Status.Done,inputs._1)
     getUpstreamRConnector().reportUp(Status.Done,inputs._2)
-  }
+  } */
 
 }

@@ -3,7 +3,7 @@ package protopipes.connectors
 import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
-import protopipes.connectors.instances.{CompositeConnector, PlatformStub}
+import protopipes.connectors.instances.{SequencedConnectors, PlatformStub}
 import protopipes.data.Identity
 import protopipes.platforms.Platform
 import protopipes.store.DataStore
@@ -98,7 +98,7 @@ abstract class Connector[Input] {
 
   def size(): Int
 
-  def +> (connector: Connector[Input]): Connector[Input] = CompositeConnector(this, connector)
+  def +> (connector: Connector[Input]): Connector[Input] = SequencedConnectors(this, connector)
 
 }
 

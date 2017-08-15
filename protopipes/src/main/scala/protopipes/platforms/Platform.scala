@@ -5,6 +5,8 @@ import protopipes.connectors.Connector
 import protopipes.data.Identifiable
 import protopipes.store.DataStore
 import com.typesafe.config.Config
+import protopipes.computations.Computation
+import protopipes.curators.{ErrorCurator, ProvenanceCurator}
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -13,17 +15,32 @@ import com.typesafe.config.Config
 
 abstract class Platform {
 
+  var computationOpt: Option[Computation] = None
+
+  def setComputation(computation: Computation): Platform = {
+    computationOpt = Some(computation)
+    this
+  }
+
   def terminate(): Unit
 
-  def run(): Unit
+  def run(): Unit = computationOpt match {
+    case Some(computation) => computation.run()
+    case None => {
+      // TODO: Throw exeption
+      ???
+    }
+  }
 
   def wake(): Unit
 
 }
 
-abstract class UnaryPlatform[Input <: Identifiable[Input],Output] extends Platform {
+abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable[Output]] extends Platform {
 
   var upstreamConnectorOpt: Option[Connector[Input]] = None
+  var provenanceCuratorOpt: Option[ProvenanceCurator[Input,Output]] = None
+  var errorCuratorOpt: Option[ErrorCurator[Input]] = None
   var inputMapOpt: Option[DataStore[Input]]   = None
   var outputMapOpt: Option[DataStore[Output]] = None
 
@@ -31,6 +48,8 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output] extends Platfo
     inputMapOpt = Some(inputMap)
     outputMapOpt = Some(outputMap)
     initConnector(conf, builder)
+    provenanceCuratorOpt = Some(builder.provenanceCurator)
+    errorCuratorOpt = Some(builder.errorCurator)
   }
 
   def initConnector(conf: Config, builder: PlatformBuilder): Unit = {
@@ -42,6 +61,22 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output] extends Platfo
 
   def getUpstreamConnector(): Connector[Input] = upstreamConnectorOpt match {
     case Some(upstreamConnector) => upstreamConnector
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getProvenanceCurator(): ProvenanceCurator[Input,Output] = provenanceCuratorOpt match {
+    case Some(provenanceCurator) => provenanceCurator
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getErrorCurator(): ErrorCurator[Input] = errorCuratorOpt match {
+    case Some(errorCurator) => errorCurator
     case None => {
       // TODO: Throw exception
       ???
@@ -68,11 +103,17 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output] extends Platfo
 
 }
 
-abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifiable[InputR],Output] extends Platform {
+abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifiable[InputR],Output <: Identifiable[Output]] extends Platform {
 
   var upstreamLConnectorOpt: Option[Connector[InputL]] = None
   var upstreamRConnectorOpt: Option[Connector[InputR]] = None
   var pairConnectorOpt: Option[Connector[protopipes.data.Pair[InputL,InputR]]] = None
+
+  var provenanceCuratorOpt: Option[ProvenanceCurator[protopipes.data.Pair[InputL,InputR],Output]] = None
+  var errorLeftCuratorOpt: Option[ErrorCurator[InputL]] = None
+  var errorRightCuratorOpt: Option[ErrorCurator[InputR]] = None
+  var errorPairCuratorOpt: Option[ErrorCurator[protopipes.data.Pair[InputL,InputR]]] = None
+
   var inputLMapOpt: Option[DataStore[InputL]] = None
   var inputRMapOpt: Option[DataStore[InputR]] = None
   var outputMapOpt: Option[DataStore[Output]] = None
@@ -82,6 +123,10 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
     inputRMapOpt = Some(inputRMap)
     outputMapOpt = Some(outputMap)
     initConnectors(conf, builder)
+    provenanceCuratorOpt = Some(builder.provenanceCurator)
+    errorLeftCuratorOpt  = Some(builder.errorCurator)
+    errorRightCuratorOpt = Some(builder.errorCurator)
+    errorPairCuratorOpt  = Some(builder.errorCurator)
   }
 
   def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
@@ -114,6 +159,38 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
 
   def getPairConnector(): Connector[protopipes.data.Pair[InputL,InputR]] = pairConnectorOpt match {
     case Some(pairConnector) => pairConnector
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getProvenanceCurator(): ProvenanceCurator[protopipes.data.Pair[InputL,InputR],Output] = provenanceCuratorOpt match {
+    case Some(provenanceCurator) => provenanceCurator
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getLeftErrorCurator(): ErrorCurator[InputL] = errorLeftCuratorOpt match {
+    case Some(errorCurator) => errorCurator
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getRightErrorCurator(): ErrorCurator[InputR] = errorRightCuratorOpt match {
+    case Some(errorCurator) => errorCurator
+    case None => {
+      // TODO: Throw exception
+      ???
+    }
+  }
+
+  def getPairErrorCurator(): ErrorCurator[protopipes.data.Pair[InputL,InputR]] = errorPairCuratorOpt match {
+    case Some(errorCurator) => errorCurator
     case None => {
       // TODO: Throw exception
       ???

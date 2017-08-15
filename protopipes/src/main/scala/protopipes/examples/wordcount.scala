@@ -19,7 +19,7 @@ case class Count(word: String, count: Int) extends Identifiable[Count] {
 
 case class CountOccurrence(implicit builder: PlatformBuilder) extends Reducer[I[String],Count] {
 
-  override def group(input: I[String]): Identity[Count] = Identity(input.a, None)
+  override def groupBy(input: I[String]): Identity[Count] = Identity(input.a, None)
 
   override def fold(input: I[String], output: Count): Count = Count(input.a, output.count + 1)
 

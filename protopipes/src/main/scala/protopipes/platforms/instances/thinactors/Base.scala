@@ -33,7 +33,7 @@ class ThinActorPlatformActor(platform: Platform) extends Actor {
 }
 
 
-abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output]
+abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = ThinActorPlatform.NAME + s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] {
 
   var actorRefOpt: Option[ActorRef] = None
@@ -70,7 +70,7 @@ abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output]
 
 }
 
-abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output]
+abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
 (name: String = ThinActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL,InputR, Output] {
 
   var actorRefOpt: Option[ActorRef] = None
