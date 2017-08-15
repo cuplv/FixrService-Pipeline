@@ -2,10 +2,11 @@ package protopipes.platforms.instances.bigactors
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.typesafe.config.Config
-import BigActorPlatform.{AddedWorker, AskForJob, PostWake, Wake}
+import BigActorPlatform._
 import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.instances.ActorConnector
+import protopipes.curators.ErrorCurator
 import protopipes.data.Identifiable
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import protopipes.store.DataStore
@@ -24,6 +25,8 @@ object BigActorPlatform{
   case class PostWake()
   case class AskForJob(acRef: ActorRef)
   case class AddedWorker(acRef: ActorRef)
+  case class Crashed(acRef: ActorRef, exception: Exception)
+  case class AddedJobs(l: List[_])
 
 }
 
@@ -64,8 +67,13 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
           case _ => self ! AskForJob(worker)
         })
       }
+    case (Crashed(acRef: ActorRef, exception: Exception), input: Input @ unchecked) =>
+      platform.getErrorCurator().reportError(input, exception)
+      self ! AskForJob(acRef)
+    case Crashed(acRef: ActorRef, exception: Exception) => ()
+    case AddedJobs(inputs: List[Input@unchecked]) => state(jobsLeft ::: inputs, workerList, isWorking)
     case ("AddedJob", input: Input@unchecked) => state(jobsLeft ::: List(input), workerList, isWorking)
-    case _ => ()
+    case other => println(s"$other was sent with nothing occurring.")
   }
 
   def receive(): Receive = {
@@ -74,15 +82,28 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
 }
 
 class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: BigActorUnaryPlatform[Input, Output]) extends Actor{
+  var currInput: Option[Input] = None
+
+  override def postStop(): Unit = {
+    super.postStop()
+    currInput match{
+      case Some(input) => context.parent ! (Crashed(self, new Exception(s"An actor has crashed trying to compute $input.")), input)
+      case _ => context.parent ! Crashed(self, new Exception(s"An actor has decided to stop!"))
+    }
+  }
+
   def receive: Receive = {
     case job: Input @ unchecked =>
+      currInput = Some(job)
       platform.compute(job)
+      currInput = None
       sender() ! AskForJob(self)
   }
 }
 
 trait Computeable[Input]{
   def compute(input: Input): Unit = ()
+  def getErrorCurator(): ErrorCurator[Input]
 }
 
 abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]](name: String = BigActorPlatform.NAME) extends UnaryPlatform[Input, Output] with Computeable[Input] {
@@ -95,7 +116,8 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   }
 
   override def run(): Unit = {
-    getInputs().foreach(input => supervisor ! ("AddedJob", input))
+    //getInputs().foreach(input => supervisor ! ("AddedJob", input))
+    supervisor ! AddedJobs(getInputs().toList)
   }
 
   override def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
@@ -117,6 +139,8 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   override def terminate(): Unit = {
     actorSystem.terminate
   }
+
+  override def getErrorCurator(): ErrorCurator[Input] = getErrorCurator()
 }
 
 abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
@@ -156,8 +180,8 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
     val inputs = getInputs()
     inputs._1.foreach(inputL => inputLOccurrences += (inputL -> 0))
     inputs._2.foreach(inputR => inputROccurrences += (inputR -> 0))
+    supervisor ! AddedJobs(inputs._3.toList)
     inputs._3.foreach{ input =>
-      supervisor ! ("AddedJob", input)
       inputLOccurrences.get(input.left) match{
         case Some(x) => inputLOccurrences += (input.left -> (x+1))
         case None => ()
@@ -196,4 +220,6 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
   override def terminate(): Unit = {
     actorSystem.terminate
   }
+
+  override def getErrorCurator(): ErrorCurator[protopipes.data.Pair[InputL, InputR]] = getPairErrorCurator()
 }

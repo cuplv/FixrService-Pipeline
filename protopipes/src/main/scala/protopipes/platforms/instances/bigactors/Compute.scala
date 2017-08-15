@@ -1,9 +1,7 @@
 package protopipes.platforms.instances.bigactors
 
 import protopipes.computations.{Mapper, PairwiseComposer, Reducer}
-import protopipes.connectors.Status
 import protopipes.data.{Identifiable, Identity}
-import protopipes.platforms.{ComputesMap, ComputesPairwiseCompose, ComputesReduce}
 import protopipes.store.DataMap
 
 import scala.util.Random
@@ -47,7 +45,7 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
             }
           case None => ()
         }
-      case None =>
+      case _ =>
         getErrorCurator().reportError(job, new Exception("Found unexpected computation. Expected: Reducer"))
     }
   }
@@ -60,7 +58,7 @@ class BigActorPairwiseComposerPlatform[InputL <: Identifiable[InputL], InputR <:
       case Some(computation: PairwiseComposer[InputL, InputR, Output]) =>
         computation.tryFilterAndCompose(input)
         super.compute(input)
-      case None =>
+      case _ =>
         getPairErrorCurator().reportError(input, new Exception("Found unexpected computation. Expected: Pairwise Composer"))
     }
   }
