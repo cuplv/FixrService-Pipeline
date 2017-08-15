@@ -20,7 +20,7 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
         case (str, next) => s"$str, ${toJson(next)}"
       } + " ]"
     case m: Map[_, _] => m.tail.foldLeft(s" [ ${toJson(m.head._1)}: ${toJson(m.head._2)}"){
-      case (str, (k, v)) => s", ${toJson(k)}: ${toJson(v)}"
+      case (str, (k, v)) => s"$str, ${toJson(k)}: ${toJson(v)}"
     } + " }"
     case s: String => "\"" + s + "\""
     case _ => a.toString
@@ -35,24 +35,23 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
       case i: Identifiable[_] => (i.getId(), i.getVersion())
       case _ => (toJson(key), None)
     }
+    val keyToString = keyID + (keyVersion match{
+      case Some(s) => "&&v."+s
+      case None => ""
+    })
     val (dataID, dataVersion) = data match{
       case i: Identifiable[_] => (i.getId(), i.getVersion())
       case _ => (toJson(data), None)
     }
-    val startingJson =
-      """{
-        | "add": {
-        |   "doc": {
-      """.stripMargin
-    val json = get(key) match{
+    var document = Map()
+    val jsonMap = Map("add"->Map("doc" -> document))
+    document = get(key) match{
       case Some(d: Data) => ???
-      case None =>
-        startingJson+
-          """
-            |     "id": ???
-          """.stripMargin
+      case None => Map("id" -> name, keyToString -> ???)
         ???
     }
+    val json = toJson(jsonMap)
+
     ???
   }
 

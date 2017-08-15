@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.typesafe.config.Config
 import BigActorPlatform.{AddedWorker, AskForJob, PostWake, Wake}
 import protopipes.configurations.PlatformBuilder
-import protopipes.connectors.Connector
+import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.instances.ActorConnector
 import protopipes.data.Identifiable
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
@@ -95,8 +95,7 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   }
 
   override def run(): Unit = {
-    val upstreamConnector = getUpstreamConnector()
-    upstreamConnector.retrieveUp().foreach(input => supervisor ! ("AddedJob", input))
+    getInputs().foreach(input => supervisor ! ("AddedJob", input))
   }
 
   override def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
@@ -122,6 +121,8 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
 
 abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL, InputR, Output] with Computeable[protopipes.data.Pair[InputL, InputR]] {
+  var inputLOccurrences: Map[InputL, Integer] = Map()
+  var inputROccurrences: Map[InputR, Integer] = Map()
   implicit val actorSystem = ActorSystem(name)
   var superActorOpt: Option[ActorRef] = None
   def supervisor: ActorRef = superActorOpt match{
@@ -134,8 +135,38 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[protopipes.data.Pair[InputL, InputR], Output]], this)))
   }
 
+  override def compute(input: protopipes.data.Pair[InputL, InputR]): Unit = {
+    inputLOccurrences.get(input.left) match{
+      case Some(x) if x > 1 => inputLOccurrences += (input.left -> (x-1))
+      case Some(_) =>
+        inputLOccurrences -= input.left
+        getUpstreamLConnector().reportUp(Status.Done,input.left)
+      case None => ()
+    }
+    inputROccurrences.get(input.right) match{
+      case Some(x) if x > 1 => inputROccurrences += (input.right -> (x-1))
+      case Some(_) =>
+        inputROccurrences -= input.right
+        getUpstreamRConnector().reportUp(Status.Done, input.right)
+      case None => ()
+    }
+  }
+
   override def run(): Unit = {
-    getInputs()._3.foreach(input => supervisor ! ("AddedJob", input))
+    val inputs = getInputs()
+    inputs._1.foreach(inputL => inputLOccurrences += (inputL -> 0))
+    inputs._2.foreach(inputR => inputROccurrences += (inputR -> 0))
+    inputs._3.foreach{ input =>
+      supervisor ! ("AddedJob", input)
+      inputLOccurrences.get(input.left) match{
+        case Some(x) => inputLOccurrences += (input.left -> (x+1))
+        case None => ()
+      }
+      inputROccurrences.get(input.right) match{
+        case Some(x) => inputROccurrences += (input.right -> (x+1))
+        case None => ()
+      }
+    }
   }
 
   override def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
