@@ -99,6 +99,8 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
 
   override def get(key: Key): Option[Data] = ???
 
+  override def contains(key: Key): Boolean = ???
+
   override def all(): Seq[Data] = ???
 
   override def remove(key: Key): Unit = getDocument() match{

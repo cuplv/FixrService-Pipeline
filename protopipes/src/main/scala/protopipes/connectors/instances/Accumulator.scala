@@ -30,6 +30,8 @@ case class Accumulator[Data](limit: Int = 50) extends Connector[Data] {
      signalDown()
   }
 
+  override def sendDownModified(data: Seq[Data]): Unit = sendDown(data)
+
   override def retrieveUp(): Seq[Data] = {
      dataStore.extract()
   }

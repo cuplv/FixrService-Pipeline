@@ -48,6 +48,8 @@ case class SequencedConnectors[Data](headConnector:Connector[Data], endConnector
 
   override def sendDown(data: Seq[Data]): Unit = headConnector.sendDown(data)
 
+  override def sendDownModified(data: Seq[Data]): Unit = headConnector.sendDownModified(data)
+
   override def retrieveUp(): Seq[Data] = endConnector.retrieveUp()
 
   override def reportUp(status: Status, data: Seq[Data]): Unit = endConnector.reportUp(status, data)

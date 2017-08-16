@@ -57,13 +57,16 @@ abstract class DataMap[Key,Data] extends DataStore[Data] {
 
   def get(key: Key): Option[Data]
 
+  def contains(key: Key): Boolean
+
   def remove(keys: Seq[Key]): Unit
 
   def remove(key: Key): Unit
 
   def put(key: Key, data: Data): Unit = {
+    val existed = contains(key)
     put_(key, data)
-    transmitDownstream(data)
+    if (!existed) transmitDownstream(data) else transmitDownstreamModified(data)
   }
 
   def getOrElse(key: Key, default: Data): Data = get(key) match {

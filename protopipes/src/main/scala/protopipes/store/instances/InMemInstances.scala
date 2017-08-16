@@ -92,6 +92,8 @@ class InMemDataMap[Key, Data] extends DataMap[Key, Data] {
 
   override def get(key: Key): Option[Data] = map.get(key)
 
+  override def contains(key: Key): Boolean = map.contains(key)
+
   override def extract(): Seq[Data] = {
     val is = map.values
     map = Map.empty[Key, Data]
@@ -167,6 +169,8 @@ class InMemIdDataMap[Data <: Identifiable[Data]] extends IdDataMap[Data] {
   }
 
   override def get(key: Identity[Data]): Option[Data] = map.get(key)
+
+  override def contains(key: Identity[Data]): Boolean = map.contains(key)
 
   override def extract(): Seq[Data] = {
     val is = map.values

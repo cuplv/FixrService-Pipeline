@@ -100,7 +100,9 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
                 case None => o
               }
             }
-            outputMap.put(newOutput)
+            if (output != newOutput) {
+              outputMap.put(newOutput)
+            }
           }
           case None => {
             // Zero operation failed. Error already logged by tryZero. Ignoring here.

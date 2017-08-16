@@ -42,6 +42,11 @@ class ParallelConnectors[Data](leftConnector: Connector[Data], rightConnector: C
     rightConnector.sendDown(data)
   }
 
+  override def sendDownModified(data: Seq[Data]): Unit = {
+    leftConnector.sendDownModified(data)
+    rightConnector.sendDownModified(data)
+  }
+
   override def retrieveUp(): Seq[Data] = leftConnector.retrieveUp() ++ rightConnector.retrieveUp()
 
   override def reportUp(status: Status, data: Seq[Data]): Unit = {

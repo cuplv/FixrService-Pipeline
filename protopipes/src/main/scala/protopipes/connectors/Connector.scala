@@ -87,6 +87,9 @@ abstract class Connector[Input] {
   def sendDown(data: Seq[Input]): Unit
   def sendDown(data: Input): Unit = sendDown(Seq(data))
 
+  def sendDownModified(data: Seq[Input]): Unit
+  def sendDownModified(data: Input): Unit = sendDownModified(Seq(data))
+
   /* Incoming methods, from downstream */
 
   // Retrieve data from upstream
@@ -115,6 +118,12 @@ trait Upstream[Data] {
   }
 
   def transmitDownstream(data: Data): Unit = transmitDownstream(Seq(data))
+
+  def transmitDownstreamModified(data: Seq[Data]): Unit = {
+    downstreamConnectors foreach { _.sendDownModified(data) }
+  }
+
+  def transmitDownstreamModified(data: Data): Unit = transmitDownstreamModified(Seq(data))
 
 }
 

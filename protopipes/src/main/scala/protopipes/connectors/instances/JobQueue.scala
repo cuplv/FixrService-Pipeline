@@ -29,6 +29,8 @@ class JobQueue[Data] extends Connector[Data] {
     super.signalDown()
   }
 
+  override def sendDownModified(data: Seq[Data]): Unit = sendDown(data)
+
   override def retrieveUp(): Seq[Data] = queue.extract()
 
   override def reportUp(status:Status, data: Seq[Data]): Unit = { }
@@ -58,6 +60,11 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     val newData = data.filterNot( d => statusMap.contains(Status.Done, d) )
     statusMap.put(Status.NotDone, newData.toSet)
     super.sendDown(newData)
+  }
+
+  override def sendDownModified(data: Seq[Data]): Unit = {
+    statusMap.put(Status.Modified, data.toSet)
+    super.sendDown(data)
   }
 
   override def retrieveUp(): Seq[Data] = {

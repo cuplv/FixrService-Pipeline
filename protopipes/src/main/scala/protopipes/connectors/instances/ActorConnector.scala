@@ -5,7 +5,7 @@ import akka.util.Timeout
 import protopipes.connectors.Connector
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
-import protopipes.connectors.instances.ActorConnectorActor.{ReportUp, RetrieveUp, SendDown, Size}
+import protopipes.connectors.instances.ActorConnectorActor._
 import com.typesafe.config.Config
 import akka.pattern.ask
 import protopipes.data.{Identifiable, Identity}
@@ -24,6 +24,8 @@ object ActorConnectorActor {
 
   case class SendDown[Data](data: Seq[Data])
 
+  case class SendDownModified[Data](data: Seq[Data])
+
   case class RetrieveUp()
 
   case class ReportUp[Data](status: Status, ids: Seq[Data])
@@ -37,6 +39,8 @@ class ActorConnectorActor[Data](connector: Connector[Data]) extends Actor {
   override def receive: Receive = {
 
     case SendDown(data: Seq[Data]) => connector.sendDown(data)
+
+    case SendDownModified(data: Seq[Data]) => connector.sendDownModified(data)
 
     case RetrieveUp() => sender() ! connector.retrieveUp()
 
@@ -78,6 +82,8 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
   override def signalDown(): Unit = {  }
 
   override def sendDown(data: Seq[Data]): Unit = getActor ! SendDown(data)
+
+  override def sendDownModified(data: Seq[Data]): Unit = getActor ! SendDownModified(data)
 
   override def retrieveUp(): Seq[Data] = {
     println(s"$name retrieving upstream...")

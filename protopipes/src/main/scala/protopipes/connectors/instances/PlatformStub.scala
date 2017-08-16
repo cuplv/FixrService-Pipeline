@@ -21,6 +21,11 @@ case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
     ???
   }
 
+  override def sendDownModified(data: Seq[Data]): Unit = {
+    // TODO throw exception: Not allowed
+    ???
+  }
+
   override def retrieveUp(): Seq[Data] = {
     // TODO Throw exception: Not allowed
     ???
