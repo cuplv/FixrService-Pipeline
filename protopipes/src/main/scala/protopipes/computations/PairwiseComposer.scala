@@ -1,6 +1,6 @@
 package protopipes.computations
 
-import protopipes.configurations.{ConfigOption, PipeConfig, PlatformBuilder}
+import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
 import protopipes.data.{Identifiable, Identity}
 import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, PartialReducerPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
@@ -19,7 +19,7 @@ import scala.util.Random
 abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
      extends BinaryComputation[InputL,InputR,Output] {
 
-  def withConfig(newConfigOption: ConfigOption): PairwiseComposer[InputL, InputR, Output] = {
+  def withConfig(newConfigOption: ConfOpt): PairwiseComposer[InputL, InputR, Output] = {
     configOption = newConfigOption
     this
   }
@@ -74,7 +74,7 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
 
 }
 
-class CartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]](implicit builder: PlatformBuilder) extends PairwiseComposer[InputL,InputR,protopipes.data.Pair[InputL,InputR]] {
+class CartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]] extends PairwiseComposer[InputL,InputR,protopipes.data.Pair[InputL,InputR]] {
 
   override def filter(inputL: InputL, inputR: InputR): Boolean = true
 

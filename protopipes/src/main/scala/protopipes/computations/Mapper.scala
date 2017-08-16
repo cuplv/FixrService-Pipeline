@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.{ConfigOption, DefaultOption, PipeConfig, PlatformBuilder}
+import protopipes.configurations.{ConfOpt, DefaultOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.Identifiable
 import protopipes.pipes.{PartialMapperPipe, Pipe}
@@ -14,7 +14,7 @@ import protopipes.store.DataStore
 
 abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
 
-  def withConfig(newConfigOption: ConfigOption): Mapper[Input,Output] = {
+  def withConfig(newConfigOption: ConfOpt): Mapper[Input,Output] = {
     configOption = newConfigOption
     this
   }

@@ -8,7 +8,7 @@ import protopipes.data.Identifiable
   */
 object Compute {
 
-  def cartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]](implicit builder: PlatformBuilder): CartesianProduct[InputL,InputR] = {
+  def cartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]]: CartesianProduct[InputL,InputR] = {
     new CartesianProduct[InputL,InputR]()
   }
 

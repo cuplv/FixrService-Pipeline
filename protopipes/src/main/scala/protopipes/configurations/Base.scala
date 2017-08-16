@@ -7,19 +7,19 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions}
 /**
   * Created by edmundlam on 8/15/17.
   */
-abstract class ConfigOption
+abstract class ConfOpt
 
-object DefaultOption extends ConfigOption
+object DefaultOpt extends ConfOpt
 
-case class StepNameOption(stepName: String) extends ConfigOption
+case class StepLabelOpt(label: String) extends ConfOpt
 
-case class OverrideConfigOption(conf: Config) extends ConfigOption
+case class OverrideConfOpt(conf: Config) extends ConfOpt
 
-object ConfigOption {
+object ConfOpt {
 
-  def default: ConfigOption = DefaultOption
-  def stepName(name: String) = StepNameOption(name)
-  def overrideConfig(conf: Config) = OverrideConfigOption(conf)
+  def default: ConfOpt = DefaultOpt
+  def label(name: String) = StepLabelOpt(name)
+  def overrideConfig(conf: Config) = OverrideConfOpt(conf)
 
 }
 
@@ -36,10 +36,10 @@ object PipeConfig {
      stepConfig.withFallback(mainConfig.getConfig(Constant.PROTOPIPES)).atPath(Constant.PROTOPIPES)
    }
 
-   def resolveOptions(mainConfig: Config, option: ConfigOption): Config = option match {
-     case DefaultOption => mainConfig
-     case StepNameOption(stepName) => combineConfig(mainConfig, stepName)
-     case OverrideConfigOption(conf) => conf.withFallback(mainConfig)
+   def resolveOptions(mainConfig: Config, option: ConfOpt): Config = option match {
+     case DefaultOpt => mainConfig
+     case StepLabelOpt(stepName) => combineConfig(mainConfig, stepName)
+     case OverrideConfOpt(conf) => conf.withFallback(mainConfig)
    }
 
 }

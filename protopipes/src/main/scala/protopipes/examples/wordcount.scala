@@ -2,7 +2,7 @@ package protopipes.examples
 
 import com.typesafe.config.ConfigFactory
 import protopipes.computations.Reducer
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{DataStoreBuilder, PlatformBuilder}
 import protopipes.configurations.instances.ThinActorPlatformBuilder
 import protopipes.data.{I, Identifiable, Identity}
 import protopipes.store.instances.InMemDataStore
@@ -38,8 +38,10 @@ object wordcount {
     import protopipes.data.Implicits._
     import protopipes.pipes.Implicits._
 
-    val words  = InMemDataStore.createLinearStore[I[String]]("words")
-    val counts = InMemDataStore.createIdDataMap[Count]("counts")
+    val storeBuilder = DataStoreBuilder.load(config)
+
+    val words  = storeBuilder.list[I[String]]("words") // InMemDataStore.createLinearStore[I[String]]("words")
+    val counts = storeBuilder.idmap[Count]("counts") // InMemDataStore.createIdDataMap[Count]("counts")
 
     val wordcountpipe = words :-+CountOccurrence()+-> counts
 

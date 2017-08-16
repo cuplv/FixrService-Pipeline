@@ -3,7 +3,7 @@ package protopipes.configurations
 /**
   * Created by edmundlam on 8/15/17.
   */
-object Constant {
+final object Constant {
 
   val PROTOPIPES = "protopipes"
 
@@ -14,5 +14,12 @@ object Constant {
   val MAPPER  = "mapper-platform"
   val REDUCER = "reducer-platform"
   val PAIRWISE = "pairwise-platform"
+
+  val DATASTORE = "datastore"
+  val MAP = "map"
+  val IDMAP = "idmap"
+  val MULTIMAP = "multimap"
+  val QUEUE = "queue"
+  val LIST  = "list"
 
 }

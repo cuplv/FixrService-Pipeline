@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.{ConfigOption, DefaultOption, PlatformBuilder}
+import protopipes.configurations.{ConfOpt, DefaultOpt, PlatformBuilder}
 import protopipes.data.Identifiable
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import protopipes.store.DataStore
@@ -15,7 +15,7 @@ import scala.util.Random
 abstract class Computation  {
 
   var platformOpt: Option[Platform] = None
-  var configOption: ConfigOption = DefaultOption
+  var configOption: ConfOpt = DefaultOpt
 
   def init(config: Config, platform: Platform): Unit = platformOpt match {
     case None => {

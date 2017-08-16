@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
-import protopipes.configurations.{ConfigOption, PipeConfig, PlatformBuilder}
+import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.{Identifiable, Identity}
 import protopipes.pipes.{PartialReducerPipe, Pipe}
@@ -15,7 +15,7 @@ import protopipes.store.{DataMap, DataStore}
 
 abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
 
-  def withConfig(newConfigOption: ConfigOption): Reducer[Input,Output] = {
+  def withConfig(newConfigOption: ConfOpt): Reducer[Input,Output] = {
     configOption = newConfigOption
     this
   }
