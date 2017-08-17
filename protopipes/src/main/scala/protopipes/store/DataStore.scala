@@ -35,6 +35,7 @@ abstract class DataStore[Data] extends Upstream[Data]  {
 
   def iterator(): Iterator[Data]
 
+
   /*
   override def registerConnector(connector: Connector[Data]): Unit = {
     super.registerConnector(connector)
@@ -101,6 +102,7 @@ abstract class DataMultiMap[Key,Data] extends DataStore[Set[Data]] {
 
   def remove(data: Set[Data]): Unit
 
+  def iterator(key: Key): Iterator[Data]
 
 }
 

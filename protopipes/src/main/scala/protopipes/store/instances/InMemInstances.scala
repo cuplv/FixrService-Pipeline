@@ -158,6 +158,8 @@ class InMemDataMultiMap[Key, Data] extends DataMultiMap[Key, Data] {
 
   override def iterator(): Iterator[Set[Data]] = map.values.iterator
 
+  override def iterator(key: Key): Iterator[Data] = map.get(key).get.iterator
+
 }
 
 class InMemIdDataMap[Data <: Identifiable[Data]] extends IdDataMap[Data] {
