@@ -138,4 +138,14 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
     }
     case None => 0
   }
+
+  override def iterator(): Iterator[Data] = ???
+}
+
+class SolrIterator[Data] extends Iterator[Data] {
+
+  override def next(): Data = ???
+
+  override def hasNext: Boolean = ???
+
 }

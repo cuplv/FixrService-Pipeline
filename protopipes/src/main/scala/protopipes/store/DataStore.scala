@@ -33,6 +33,8 @@ abstract class DataStore[Data] extends Upstream[Data]  {
 
   def size(): Int
 
+  def iterator(): Iterator[Data]
+
   /*
   override def registerConnector(connector: Connector[Data]): Unit = {
     super.registerConnector(connector)

@@ -45,6 +45,8 @@ class InMemLinearStore[Data] extends DataStore[Data] {
 
   override def size(): Int = ls.size
 
+  override def iterator(): Iterator[Data] = ls.iterator
+
   override def toString: String = ls.mkString("{",",","}")
 
 }
@@ -74,6 +76,8 @@ class InMemDataQueue[Data] extends DataQueue[Data] {
   }
 
   override def size(): Int = ls.size
+
+  override def iterator(): Iterator[Data] = ls.iterator
 
 }
 
@@ -105,6 +109,8 @@ class InMemDataMap[Key, Data] extends DataMap[Key, Data] {
   override def remove(key: Key): Unit = map = map - key
 
   override def size(): Int = map.size
+
+  override def iterator(): Iterator[Data] = map.values.iterator
 
 }
 
@@ -150,6 +156,8 @@ class InMemDataMultiMap[Key, Data] extends DataMultiMap[Key, Data] {
 
   override def size(): Int = map.size
 
+  override def iterator(): Iterator[Set[Data]] = map.values.iterator
+
 }
 
 class InMemIdDataMap[Data <: Identifiable[Data]] extends IdDataMap[Data] {
@@ -187,6 +195,8 @@ class InMemIdDataMap[Data <: Identifiable[Data]] extends IdDataMap[Data] {
   }
 
   override def size(): Int = map.size
+
+  override def iterator(): Iterator[Data] = map.values.iterator
 
   override def toString: String = if (map.size > 0) map.values.mkString("{",", ","}") else "<None>"
 

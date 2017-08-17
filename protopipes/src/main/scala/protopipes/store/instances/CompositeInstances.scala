@@ -61,4 +61,16 @@ case class BothDataStore[DataL <: Identifiable[DataL],DataR <: Identifiable[Data
 
   override def size(): Int = dStoreL.size() + dStoreR.size()
 
+  override def iterator(): Iterator[data.Either[DataL, DataR]] = new BothDataIterator[DataL,DataR](dStoreL.iterator(),dStoreR.iterator())
+
+}
+
+class BothDataIterator[DataL,DataR](iterL: Iterator[DataL], iterR: Iterator[DataR]) extends Iterator[data.Either[DataL,DataR]] {
+
+  override def next(): data.Either[DataL, DataR] = {
+    if (iterL.hasNext) data.Left[DataL,DataR](iterL.next()) else data.Right[DataL,DataR](iterR.next())
+  }
+
+  override def hasNext: Boolean = iterL.hasNext || iterR.hasNext
+
 }
