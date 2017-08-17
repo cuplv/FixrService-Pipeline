@@ -10,30 +10,29 @@ import scalaj.http.Http
   * Created by chanceroberts on 8/10/17.
   */
 
+case class SolrClassObject(name: String, args: List[Any])
+
 object SolrInstances{
   def createIdDataMap[Data <: Identifiable[Data]](name: String): DataStore[Data] = {
     ???
   }
 }
 
-class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
-  val url: String = ???
+class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost:8983") extends DataMap[Key, Data]{
+  val url: String = s"http://$solrLocation/solr/$coreName/"
+
+  def extractClassFromData(str: String): SolrClassObject = {
+
+    ???
+  }
 
   def keyToString(key: Key): String = {
-    /*
-    val (keyID, keyVersion) = key match{
-      case i: Identifiable[_] => (i.getId(), i.getVersion())
-      case _ => (toJson(key), None)
-    }
-    keyID + (keyVersion match{
-      case Some(s) => "&&v."+s
-      case None => ""
-    }) */
     key match {
       case i: Identifiable[_] => i.getId().toString
       case _ => toJson(key)
     }
   }
+
   def toJson(a: Any): String = a match{
     case l: List[_] =>
       l.tail.foldLeft(s"[ ${toJson(l.head)}") {
@@ -43,7 +42,7 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
       case (str, (k, v)) => s"$str, ${toJson(k)}: ${toJson(v)}"
     } + " }"
     case s: String => "\"" + s.replaceAll("\"", "\\\"") + "\""
-    case _ => a.toString
+    case _ => a.toString.replaceAll("\"", "\\\"")
   }
 
   def getDocument(id: String = name): Option[Map[String, Any]] = {
@@ -67,7 +66,7 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
     }
   }
 
-  def updateDocument(doc: Map[String, Any], keys: List[Key]): Unit = {
+  def addToDocument(doc: Map[String, Any], keys: List[Key]): Unit = {
     val jsonMap = Map("add" -> Map("doc" -> doc), "commit" -> Map[String, Any]())
     val json = toJson(jsonMap)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
@@ -81,62 +80,78 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
     }
   }
 
+  def deleteDocuments(ids: List[String]): Unit = {
+    val jsonMap = Map("delete" -> ids)
+    val json = toJson(jsonMap)
+    val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
+    JSON.parseFull(result) match{
+      case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
+        parsed.get("error") match{
+          case Some(x) => throw new Exception(s"Could not update the DataMap $name on ID(s) $ids.")
+          case _ => ()
+        }
+      case _ => ()
+    }
+  }
+
   override def put_(key: Key, data: Data): Unit = {
     val kToString = keyToString(key)
     val dMap: String = data match{
       case i: Identifiable[_] => toJson(Map("id" -> i.getId()))
-      /*
-      toJson(i.getVersion() match{
-        case Some(vers) => Map("id" -> i.getId(), "version" -> i.getVersion())
-        case None => Map("id" -> i.getId())
-      }) */
       case _ => toJson(data)
     }
     val document = getDocument() match{
-      case Some(m: Map[String @ unchecked, String @ unchecked]) =>
+      case Some(m: Map[String @ unchecked, Any @ unchecked]) =>
         val newM = m - "_version_"
-        newM + (kToString -> dMap)
+        newM + ("dataID" -> dMap, "data" -> data.toString)
       case None =>
-        Map("id" -> name, kToString -> dMap)
+        Map("id" -> kToString, "dataID" -> dMap, "data" -> data.toString)
     }
-    updateDocument(document, List(key))
+    addToDocument(document, List(key))
   }
 
   override def put_(data: Seq[Data]): Unit = { }
 
-  override def get(key: Key): Option[Data] = ???
+  override def get(key: Key): Option[Data] = getDocument() match{
+    case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("data") match{
+      case Some(data: String) => ???
+      case Some((data: String) :: _) => ???
+      case _ => None
+    }
+      ???
+    case None => None
+  }
 
   override def contains(key: Key): Boolean = ???
 
   override def all(): Seq[Data] = ???
 
-  override def remove(key: Key): Unit = getDocument() match{
-    case Some(doc: Map[String@unchecked, String@unchecked]) =>
-      val kToString = keyToString(key)
-      val newDoc = doc - "_version_" - kToString
-      updateDocument(doc, List(key))
-    case None => ()
+  override def remove(key: Key): Unit = {
+    deleteDocuments(List(keyToString(key)))
   }
 
-  override def remove(keys: Seq[Key]): Unit = getDocument() match{
-    case Some(doc: Map[String@unchecked, String@unchecked]) =>
-      updateDocument(keys.foldLeft(doc - "_version_"){
-        case (map, key) =>
-          keyToString(key)
-          map - keyToString(key)
-      }, keys.toList)
-    case None => ()
+  override def remove(keys: Seq[Key]): Unit = {
+    deleteDocuments(keys.foldRight(List.empty[String]){
+      case (key, list) => keyToString(key) :: list
+    })
   }
 
   override def extract(): Seq[Data] = ???
 
-  override def size(): Int = getDocument() match{
-    case Some(doc: Map[String@unchecked, String@unchecked]) => doc.foldRight(0){
-      case ((key, data), fields) =>
-        if (!key.equals("id") && !key.equals("_version_")) fields+1
-        else fields
+  override def size(): Int = {
+    val queryURL = url+"select?wt=json&q=*:*"
+    val json = Http(queryURL).asString.body
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) => parsed.get("response") match{
+        case Some(response: Map[String@unchecked, Any@unchecked]) => parsed.get("numFound") match {
+          case Some(num: Int) => num
+          case Some(str: String) => str.toInt
+          case _ => 0
+        }
+        case _ => 0
+      }
+      case _ => 0
     }
-    case None => 0
   }
 
   override def iterator(): Iterator[Data] = ???
