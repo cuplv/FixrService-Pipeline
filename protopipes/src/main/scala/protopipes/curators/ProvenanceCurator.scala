@@ -1,5 +1,7 @@
 package protopipes.curators
 
+import java.util.Calendar
+
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
 import protopipes.store.DataMap
 import protopipes.store.instances.InMemDataMap
@@ -25,7 +27,7 @@ class StandardProvenanceCurator[Input <: Identifiable[Input],Output <: Identifia
 
   val provMap: DataMap[Identity[Output],Any] = new InMemDataMap[Identity[Output],Any]
 
-  def provenance(src: Input, target: Output): Any = src.identity()
+  def provenance(src: Input, target: Output): Any = (src.identity(),Calendar.getInstance().getTime().toString)
 
   override def reportProvenance(src: Input, targets: List[Output]): Unit = {
     targets foreach {

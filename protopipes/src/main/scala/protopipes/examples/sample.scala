@@ -18,17 +18,23 @@ import com.typesafe.config.ConfigFactory
 
 case class Plus(n: Int) extends Mapper[I[Int],I[Int]] {
 
+  override val versionOpt: Option[String] = Some("v0.5")
+
   override def compute(input: I[Int]): List[I[Int]] = List( I(input.i + n) )
 
 }
 
 case class TimesPair() extends Mapper[protopipes.data.Pair[I[Int],I[Int]],I[Int]] {
 
+  override val versionOpt: Option[String] = Some("v0.6")
+
   override def compute(input: protopipes.data.Pair[I[Int],I[Int]]): List[I[Int]] = List(I(input.left.i * input.right.i))
 
 }
 
 case class Helloworld() extends Mapper[I[Int],I[String]] {
+
+  override val versionOpt: Option[String] = Some("v0.5")
 
   override def compute(input: I[Int]): List[I[String]] = List(I(s"Hello! ${input.i()}"))
 
