@@ -42,7 +42,7 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
     val platform = getBinaryPlatform()
     try {
       val output = if(filter(pair.left, pair.right)) {
-        val output = compose(pair.left, pair.right)
+        val output = platform.getVersionCurator().stampVersion( compose(pair.left, pair.right) )
         platform.getOutputMap().put(output)
         platform.getProvenanceCurator().reportProvenance(pair, output)
         Some(output)

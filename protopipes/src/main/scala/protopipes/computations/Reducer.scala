@@ -53,7 +53,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
   def tryFold(input: Input, output: Output): Option[Output] = {
     val platform = getUnaryPlatform()
     try {
-      val newOutput = fold(input, output)
+      val newOutput = platform.getVersionCurator().stampVersion(fold(input, output))
       platform.getUpstreamConnector.reportUp(Status.Done, input)
       platform.getProvenanceCurator.reportProvenance(input, output)
       Some(newOutput)
@@ -93,15 +93,17 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
       pair => {
         tryZero() match {
           case Some(zero) => {
-            val output = outputMap.getOrElse(pair._1, zero)
+            val oid = platform.getVersionCurator().stampVersion(pair._1)
+            val output = outputMap.getOrElse(  oid , zero)
             val newOutput = pair._2.foldRight(output) {
               (i, o) => tryFold(i, o) match {
                 case Some(no) => no
                 case None => o
               }
             }
-            if (output != newOutput) {
-              outputMap.put(newOutput)
+            val vNewOutput = platform.getVersionCurator().stampVersion(newOutput)
+            if (output != vNewOutput) {
+              outputMap.put(vNewOutput)
             }
           }
           case None => {

@@ -17,6 +17,8 @@ abstract class Computation  {
   var platformOpt: Option[Platform] = None
   var configOption: ConfOpt = DefaultOpt
 
+  val versionOpt: Option[String] = None
+
   def init(config: Config, platform: Platform): Unit = platformOpt match {
     case None => {
       platformOpt = Some(platform)

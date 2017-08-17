@@ -13,7 +13,7 @@ import protopipes.store.instances.InMemDataStore
 
 case class Count(word: String, count: Int) extends Identifiable[Count] {
 
-  override def identity(): Identity[Count] = BasicIdentity(word)
+  override def mkIdentity(): Identity[Count] = BasicIdentity(word)
 
 }
 

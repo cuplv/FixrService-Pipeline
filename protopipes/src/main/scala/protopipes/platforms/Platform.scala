@@ -6,7 +6,7 @@ import protopipes.data.Identifiable
 import protopipes.store.DataStore
 import com.typesafe.config.Config
 import protopipes.computations.Computation
-import protopipes.curators.{ErrorCurator, ProvenanceCurator}
+import protopipes.curators._
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -41,6 +41,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   var upstreamConnectorOpt: Option[Connector[Input]] = None
   var provenanceCuratorOpt: Option[ProvenanceCurator[Input,Output]] = None
   var errorCuratorOpt: Option[ErrorCurator[Input]] = None
+  var versionCuratorOpt: Option[VersionCurator[Output]] = None
   var inputMapOpt: Option[DataStore[Input]]   = None
   var outputMapOpt: Option[DataStore[Output]] = None
 
@@ -83,6 +84,18 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     }
   }
 
+  def getVersionCurator(): VersionCurator[Output] = versionCuratorOpt match {
+    case Some(versionCurator) => versionCurator
+    case None => {
+      val versionCurator = computationOpt.get.versionOpt match {
+        case None => new IdleVersionCurator[Output]
+        case Some(version) => new StandardVersionCurator[Output](version)
+      }
+      versionCuratorOpt = Some(versionCurator)
+      versionCurator
+    }
+  }
+
   def getInputMap(): DataStore[Input] = inputMapOpt match {
     case Some(inputMap) => inputMap
     case None => {
@@ -113,6 +126,7 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   var errorLeftCuratorOpt: Option[ErrorCurator[InputL]] = None
   var errorRightCuratorOpt: Option[ErrorCurator[InputR]] = None
   var errorPairCuratorOpt: Option[ErrorCurator[protopipes.data.Pair[InputL,InputR]]] = None
+  var versionCuratorOpt: Option[VersionCurator[Output]] = None
 
   var inputLMapOpt: Option[DataStore[InputL]] = None
   var inputRMapOpt: Option[DataStore[InputR]] = None
@@ -170,6 +184,18 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
     case None => {
       // TODO: Throw exception
       ???
+    }
+  }
+
+  def getVersionCurator(): VersionCurator[Output] = versionCuratorOpt match {
+    case Some(versionCurator) => versionCurator
+    case None => {
+      val versionCurator = computationOpt.get.versionOpt match {
+        case None => new IdleVersionCurator[Output]
+        case Some(version) => new StandardVersionCurator[Output](version)
+      }
+      versionCuratorOpt = Some(versionCurator)
+      versionCurator
     }
   }
 

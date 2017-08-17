@@ -36,8 +36,9 @@ abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Outpu
     try {
       val outputs = compute(input).map(
         output => {
-          platform.getOutputMap().put(output)
-          output
+          val voutput = platform.getVersionCurator().stampVersion(output)
+          platform.getOutputMap().put(voutput)
+          voutput
         }
       )
       platform.getUpstreamConnector().reportUp(Status.Done, input)
