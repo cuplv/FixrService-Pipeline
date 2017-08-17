@@ -19,7 +19,8 @@ object SolrInstances{
 class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
   val url: String = ???
 
-  def keyToString(key: Key) = {
+  def keyToString(key: Key): String = {
+    /*
     val (keyID, keyVersion) = key match{
       case i: Identifiable[_] => (i.getId(), i.getVersion())
       case _ => (toJson(key), None)
@@ -27,7 +28,11 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
     keyID + (keyVersion match{
       case Some(s) => "&&v."+s
       case None => ""
-    })
+    }) */
+    key match {
+      case i: Identifiable[_] => i.getId().toString
+      case _ => toJson(key)
+    }
   }
   def toJson(a: Any): String = a match{
     case l: List[_] =>
@@ -79,10 +84,12 @@ class SolrDataMap[Key, Data] extends DataMap[Key, Data]{
   override def put_(key: Key, data: Data): Unit = {
     val kToString = keyToString(key)
     val dMap: String = data match{
-      case i: Identifiable[_] => toJson(i.getVersion() match{
+      case i: Identifiable[_] => toJson(Map("id" -> i.getId()))
+      /*
+      toJson(i.getVersion() match{
         case Some(vers) => Map("id" -> i.getId(), "version" -> i.getVersion())
         case None => Map("id" -> i.getId())
-      })
+      }) */
       case _ => toJson(data)
     }
     val document = getDocument() match{
