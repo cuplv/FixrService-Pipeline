@@ -65,7 +65,7 @@ case class BothDataStore[DataL <: Identifiable[DataL],DataR <: Identifiable[Data
 
 }
 
-class BothDataIterator[DataL,DataR](iterL: Iterator[DataL], iterR: Iterator[DataR]) extends Iterator[data.Either[DataL,DataR]] {
+class BothDataIterator[DataL <: Identifiable[DataL],DataR <: Identifiable[DataR]](iterL: Iterator[DataL], iterR: Iterator[DataR]) extends Iterator[data.Either[DataL,DataR]] {
 
   override def next(): data.Either[DataL, DataR] = {
     if (iterL.hasNext) data.Left[DataL,DataR](iterL.next()) else data.Right[DataL,DataR](iterR.next())
