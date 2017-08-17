@@ -1,7 +1,7 @@
 package protopipes.store
 
 import protopipes.connectors.{Connector, Upstream}
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity}
 
 /**
   * Created by edmundlam on 8/8/17.

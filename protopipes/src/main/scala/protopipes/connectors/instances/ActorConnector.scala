@@ -8,7 +8,7 @@ import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.ActorConnectorActor._
 import com.typesafe.config.Config
 import akka.pattern.ask
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{Identifiable, BasicIdentity}
 import protopipes.platforms.Platform
 
 import scala.concurrent.Await

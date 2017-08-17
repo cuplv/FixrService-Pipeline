@@ -6,28 +6,46 @@ package protopipes.data
 
 abstract class Identifiable[A] {
   def identity(): Identity[A]
-  def getId(): Any = identity().id
+  def getId(): Any = identity().getId()
   // def getVersion(): Option[String] = identity().version
 }
 
 object Identity {
 
-  def lift[Src,Dest](identity: Identity[Src]): Identity[Dest] = Identity[Dest](identity.id)
+  def lift[Src,Dest](identity: Identity[Src]): Identity[Dest] = BasicIdentity[Dest](identity.getId())
 
-  def toAny[Src](identity: Identity[Src]): Identity[Any] = Identity[Any](identity.id)
+  def toAny[Src](identity: Identity[Src]): Identity[Any] = BasicIdentity[Any](identity.getId())
 
 }
 
-case class Identity[A](id: Any) extends Identifiable[A] {
+abstract class Identity[A] extends Identifiable[A]
+
+case class BasicIdentity[A](id: Any) extends Identity[A] {
 
   val delimiter = "-:**:-"
+
+  override def getId(): Any = id
 
   override def identity(): Identity[A] = this
 }
 
+class VersionedIdentity[A](id: Any, version: String) extends BasicIdentity[A] {
+
+  override def identity(): Identity[A] = this
+
+  override def getId(): Any = id
+
+  def getVersion(): String = version
+
+  def setVersion(v: String) = new VersionedIdentity[A](id, v)
+
+  def dropVersion(): BasicIdentity[A] = BasicIdentity[A](id)
+
+}
+
 object PairIdentity {
 
-  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): Any = (id1.id,id2.id)
+  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): Any = (id1.getId(),id2.getId())
 
   /*
   def mergeVersions[A,B](id1: Identity[A], id2: Identity[B]): Option[String] = {
@@ -42,7 +60,7 @@ object PairIdentity {
 }
 
 class PairIdentity[L <: Identifiable[L],R <: Identifiable[R]](id1: Identity[L], id2: Identity[R])
-  extends Identity[Pair[L,R]](PairIdentity.mergeIds(id1,id2))  {
+  extends BasicIdentity[Pair[L,R]](PairIdentity.mergeIds(id1,id2))  {
 
   val leftId = id1
   val rightId = id2
@@ -53,11 +71,11 @@ class PairIdentity[L <: Identifiable[L],R <: Identifiable[R]](id1: Identity[L], 
 abstract class Either[L <: Identifiable[L], R <: Identifiable[R]] extends Identifiable[Either[L,R]]
 
 case class Left[L <: Identifiable[L], R <: Identifiable[R]](left: L) extends Either[L,R] {
-  override def identity(): Identity[Either[L,R]] = Identity[Either[L,R]]("L::" + left.identity().id)
+  override def identity(): BasicIdentity[Either[L,R]] = BasicIdentity[Either[L,R]]("L::" + left.identity().getId())
 }
 
 case class Right[L <: Identifiable[L], R <: Identifiable[R]](right: R) extends Either[L,R] {
-  override def identity(): Identity[Either[L,R]] = Identity[Either[L,R]]("R::" + right.identity().id)
+  override def identity(): BasicIdentity[Either[L,R]] = BasicIdentity[Either[L,R]]("R::" + right.identity().getId())
 }
 
 
@@ -72,7 +90,7 @@ case class Pair[L <: Identifiable[L],R <: Identifiable[R]](left: L, right: R) ex
 
 case class I[A](a: A) extends Identifiable[I[A]] {
   def i(): A = a
-  override def identity(): Identity[I[A]] = Identity[I[A]](s"${a.hashCode()}")
+  override def identity(): Identity[I[A]] = BasicIdentity[I[A]](s"${a.hashCode()}")
   override def toString: String = s"${a.toString}"
 }
 

@@ -1,7 +1,7 @@
 package protopipes.platforms.instances.bigactors
 
 import protopipes.computations.{Mapper, PairwiseComposer, Reducer}
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity}
 import protopipes.store.DataMap
 
 import scala.util.Random

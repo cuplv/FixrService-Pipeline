@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import protopipes.computations.Reducer
 import protopipes.configurations.{DataStoreBuilder, PlatformBuilder}
 import protopipes.configurations.instances.ThinActorPlatformBuilder
-import protopipes.data.{I, Identifiable, Identity}
+import protopipes.data.{BasicIdentity, I, Identifiable, Identity}
 import protopipes.store.instances.InMemDataStore
 
 /**
@@ -13,13 +13,13 @@ import protopipes.store.instances.InMemDataStore
 
 case class Count(word: String, count: Int) extends Identifiable[Count] {
 
-  override def identity(): Identity[Count] = Identity(word)
+  override def identity(): Identity[Count] = BasicIdentity(word)
 
 }
 
 case class CountOccurrence() extends Reducer[I[String],Count] {
 
-  override def groupBy(input: I[String]): Identity[Count] = Identity(input.a)
+  override def groupBy(input: I[String]): Identity[Count] = BasicIdentity(input.a)
 
   override def fold(input: I[String], output: Count): Count = Count(input.a, output.count + 1)
 

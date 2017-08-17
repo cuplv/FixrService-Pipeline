@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{Identifiable, BasicIdentity}
 import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, PartialReducerPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
 import protopipes.platforms._

@@ -3,7 +3,7 @@ package protopipes.computations
 import com.typesafe.config.Config
 import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity}
 import protopipes.pipes.{PartialReducerPipe, Pipe}
 import protopipes.platforms.UnaryPlatform
 import protopipes.store.{DataMap, DataStore}

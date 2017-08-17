@@ -1,7 +1,7 @@
 package protopipes.platforms.instances.thinactors
 
 import protopipes.connectors.Status
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{Identifiable, BasicIdentity}
 import protopipes.platforms.{ComputesMap, ComputesPairwiseCompose, ComputesReduce}
 import protopipes.store.DataMap
 

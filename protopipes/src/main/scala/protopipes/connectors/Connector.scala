@@ -4,7 +4,7 @@ import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.{SequencedConnectors, PlatformStub}
-import protopipes.data.Identity
+import protopipes.data.BasicIdentity
 import protopipes.platforms.Platform
 import protopipes.store.DataStore
 import com.typesafe.config.Config

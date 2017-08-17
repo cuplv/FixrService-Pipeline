@@ -4,7 +4,7 @@ import protopipes.computations.{Mapper, PairwiseComposer, Reducer}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.{Connector, Status}
 import protopipes.curators.{ErrorCurator, ProvenanceCurator}
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity}
 import protopipes.store.DataStore
 
 /**

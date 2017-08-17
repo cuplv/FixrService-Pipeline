@@ -4,7 +4,7 @@ import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{Identifiable, BasicIdentity}
 import protopipes.store.{DataMap, DataMultiMap, DataQueue, IdDataMap}
 import protopipes.store.instances.{InMemDataMap, InMemDataMultiMap, InMemDataQueue}
 import com.typesafe.config.Config

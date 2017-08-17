@@ -1,6 +1,6 @@
 package protopipes.store.instances
 
-import protopipes.data.{Identifiable, Identity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity}
 import protopipes.store._
 
 /**
