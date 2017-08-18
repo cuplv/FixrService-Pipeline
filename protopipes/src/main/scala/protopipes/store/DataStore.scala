@@ -1,5 +1,7 @@
 package protopipes.store
 
+import com.typesafe.config.Config
+import protopipes.checkers.ConfigChecker
 import protopipes.connectors.{Connector, Upstream}
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
 
@@ -8,13 +10,15 @@ import protopipes.data.{BasicIdentity, Identifiable, Identity}
   */
 
 
-abstract class DataStore[Data] extends Upstream[Data]  {
+abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker  {
 
   var name = "DataStore"
 
   def displayName(): String = name
 
   def setName(newName: String) : Unit = name = newName
+
+  def init(conf: Config): Unit = { }
 
   def put_(data: Seq[Data]): Unit
 

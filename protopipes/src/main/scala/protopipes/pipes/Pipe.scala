@@ -49,10 +49,8 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
 case class St[Data <: Identifiable[Data]](store: DataStore[Data]) extends Pipe[Data,Data] {
   override def toString: String = store.displayName
-  override def check(conf: Config): Unit = {
-    // TODO: DataStore need checking routines as well
-  }
-  override def init(conf: Config): Unit = { }
+  override def check(conf: Config): Unit = store.checkConfig(conf)
+  override def init(conf: Config): Unit = store.init(conf)
   override def head(): DataStore[Data] = store
   override def end(): DataStore[Data] = store
   override def terminate(): Unit = { }
@@ -62,10 +60,8 @@ case class St[Data <: Identifiable[Data]](store: DataStore[Data]) extends Pipe[D
 object Implicits {
   implicit class DataNode[Data <: Identifiable[Data]](map: DataStore[Data]) extends Pipe[Data,Data] {
     override def toString: String = map.displayName
-    override def check(conf: Config): Unit = {
-      // TODO: DataStore need checking routines as well.
-    }
-    override def init(conf: Config): Unit = { }
+    override def check(conf: Config): Unit = map.checkConfig(conf)
+    override def init(conf: Config): Unit = map.init(conf)
     override def head(): DataStore[Data] = map
     override def end(): DataStore[Data] = map
     override def terminate(): Unit = { }
