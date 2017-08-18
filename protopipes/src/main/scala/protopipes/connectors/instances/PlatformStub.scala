@@ -6,6 +6,7 @@ import protopipes.connectors.Status.Status
 import protopipes.data.BasicIdentity
 import protopipes.platforms.Platform
 import com.typesafe.config.Config
+import protopipes.exceptions.CallNotAllowException
 
 /**
   * Created by edmundlam on 8/9/17.
@@ -17,23 +18,19 @@ case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
 
   override def signalDown(): Unit = { platform.wake() }
   override def sendDown(data: Seq[Data]): Unit = {
-    // TODO Throw exception: Not allowed
-    ???
+    throw new CallNotAllowException("PlatformStub does not support \'sendDown\'", None)
   }
 
   override def sendDownModified(data: Seq[Data]): Unit = {
-    // TODO throw exception: Not allowed
-    ???
+    throw new CallNotAllowException("PlatformStub does not support \'sendDownModified\'", None)
   }
 
   override def retrieveUp(): Seq[Data] = {
-    // TODO Throw exception: Not allowed
-    ???
+    throw new CallNotAllowException("PlatformStub does not support \'retrieveUp\'", None)
   }
 
   override def reportUp(status: Status, ids: Seq[Data]): Unit = {
-    // TODO Throw exception: Not allowed
-    ???
+    throw new CallNotAllowException("PlatformStub does not support \'reportUp\'", None)
   }
 
   override def size(): Int = 0

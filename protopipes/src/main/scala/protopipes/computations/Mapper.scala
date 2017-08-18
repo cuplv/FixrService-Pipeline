@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import protopipes.configurations.{ConfOpt, DefaultOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.Identifiable
+import protopipes.exceptions.UserComputationException
 import protopipes.pipes.{PartialMapperPipe, Pipe}
 import protopipes.platforms.UnaryPlatform
 import protopipes.store.DataStore
@@ -47,7 +48,8 @@ abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Outpu
     } catch {
       case ex: Exception => {
         // Compute exception occurred, log this in error store
-        platform.getErrorCurator().reportError(input, ex, Some(s"Mapper \'compute\' operation failed on input $input."))
+        val pex = new UserComputationException("Mapper \'compute\'", Some(ex))
+        platform.getErrorCurator().reportError(input, pex, Some(s"Mapper \'compute\' operation failed on input $input."))
         None
       }
     }

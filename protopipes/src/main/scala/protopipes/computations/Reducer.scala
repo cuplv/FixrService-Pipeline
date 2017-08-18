@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
+import protopipes.exceptions.UserComputationException
 import protopipes.pipes.{PartialReducerPipe, Pipe}
 import protopipes.platforms.UnaryPlatform
 import protopipes.store.{DataMap, DataStore}
@@ -44,7 +45,8 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
       Some(outputId)
     } catch {
       case ex: Exception => {
-        platform.getErrorCurator().reportError(input, ex, Some(s"Reducer \'groupBy\' operation failed on input $input."))
+        val pex = new UserComputationException(s"Reducer \'groupBy\'", Some(ex))
+        platform.getErrorCurator().reportError(input, pex, Some(s"Reducer \'groupBy\' operation failed on input $input."))
         None
       }
     }
@@ -59,6 +61,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
       Some(newOutput)
     } catch {
       case ex: Exception => {
+        val pex = new UserComputationException(s"Reducer \'fold\'", Some(ex))
         platform.getErrorCurator.reportError(input, ex, Some(s"Reducer \'fold\' operation failed on inputs $input and $output."))
         None
       }
@@ -71,7 +74,9 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
       Some(zero())
     } catch {
       case ex: Exception => {
-        // TODO Log error here.
+        // TODO: Log this somewhere
+        // val pex = new UserComputationException(s"Reducer \'zero\'", Some(ex))
+        // platform.getErrorCurator.reportError(input, ex, Some(s"Reducer \'fold\' operation failed on inputs $input and $output."))
         None
       }
     }

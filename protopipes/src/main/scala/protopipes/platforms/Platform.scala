@@ -7,6 +7,7 @@ import protopipes.store.DataStore
 import com.typesafe.config.Config
 import protopipes.computations.Computation
 import protopipes.curators._
+import protopipes.exceptions.NotInitializedException
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -27,8 +28,7 @@ abstract class Platform {
   def run(): Unit = computationOpt match {
     case Some(computation) => computation.run()
     case None => {
-      // TODO: Throw exeption
-      ???
+      throw new NotInitializedException("Platform", "run()", None)
     }
   }
 
@@ -63,24 +63,21 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   def getUpstreamConnector(): Connector[Input] = upstreamConnectorOpt match {
     case Some(upstreamConnector) => upstreamConnector
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryPlatform", "getUpstreamConnector()", None)
     }
   }
 
   def getProvenanceCurator(): ProvenanceCurator[Input,Output] = provenanceCuratorOpt match {
     case Some(provenanceCurator) => provenanceCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryPlatform", "getProvenanceCurator()", None)
     }
   }
 
   def getErrorCurator(): ErrorCurator[Input] = errorCuratorOpt match {
     case Some(errorCurator) => errorCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryPlatform", "getErrorCurator()", None)
     }
   }
 
@@ -99,16 +96,14 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   def getInputMap(): DataStore[Input] = inputMapOpt match {
     case Some(inputMap) => inputMap
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryPlatform", "getInputMap()", None)
     }
   }
 
   def getOutputMap(): DataStore[Output] = outputMapOpt match {
     case Some(outputMap) => outputMap
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryPlatform", "getOutputMap()", None)
     }
   }
 
@@ -158,32 +153,28 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   def getUpstreamLConnector(): Connector[InputL] = upstreamLConnectorOpt match {
     case Some(upstreamConnector) => upstreamConnector
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getUpstreamLConnector()", None)
     }
   }
 
   def getUpstreamRConnector(): Connector[InputR] = upstreamRConnectorOpt match {
     case Some(upstreamConnector) => upstreamConnector
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getUpstreamRConnector()", None)
     }
   }
 
   def getPairConnector(): Connector[protopipes.data.Pair[InputL,InputR]] = pairConnectorOpt match {
     case Some(pairConnector) => pairConnector
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getPairConnector()", None)
     }
   }
 
   def getProvenanceCurator(): ProvenanceCurator[protopipes.data.Pair[InputL,InputR],Output] = provenanceCuratorOpt match {
     case Some(provenanceCurator) => provenanceCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getProvenanceCurator()", None)
     }
   }
 
@@ -202,48 +193,42 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   def getLeftErrorCurator(): ErrorCurator[InputL] = errorLeftCuratorOpt match {
     case Some(errorCurator) => errorCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getLeftErrorCurator()", None)
     }
   }
 
   def getRightErrorCurator(): ErrorCurator[InputR] = errorRightCuratorOpt match {
     case Some(errorCurator) => errorCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getRightErrorCurator()", None)
     }
   }
 
   def getPairErrorCurator(): ErrorCurator[protopipes.data.Pair[InputL,InputR]] = errorPairCuratorOpt match {
     case Some(errorCurator) => errorCurator
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getPairErrorCurator()", None)
     }
   }
 
   def getInputLMap(): DataStore[InputL] = inputLMapOpt match {
     case Some(inputMap) => inputMap
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getInputLMap()", None)
     }
   }
 
   def getInputRMap(): DataStore[InputR] = inputRMapOpt match {
     case Some(inputMap) => inputMap
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getInputRMap()", None)
     }
   }
 
   def getOutputMap(): DataStore[Output] = outputMapOpt match {
     case Some(outputMap) => outputMap
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryPlatform", "getOutputMap()", None)
     }
   }
 

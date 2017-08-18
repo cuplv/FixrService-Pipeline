@@ -6,6 +6,7 @@ import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector
 import protopipes.connectors.instances.ActorConnector
 import protopipes.data.Identifiable
+import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import protopipes.platforms.instances.thinactors.ThinActorPlatform.Wake
 import protopipes.store.DataStore
@@ -43,8 +44,7 @@ abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output <: Id
   def getActor(): ActorRef = actorRefOpt match {
     case Some(actorRef) => actorRef
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("ThinActorUnaryPlatform", "getActor()", None)
     }
   }
 
@@ -80,8 +80,7 @@ abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <:
   def getActor(): ActorRef = actorRefOpt match {
     case Some(actorRef) => actorRef
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("ThinActorBinaryPlatform", "getActor()", None)
     }
   }
 

@@ -3,11 +3,12 @@ package protopipes.connectors
 import protopipes.configurations.PlatformBuilder
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
-import protopipes.connectors.instances.{SequencedConnectors, PlatformStub}
+import protopipes.connectors.instances.{PlatformStub, SequencedConnectors}
 import protopipes.data.BasicIdentity
 import protopipes.platforms.Platform
 import protopipes.store.DataStore
 import com.typesafe.config.Config
+import protopipes.exceptions.NotInitializedException
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -33,9 +34,6 @@ object Connector {
 
 abstract class Connector[Input] {
 
-  // var datastoreOpt: Option[DataStore[Input]] = None
-  //  var platformOpt: Option[Platform] = None
-
   var upstreamConnectorOpt: Option[Connector[Input]] = None
   var downstreamConnectorOpt: Option[Connector[Input]] = None
 
@@ -50,28 +48,17 @@ abstract class Connector[Input] {
      downstreamConnectorOpt = Some( PlatformStub(platform) )
   }
 
-  /*
-  def getPlatform(): Platform = platformOpt match {
-    case Some(platform) => platform
-    case None => {
-      // TODO: Throw exception
-      ???
-    }
-  } */
-
   def getUpstream(): Connector[Input] = upstreamConnectorOpt match {
     case Some(connector) => connector
     case None => {
-      // TODO: throw exception
-      ???
+      throw new NotInitializedException("Connector", "getUpstream()", None)
     }
   }
 
   def getDownstream(): Connector[Input] = downstreamConnectorOpt match {
     case Some(connector) => connector
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("Connector", "getDownstream()", None)
     }
   }
 

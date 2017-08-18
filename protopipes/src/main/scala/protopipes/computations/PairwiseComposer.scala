@@ -1,7 +1,7 @@
 package protopipes.computations
 
 import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
-import protopipes.data.{Identifiable, BasicIdentity}
+import protopipes.data.{BasicIdentity, Identifiable}
 import protopipes.pipes.{PartialComposerPipe, PartialMapperPipe, PartialReducerPipe, Pipe}
 import protopipes.platforms.instances.MapperPlatform
 import protopipes.platforms._
@@ -9,6 +9,7 @@ import protopipes.store.{DataMap, DataStore}
 import com.typesafe.config.Config
 import protopipes.connectors.Status
 import protopipes.data
+import protopipes.exceptions.UserComputationException
 
 import scala.util.Random
 
@@ -51,7 +52,8 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
       output
     } catch {
       case ex: Exception => {
-        platform.getPairErrorCurator().reportError(pair, ex,
+        val pex = new UserComputationException(s"PairwiseComposer \'filter\' or \'compose\'", Some(ex))
+        platform.getPairErrorCurator().reportError(pair, pex,
              Some(s"PairwiseComposer operations \'filter\' and \'compose\' failed on inputs ${pair.left} and ${pair.right}."))
         None
       }

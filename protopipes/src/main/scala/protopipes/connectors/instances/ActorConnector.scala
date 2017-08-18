@@ -8,7 +8,8 @@ import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.ActorConnectorActor._
 import com.typesafe.config.Config
 import akka.pattern.ask
-import protopipes.data.{Identifiable, BasicIdentity}
+import protopipes.data.{BasicIdentity, Identifiable}
+import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.Platform
 
 import scala.concurrent.Await
@@ -61,8 +62,7 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
   def getActor(): ActorRef = actorRefOpt match {
     case Some(actorRef) => actorRef
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("ActorConnector", "getActor()", None)
     }
   }
 
