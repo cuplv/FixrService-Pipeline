@@ -5,6 +5,8 @@ import protopipes.store.{DataMap, DataStore}
 
 import scala.util.parsing.json.JSON
 import scalaj.http.Http
+import spray.json._
+
 
 /**
   * Created by chanceroberts on 8/10/17.
@@ -18,28 +20,27 @@ object SolrInstances{
   }
 }
 
-class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost:8983") extends DataMap[Key, Data]{
+abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983") extends DataMap[Key, Data]{
   val url: String = s"http://$solrLocation/solr/$coreName/"
-
-  def extractClassFromData(str: String): SolrClassObject = {
-
-    ???
-  }
 
   def keyToString(key: Key): String = {
     key match {
       case i: Identifiable[_] => i.getId().toString
-      case _ => toJson(key)
+      case _ => toJSON(key)
     }
   }
 
-  def toJson(a: Any): String = a match{
+  def toJson(d: Data): String
+
+  def fromJson(s: String): Data
+
+  def toJSON(a: Any): String = a match{
     case l: List[_] =>
-      l.tail.foldLeft(s"[ ${toJson(l.head)}") {
-        case (str, next) => s"$str, ${toJson(next)}"
+      l.tail.foldLeft(s"[ ${toJSON(l.head)}") {
+        case (str, next) => s"$str, ${toJSON(next)}"
       } + " ]"
-    case m: Map[_, _] => m.tail.foldLeft(s" [ ${toJson(m.head._1)}: ${toJson(m.head._2)}"){
-      case (str, (k, v)) => s"$str, ${toJson(k)}: ${toJson(v)}"
+    case m: Map[_, _] => m.tail.foldLeft(s" [ ${toJSON(m.head._1)}: ${toJSON(m.head._2)}"){
+      case (str, (k, v)) => s"$str, ${toJSON(k)}: ${toJSON(v)}"
     } + " }"
     case s: String => "\"" + s.replaceAll("\"", "\\\"") + "\""
     case _ => a.toString.replaceAll("\"", "\\\"")
@@ -66,14 +67,14 @@ class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost
     }
   }
 
-  def addToDocument(doc: Map[String, Any], keys: List[Key]): Unit = {
+  def addToDocument(doc: Map[String, Any], key: Key): Unit = {
     val jsonMap = Map("add" -> Map("doc" -> doc), "commit" -> Map[String, Any]())
-    val json = toJson(jsonMap)
+    val json = toJSON(jsonMap)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     JSON.parseFull(result) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
         parsed.get("error") match{
-          case Some(x) => throw new Exception(s"Could not update the DataMap $name on key(s) $keys.")
+          case Some(x) => throw new Exception(s"Could not update the DataMap $name on key(s) $key.")
           case _ => ()
         }
       case _ => ()
@@ -82,7 +83,7 @@ class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost
 
   def deleteDocuments(ids: List[String]): Unit = {
     val jsonMap = Map("delete" -> ids)
-    val json = toJson(jsonMap)
+    val json = toJSON(jsonMap)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     JSON.parseFull(result) match{
       case Some(parsed: Map[String @ unchecked, Any @ unchecked]) =>
@@ -97,34 +98,53 @@ class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost
   override def put_(key: Key, data: Data): Unit = {
     val kToString = keyToString(key)
     val dMap: String = data match{
-      case i: Identifiable[_] => toJson(Map("id" -> i.getId()))
-      case _ => toJson(data)
+      case i: Identifiable[_] => toJSON(Map("id" -> i.getId()))
+      case _ => toJSON(data)
     }
     val document = getDocument() match{
       case Some(m: Map[String @ unchecked, Any @ unchecked]) =>
         val newM = m - "_version_"
-        newM + ("dataID" -> dMap, "data" -> data.toString)
+        newM + ("dataID" -> dMap, "data" -> toJson(data))
       case None =>
-        Map("id" -> kToString, "dataID" -> dMap, "data" -> data.toString)
+        Map("id" -> kToString, "dataID" -> dMap, "data" -> toJson(data))
     }
-    addToDocument(document, List(key))
+    addToDocument(document, key)
   }
 
   override def put_(data: Seq[Data]): Unit = { }
 
-  override def get(key: Key): Option[Data] = getDocument() match{
-    case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("data") match{
-      case Some(data: String) => ???
-      case Some((data: String) :: _) => ???
-      case _ => None
+  override def get(key: Key): Option[Data] = {
+    getDocument() match{
+      case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("data") match{
+        case Some(data: String) => Some(fromJson(data))
+        case Some((data: String) :: _) => Some(fromJson(data))
+        case _ => None
+      }
+      case None => None
     }
-      ???
-    case None => None
   }
 
-  override def contains(key: Key): Boolean = ???
+  override def contains(key: Key): Boolean = getDocument() match{
+    case Some(m: Map[String @ unchecked, Any @ unchecked]) => true
+    case _ => false
+  }
 
-  override def all(): Seq[Data] = ???
+  override def all(): Seq[Data] = {
+    val queryURL = url+"select?&rows=100000000&q=*:*"
+    val json = Http(queryURL).asString.body
+    JSON.parseFull(json) match {
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) => parsed.get("response") match {
+        case Some(response: Map[String@unchecked, Any@unchecked]) => response.get("docs") match {
+          case Some(docs: List[Map[String, Any]@unchecked]) => docs.foldRight(List[Data]()) {
+            case (map: Map[String @ unchecked, Any @ unchecked], data) =>
+              map.get("data") match{
+                case Some(jsonable: String) => fromJson(jsonable) :: data
+              }
+          }
+        }
+      }
+    }
+  }
 
   override def remove(key: Key): Unit = {
     deleteDocuments(List(keyToString(key)))
@@ -136,7 +156,11 @@ class SolrDataMap[Key, Data](coreName: String, solrLocation: String = "localhost
     })
   }
 
-  override def extract(): Seq[Data] = ???
+  override def extract(): Seq[Data] = {
+    val toReturn = all()
+    Http(url+"update").postData("{ \"delete\": { \"query\":\"*:*\" }, \"commit\": {}").header("Content-Type", "application/json")
+    toReturn
+  }
 
   override def size(): Int = {
     val queryURL = url+"select?wt=json&q=*:*"
