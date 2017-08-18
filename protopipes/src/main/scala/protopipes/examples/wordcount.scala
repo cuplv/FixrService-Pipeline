@@ -47,6 +47,8 @@ object wordcount {
 
     val wordcountpipe = words :-+CountOccurrence()+-> counts
 
+    wordcountpipe.check(config)
+
     wordcountpipe.init(config)
 
     Thread.sleep(2000)

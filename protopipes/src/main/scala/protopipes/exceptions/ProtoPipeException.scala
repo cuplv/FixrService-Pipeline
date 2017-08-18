@@ -12,10 +12,10 @@ object ProtoPipeException {
       case None => ""
     }
     val c = cause match {
-        case Some(t) => t.toString
-        case None => "<Unknown>"
+        case Some(t) => "Cause by: " + t.toString
+        case None => ""
     }
-    m + "\nCause: c"
+    m + c
   }
 
 }
@@ -33,7 +33,10 @@ class UnexpectedPipelineException(context: String, cause: Option[Throwable])
     extends ProtoPipeException(message = Some(s"Problem in pipeline: $context"), cause = cause)
 
 class MalformedPipelineConfigException(context: String, cause: Option[Throwable])
-    extends ProtoPipeException(message = Some(s"Pipeline segment is malformed: $context"), cause = cause)
+    extends ProtoPipeException(message = Some(s"Pipeline configuration is malformed: $context"), cause = cause)
+
+class IncompatiblePipelineSegmentException(context: String, cause: Option[Throwable])
+    extends ProtoPipeException(message = Some(s"Pipeline components are incompatible: $context"), cause = cause)
 
 class CallNotAllowException(msg: String, cause: Option[Throwable])
     extends ProtoPipeException(message = Some(msg), cause = cause)

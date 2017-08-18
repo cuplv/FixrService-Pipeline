@@ -5,6 +5,7 @@ import protopipes.connectors.Connector
 import protopipes.data.Identifiable
 import protopipes.store.DataStore
 import com.typesafe.config.Config
+import protopipes.checkers.{BinaryChecker, UnaryChecker}
 import protopipes.computations.Computation
 import protopipes.curators._
 import protopipes.exceptions.NotInitializedException
@@ -36,7 +37,7 @@ abstract class Platform {
 
 }
 
-abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable[Output]] extends Platform {
+abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable[Output]] extends Platform with UnaryChecker[Input,Output] {
 
   var upstreamConnectorOpt: Option[Connector[Input]] = None
   var provenanceCuratorOpt: Option[ProvenanceCurator[Input,Output]] = None
@@ -111,7 +112,8 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
 
 }
 
-abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifiable[InputR],Output <: Identifiable[Output]] extends Platform {
+abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifiable[InputR],Output <: Identifiable[Output]]
+     extends Platform with BinaryChecker[InputL,InputR,Output] {
 
   var upstreamLConnectorOpt: Option[Connector[InputL]] = None
   var upstreamRConnectorOpt: Option[Connector[InputR]] = None

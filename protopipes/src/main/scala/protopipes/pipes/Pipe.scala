@@ -19,6 +19,8 @@ import com.typesafe.config.Config
 
 abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
+  def check(conf: Config): Unit
+
   def init(conf: Config): Unit
 
   def head(): DataStore[Head]
@@ -47,6 +49,9 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
 case class St[Data <: Identifiable[Data]](store: DataStore[Data]) extends Pipe[Data,Data] {
   override def toString: String = store.displayName
+  override def check(conf: Config): Unit = {
+    // TODO: DataStore need checking routines as well
+  }
   override def init(conf: Config): Unit = { }
   override def head(): DataStore[Data] = store
   override def end(): DataStore[Data] = store
@@ -55,21 +60,25 @@ case class St[Data <: Identifiable[Data]](store: DataStore[Data]) extends Pipe[D
 }
 
 object Implicits {
-  implicit class DataNode1[Data <: Identifiable[Data]](map: DataStore[Data]) extends Pipe[Data,Data] {
+  implicit class DataNode[Data <: Identifiable[Data]](map: DataStore[Data]) extends Pipe[Data,Data] {
     override def toString: String = map.displayName
+    override def check(conf: Config): Unit = {
+      // TODO: DataStore need checking routines as well.
+    }
     override def init(conf: Config): Unit = { }
     override def head(): DataStore[Data] = map
     override def end(): DataStore[Data] = map
     override def terminate(): Unit = { }
   }
 
+  /*
   implicit class DataNode2[Data <: Identifiable[Data]](map: InMemIdDataMap[Data]) extends Pipe[Data,Data] {
     override def toString: String = map.displayName
     override def init(conf: Config): Unit = { }
     override def head(): DataStore[Data] = map
     override def end(): DataStore[Data] = map
     override def terminate(): Unit = { }
-  }
+  } */
 
   implicit class PairPipes[HeadL <: Identifiable[HeadL],HeadR <: Identifiable[HeadR],EndL <: Identifiable[EndL],EndR <: Identifiable[EndR]]
   (ps: (Pipe[HeadL,EndL],Pipe[HeadR,EndR])) {
@@ -82,6 +91,12 @@ object Implicits {
 
 case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], mapper: Mapper[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
+
+  override def check(conf: Config): Unit = {
+    p1.check(conf)
+    mapper.check(conf, p1.end(), p2.head())
+    p2.check(conf)
+  }
 
   override def init(conf: Config): Unit = {
     p1.init(conf)
@@ -104,6 +119,12 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], reducer: Reducer[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
 
+  override def check(conf: Config): Unit = {
+    p1.check(conf)
+    reducer.check(conf, p1.end(), p2.head())
+    p2.check(conf)
+  }
+
   override def init(conf: Config): Unit = {
     p1.init(conf)
     reducer.init(conf, p1.end(), p2.head())
@@ -125,6 +146,13 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
 case class CompositionPipe[HeadL <: Identifiable[HeadL], HeadR <: Identifiable[HeadR], InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]
                           ,Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[HeadL,InputL], composer: PairwiseComposer[InputL,InputR,Output], p2: Pipe[HeadR,InputR], o: Pipe[Output,End]) extends Pipe[protopipes.data.Either[HeadL,HeadR],End] {
+
+  override def check(conf: Config): Unit = {
+    p1.check(conf)
+    p2.check(conf)
+    composer.check(conf, p1.end(), p2.end(), o.head())
+    o.check(conf)
+  }
 
   override def init(conf: Config): Unit = {
     p1.init(conf)
@@ -155,6 +183,11 @@ case class PartialComposerPipe[InputL <: Identifiable[InputL], InputR <: Identif
 
 case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], End <: Identifiable[End]](p1: Pipe[Head,Mid], p2: PartialPipe[Mid,End]) extends Pipe[Head,End] {
 
+  override def check(conf: Config): Unit = {
+    p1.check(conf)
+    p2.check(conf, p1.end())
+  }
+
   override def init(conf: Config): Unit = {
     p1.init(conf)
     p2.init(conf, p1.end())
@@ -172,6 +205,8 @@ case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], En
 }
 
 abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End]] {
+
+  def check(conf: Config, input: DataStore[Input]): Unit
 
   def init(conf: Config, input: DataStore[Input]): Unit
 
@@ -196,6 +231,11 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
 case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (mapper: Mapper[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
 
+  override def check(conf: Config, input: DataStore[Input]): Unit = {
+    mapper.check(conf, input, p.head())
+    p.check(conf)
+  }
+
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     mapper.init(conf, input, p.head())
     p.init(conf)
@@ -212,6 +252,11 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
 
 case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (reducer: Reducer[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
+
+  override def check(conf: Config, input: DataStore[Input]): Unit = {
+    reducer.check(conf, input, p.head())
+    p.check(conf)
+  }
 
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     reducer.init(conf, input, p.head())
@@ -230,6 +275,11 @@ case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiab
 case class SequencedPartialPipes[Input <: Identifiable[Input], Mid <: Identifiable[Mid], Output <: Identifiable[Output]]
      (pi: PartialPipe[Input,Mid], po: PartialPipe[Mid,Output]) extends PartialPipe[Input,Output] {
 
+  override def check(conf: Config, input: DataStore[Input]): Unit = {
+    pi.check(conf, input)
+    po.check(conf, pi.end())
+  }
+
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     pi.init(conf, input)
     po.init(conf, pi.end())
@@ -246,6 +296,11 @@ case class SequencedPartialPipes[Input <: Identifiable[Input], Mid <: Identifiab
 
 
 case class ParallelPartialPipes[Input <: Identifiable[Input], LEnd <: Identifiable[LEnd], REnd <: Identifiable[REnd]](p1: PartialPipe[Input,LEnd], p2: PartialPipe[Input,REnd]) extends PartialPipe[Input, protopipes.data.Either[LEnd,REnd]] {
+
+  override def check(conf: Config, input: DataStore[Input]): Unit = {
+    p1.check(conf, input)
+    p2.check(conf, input)
+  }
 
   override def init(conf: Config, input: DataStore[Input]): Unit = {
     p1.init(conf, input)

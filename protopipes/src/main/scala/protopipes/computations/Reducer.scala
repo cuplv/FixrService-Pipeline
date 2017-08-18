@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import protopipes.configurations.{ConfOpt, PipeConfig, PlatformBuilder}
 import protopipes.connectors.Status
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
-import protopipes.exceptions.UserComputationException
+import protopipes.exceptions.{IncompatiblePipelineSegmentException, UserComputationException}
 import protopipes.pipes.{PartialReducerPipe, Pipe}
 import protopipes.platforms.UnaryPlatform
 import protopipes.store.{DataMap, DataStore}
@@ -19,6 +19,13 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
   def withConfig(newConfigOption: ConfOpt): Reducer[Input,Output] = {
     configOption = newConfigOption
     this
+  }
+
+  override def checkOutput(outputMap: DataStore[Output]): Unit = {
+    if (!outputMap.isInstanceOf[DataMap[_,_]]) {
+       val context = s"Output map for Reducer \'$name\' needs to be a DataMap, but ${outputMap.name} is a ${outputMap.getClass.getName}"
+       throw new IncompatiblePipelineSegmentException(context, None)
+    }
   }
 
   def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {

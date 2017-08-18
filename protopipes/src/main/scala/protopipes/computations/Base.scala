@@ -1,8 +1,10 @@
 package protopipes.computations
 
 import com.typesafe.config.Config
+import protopipes.checkers.{BinaryChecker, UnaryChecker}
 import protopipes.configurations.{ConfOpt, DefaultOpt, PlatformBuilder}
 import protopipes.data.Identifiable
+import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import protopipes.store.DataStore
 
@@ -31,8 +33,7 @@ abstract class Computation  {
   def run(): Unit = platformOpt match {
     case Some(platform) => platform.run()
     case None => {
-      // TODO: Not init-ed. Throw exception
-      ???
+      throw new NotInitializedException("Computation", "run()", None)
     }
   }
 
@@ -47,7 +48,8 @@ abstract class Computation  {
 
 }
 
-abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends Computation {
+abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifiable[Output]]
+    extends Computation with UnaryChecker[Input,Output] {
 
   var name: String = s"UnaryComputation-${Random.nextInt(99999)}"
   var unaryPlatformOpt: Option[UnaryPlatform[Input,Output]] = None
@@ -57,8 +59,7 @@ abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifi
   def getUnaryPlatform(): UnaryPlatform[Input,Output] = unaryPlatformOpt match {
     case Some(unaryPlatform) => unaryPlatform
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("UnaryComputation", "getUnaryPlatform", None)
     }
   }
 
@@ -70,7 +71,8 @@ abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifi
 
 }
 
-abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]] extends Computation {
+abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
+    extends Computation with BinaryChecker[InputL,InputR,Output] {
 
   var name: String = s"BinaryComputation-${Random.nextInt(99999)}"
   var binaryPlatformOpt: Option[BinaryPlatform[InputL, InputR, Output]] = None
@@ -80,8 +82,7 @@ abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Ident
   def getBinaryPlatform(): BinaryPlatform[InputL, InputR, Output] = binaryPlatformOpt match {
     case Some(platform) => platform
     case None => {
-      // TODO: Throw exception
-      ???
+      throw new NotInitializedException("BinaryComputation", "getBinaryPlatform", None)
     }
   }
 
