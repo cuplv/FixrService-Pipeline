@@ -1,7 +1,7 @@
 package protopipes.store.instances
 
 import protopipes.data.Identifiable
-import protopipes.store.{DataMap, DataStore}
+import protopipes.store.{DataMap, DataMultiMap, DataStore}
 
 import scala.util.parsing.json.JSON
 import scalaj.http.Http
@@ -20,7 +20,10 @@ object SolrInstances{
   }
 }
 
-abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983") extends DataMap[Key, Data]{
+abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data]{
+  if (needToCreate){
+    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+  }
   val url: String = s"http://$solrLocation/solr/$coreName/"
 
   def keyToString(key: Key): String = {
@@ -179,6 +182,48 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
   }
 
   override def iterator(): Iterator[Data] = ???
+}
+
+abstract class SolrMultiMap[Key, Data <: Identifiable[Data]] extends DataMultiMap[Key, Data]{
+  override def put_(data: Seq[Set[Data]]): Unit = {}
+
+  override def put_(key: Key, data: Set[Data]): Unit = {
+    ???
+  }
+
+  override def remove(keys: Seq[Key]): Unit = {
+    ???
+  }
+
+  override def remove(key: Key): Unit = {
+    ???
+  }
+
+  override def remove(key: Key, data: Set[Data]): Unit = {
+    ???
+  }
+
+  override def remove(data: Set[Data]): Unit = {
+    ???
+  }
+
+  override def iterator(): Iterator[Set[Data]] = ???
+
+  override def iterator(key: Key): Iterator[Data] = ???
+
+  override def get(key: Key): Set[Data] = {
+    ???
+  }
+
+  override def all(): Seq[Set[Data]] = {
+    ???
+  }
+
+  override def contains(key: Key, data: Set[Data]): Boolean = ???
+
+  override def extract(): Seq[Set[Data]] = ???
+
+  override def size(): Int = ???
 }
 
 class SolrIterator[Data] extends Iterator[Data] {
