@@ -32,7 +32,8 @@ abstract class PlatformBuilder {
 
 object PlatformBuilder {
 
-  def load(conf: Config): PlatformBuilder = {
+  def load(pconf: PipeConfig): PlatformBuilder = {
+     val conf = pconf.typeSafeConfig
      val protoConf = conf.getConfig(Constant.PROTOPIPES)
      // println( protoConf.getString(Constant.MAPPER) )
 

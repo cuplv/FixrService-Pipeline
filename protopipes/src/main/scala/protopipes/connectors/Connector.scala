@@ -1,6 +1,6 @@
 package protopipes.connectors
 
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{PipeConfig, PlatformBuilder}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.{PlatformStub, SequencedConnectors}
@@ -37,7 +37,7 @@ abstract class Connector[Input] {
   var upstreamConnectorOpt: Option[Connector[Input]] = None
   var downstreamConnectorOpt: Option[Connector[Input]] = None
 
-  def init(conf: Config): Unit
+  def init(conf: PipeConfig): Unit
   def terminate(): Unit
 
   // def registerStore(datastore: DataStore[Input]): Unit = datastoreOpt = Some(datastore)

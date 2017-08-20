@@ -28,7 +28,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
     }
   }
 
-  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+  def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
     val rconf = PipeConfig.resolveOptions(conf, configOption)
     val builder = PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input, Output] = builder.reducerPlatform[Input,Output]()

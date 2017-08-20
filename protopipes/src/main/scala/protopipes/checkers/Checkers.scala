@@ -1,6 +1,7 @@
 package protopipes.checkers
 
 import com.typesafe.config.Config
+import protopipes.configurations.PipeConfig
 import protopipes.store.DataStore
 
 /**
@@ -27,7 +28,7 @@ trait ConfigChecker {
     *
     * @param conf the config file to check
     */
-  def checkConfig(conf: Config): Unit = { }
+  def checkConfig(conf: PipeConfig): Unit = { }
 
 }
 
@@ -80,7 +81,7 @@ trait UnaryChecker[Input, Output] extends ConfigChecker with InputStoreChecker[I
     * @param inputMap the input store to check
     * @param outputMap the output store to check
     */
-  def check(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+  def check(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
      checkConfig(conf)
      checkInput(inputMap)
      checkOutput(outputMap)
@@ -98,7 +99,7 @@ trait BinaryChecker[InputL, InputR, Output] extends ConfigChecker with InputStor
     * @param inputRMap the right input store to check
     * @param outputMap the output store to check
     */
-  def check(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
+  def check(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
     checkConfig(conf)
     checkInputL(inputLMap)
     checkInputR(inputRMap)

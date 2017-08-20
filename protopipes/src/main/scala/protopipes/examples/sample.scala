@@ -1,6 +1,6 @@
 package protopipes.examples
 
-import protopipes.configurations.{Compute, DataStoreBuilder, PlatformBuilder}
+import protopipes.configurations.{Compute, DataStoreBuilder, PipeConfig, PlatformBuilder}
 import protopipes.configurations.instances.ThinActorPlatformBuilder
 import protopipes.computations.Mapper
 import protopipes.connectors.instances.{ActorConnector, IncrTrackerJobQueue}
@@ -49,7 +49,9 @@ object sample {
     import protopipes.data.Implicits._
     import protopipes.pipes.Implicits._
 
-    val config = ConfigFactory.load()
+    // val config = ConfigFactory.load()
+    val config = PipeConfig.newConfig()
+
     val storeBuilder = DataStoreBuilder.load(config)
 
     val d0 = storeBuilder.idmap[I[Int]]("D0") // InMemDataStore.createIdDataMap[I[Int]]("m0")

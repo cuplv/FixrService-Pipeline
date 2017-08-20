@@ -69,6 +69,16 @@ class MalformedPipelineConfigException(context: String, cause: Option[Throwable]
     extends ProtoPipeException(message = Some(s"Pipeline configuration is malformed: $context"), cause = cause)
 
 /**
+  * This is thrown when a configuration type supplied to a specific segment of the pipeline is not supported by the
+  * components of that segment. E.g., supplying Java utils properties configuration to Akka actor platform.
+  *
+  * @param context description of the context.
+  * @param cause an associated throwable
+  */
+class NotSupportedPipelineConfigException(context: String, cause: Option[Throwable])
+  extends ProtoPipeException(message = Some(s"Pipeline configuration type is not supported: $context"), cause = cause)
+
+/**
   * This is thrown when an input/output DataStore checking routine has determined an incompatibility with the associated
   * computation/platform
   *

@@ -27,7 +27,8 @@ abstract class DataStoreBuilder {
 
 object DataStoreBuilder {
 
-  def load(conf: Config): DataStoreBuilder = {
+  def load(pconf: PipeConfig): DataStoreBuilder = {
+    val conf = pconf.typeSafeConfig
     val protoConf = conf.getConfig(Constant.PROTOPIPES)
 
     new DataStoreBuilder {

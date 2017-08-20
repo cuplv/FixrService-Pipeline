@@ -7,6 +7,7 @@ import protopipes.data.BasicIdentity
 import protopipes.store.DataStore
 import protopipes.store.instances.InMemLinearStore
 import com.typesafe.config.Config
+import protopipes.configurations.PipeConfig
 
 /**
   * Created by edmundlam on 8/10/17.
@@ -15,7 +16,7 @@ case class Accumulator[Data](limit: Int = 50) extends Connector[Data] {
 
   val dataStore: DataStore[Data] = new InMemLinearStore[Data]
 
-  override def init(conf: Config): Unit = {}
+  override def init(conf: PipeConfig): Unit = {}
 
   override def terminate(): Unit = {}
 

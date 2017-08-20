@@ -14,3 +14,6 @@ libraryDependencies ++=  Seq(
   "org.scalactic" %% "scalactic" % "3.0.1",
   "org.scalatest" %% "scalatest" % "3.0.1" % "test",
   "org.scalaj" %% "scalaj-http" % "2.3.0")
+
+
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "0.11.0.0"

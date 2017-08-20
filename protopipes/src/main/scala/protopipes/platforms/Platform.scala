@@ -1,6 +1,6 @@
 package protopipes.platforms
 
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{PipeConfig, PlatformBuilder}
 import protopipes.connectors.Connector
 import protopipes.data.Identifiable
 import protopipes.store.DataStore
@@ -46,7 +46,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   var inputMapOpt: Option[DataStore[Input]]   = None
   var outputMapOpt: Option[DataStore[Output]] = None
 
-  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     inputMapOpt = Some(inputMap)
     outputMapOpt = Some(outputMap)
     initConnector(conf, builder)
@@ -54,7 +54,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     errorCuratorOpt = Some(builder.errorCurator)
   }
 
-  def initConnector(conf: Config, builder: PlatformBuilder): Unit = {
+  def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     val upstreamConnector = builder.connector[Input]("unary-platform-connector")
     upstreamConnector.init(conf)
     upstreamConnector.registerPlatform(this)
@@ -129,7 +129,7 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   var inputRMapOpt: Option[DataStore[InputR]] = None
   var outputMapOpt: Option[DataStore[Output]] = None
 
-  def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     inputLMapOpt = Some(inputLMap)
     inputRMapOpt = Some(inputRMap)
     outputMapOpt = Some(outputMap)
@@ -140,7 +140,7 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
     errorPairCuratorOpt  = Some(builder.errorCurator)
   }
 
-  def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
+  def initConnectors(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     val upstreamLConnector = builder.connector[InputL]("binary-platform-connector-left")
     upstreamLConnector.init(conf)
     upstreamLConnectorOpt = Some(upstreamLConnector)

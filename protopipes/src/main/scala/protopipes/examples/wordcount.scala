@@ -2,14 +2,24 @@ package protopipes.examples
 
 import com.typesafe.config.ConfigFactory
 import protopipes.computations.Reducer
-import protopipes.configurations.{DataStoreBuilder, PlatformBuilder}
+import protopipes.configurations.{DataStoreBuilder, PipeConfig, PlatformBuilder}
 import protopipes.configurations.instances.ThinActorPlatformBuilder
-import protopipes.data.{BasicIdentity, I, Identifiable, Identity}
+import protopipes.data._
 import protopipes.store.instances.InMemDataStore
+import spray.json.DefaultJsonProtocol
 
 /**
   * Created by edmundlam on 8/12/17.
   */
+
+/*
+import spray.json._
+
+object CountToJson extends DefaultJsonProtocol {
+  implicit val jsonCountFormat = jsonFormat2(Count)
+}
+
+import CountToJson._ */
 
 case class Count(word: String, count: Int) extends Identifiable[Count] {
 
@@ -33,7 +43,14 @@ object wordcount {
 
   def main(args: Array[String]): Unit = {
 
-    val config = ConfigFactory.load()
+    val config = PipeConfig.newConfig() // ConfigFactory.load()
+
+
+    val testjson = Count("crap",10)
+
+    // println(testjson.intoJson())
+
+    // println( testjson.fromJson(testjson.intoJson()) )
 
     // implicit val defaultPlatformBuilder: PlatformBuilder = PlatformBuilder.load(config) // ThinActorPlatformBuilder
 

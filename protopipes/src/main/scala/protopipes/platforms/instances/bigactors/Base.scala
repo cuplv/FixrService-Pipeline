@@ -165,8 +165,8 @@ trait BigActor[Input]{
   def updateConfigAndGetActorNames(conf: Config, name: String): List[String] = {
     ConfigHelper.possiblyAConfig(conf.getConfig(Constant.PROTOPIPES), "_bigactor") match {
       case Some(overwriteConfig) =>
-        infoConfig = PipeConfig.resolveOptions(infoConfig, ConfOpt.overrideConfig(overwriteConfig))
-        actorSystemOpt = Some(ActorSystem(name, PipeConfig.resolveOptions(conf, ConfOpt.overrideConfig(overwriteConfig))))
+        infoConfig = PipeConfig.resolveOptions(infoConfig, ConfOpt.typesafeConfig(overwriteConfig))
+        actorSystemOpt = Some(ActorSystem(name, PipeConfig.resolveOptions(conf, ConfOpt.typesafeConfig(overwriteConfig))))
         ConfigHelper.possiblyAConfig(infoConfig, "akka") match{
           case Some(akkaConf) => ConfigHelper.possiblyAConfig(akkaConf, "actor") match{
             case Some(actorConf) => ConfigHelper.possiblyHasObject(actorConf, "deployment") match{
@@ -205,13 +205,13 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
     supervisor ! AddedJobs(getInputs().toList)
   }
 
-  override def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  override def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     super.init(conf, inputMap, outputMap, builder)
-    val listOfActors = updateConfigAndGetActorNames(conf, name)
+    val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[Input, Output]], this, listOfActors), "super"))
   }
 
-  override def initConnector(conf: Config, builder: PlatformBuilder): Unit = {
+  override def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     val upstreamConnector = new ActorConnector[Input] {
       override val innerConnector: Connector[Input] = builder.connector[Input]("BigActorConnector")
     }
@@ -239,9 +239,9 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
     case None => throw new Exception("The Supervisor Actor does not exist.")
   }
 
-  override def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  override def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     super.init(conf, inputLMap, inputRMap, outputMap, builder)
-    val listOfActors = updateConfigAndGetActorNames(conf, name)
+    val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[protopipes.data.Pair[InputL, InputR], Output]], this, listOfActors), "super"))
   }
 
@@ -279,7 +279,7 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
     }
   }
 
-  override def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
+  override def initConnectors(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     // println("Called this")
     val upstreamLConnector = new ActorConnector[InputL]("binary-platform-connector-left") {
       override val innerConnector: Connector[InputL] = builder.connector[InputL]("binary-platform-connector-left")

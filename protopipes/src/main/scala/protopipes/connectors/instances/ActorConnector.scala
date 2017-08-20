@@ -8,6 +8,7 @@ import protopipes.connectors.Status.Status
 import protopipes.connectors.instances.ActorConnectorActor._
 import com.typesafe.config.Config
 import akka.pattern.ask
+import protopipes.configurations.PipeConfig
 import protopipes.data.{BasicIdentity, Identifiable}
 import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.Platform
@@ -66,7 +67,7 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
     }
   }
 
-  override def init(conf: Config): Unit = {
+  override def init(conf: PipeConfig): Unit = {
      innerConnector.init(conf)
      val actorRef = actorSystem.actorOf(Props(classOf[ActorConnectorActor[Data]], innerConnector), name = name)
      actorRefOpt = Some(actorRef)

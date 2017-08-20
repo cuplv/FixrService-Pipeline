@@ -25,7 +25,7 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
     this
   }
 
-  def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
+  def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
      val rconf = PipeConfig.resolveOptions(conf, configOption)
      val builder = PlatformBuilder.load(rconf)
      val platform: BinaryPlatform[InputL,InputR,Output] = builder.pairwiseComposerPlatform[InputL,InputR,Output]

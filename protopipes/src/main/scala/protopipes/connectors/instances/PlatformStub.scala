@@ -6,6 +6,7 @@ import protopipes.connectors.Status.Status
 import protopipes.data.BasicIdentity
 import protopipes.platforms.Platform
 import com.typesafe.config.Config
+import protopipes.configurations.PipeConfig
 import protopipes.exceptions.CallNotAllowException
 
 /**
@@ -13,7 +14,7 @@ import protopipes.exceptions.CallNotAllowException
   */
 case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
 
-  override def init(conf: Config): Unit = { }
+  override def init(conf: PipeConfig): Unit = { }
   override def terminate(): Unit = { }
 
   override def signalDown(): Unit = { platform.wake() }

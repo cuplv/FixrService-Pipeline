@@ -2,7 +2,7 @@ package protopipes.platforms.instances.thinactors
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.typesafe.config.Config
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{PipeConfig, PlatformBuilder}
 import protopipes.connectors.Connector
 import protopipes.connectors.instances.ActorConnector
 import protopipes.data.Identifiable
@@ -48,13 +48,13 @@ abstract class ThinActorUnaryPlatform[Input <: Identifiable[Input], Output <: Id
     }
   }
 
-  override def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  override def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     super.init(conf, inputMap, outputMap, builder)
     val actorRef = actorSystem.actorOf(Props(classOf[ThinActorPlatformActor], this), name = ThinActorPlatform.NAME)
     actorRefOpt = Some(actorRef)
   }
 
-  override def initConnector(conf: Config, builder: PlatformBuilder): Unit = {
+  override def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     // println("Called this")
     val upstreamConnector = new ActorConnector[Input] {
       override val innerConnector: Connector[Input] = builder.connector[Input]("connector")
@@ -84,13 +84,13 @@ abstract class ThinActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <:
     }
   }
 
-  override def init(conf: Config, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+  override def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     super.init(conf, inputLMap, inputRMap, outputMap, builder)
     val actorRef = actorSystem.actorOf(Props(classOf[ThinActorPlatformActor], this), name = ThinActorPlatform.NAME)
     actorRefOpt = Some(actorRef)
   }
 
-  override def initConnectors(conf: Config, builder: PlatformBuilder): Unit = {
+  override def initConnectors(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     // println("Called this")
     val upstreamLConnector = new ActorConnector[InputL]("binary-platform-connector-left")(actorSystem) {
       override val innerConnector: Connector[InputL] = builder.connector[InputL]("binary-platform-connector-left")

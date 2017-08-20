@@ -1,6 +1,7 @@
 package protopipes.connectors.instances
 
 import com.typesafe.config.Config
+import protopipes.configurations.PipeConfig
 import protopipes.connectors.Connector
 import protopipes.connectors.Status.Status
 import protopipes.platforms.Platform
@@ -10,7 +11,7 @@ import protopipes.platforms.Platform
   */
 class ParallelConnectors[Data](leftConnector: Connector[Data], rightConnector: Connector[Data]) extends Connector[Data] {
 
-  override def init(conf: Config): Unit = {
+  override def init(conf: PipeConfig): Unit = {
      leftConnector.init(conf)
      rightConnector.init(conf)
   }

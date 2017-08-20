@@ -20,7 +20,7 @@ abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Outpu
     this
   }
 
-  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
+  def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
     val rconf = PipeConfig.resolveOptions(conf, configOption)
     val builder = PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input,Output] = builder.mapperPlatform[Input,Output]()

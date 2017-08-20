@@ -2,7 +2,7 @@ package protopipes.computations
 
 import com.typesafe.config.Config
 import protopipes.checkers.{BinaryChecker, UnaryChecker}
-import protopipes.configurations.{ConfOpt, DefaultOpt, PlatformBuilder}
+import protopipes.configurations.{ConfOpt, DefaultOpt, PipeConfig, PlatformBuilder}
 import protopipes.data.Identifiable
 import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
@@ -21,7 +21,7 @@ abstract class Computation  {
 
   val versionOpt: Option[String] = None
 
-  def init(config: Config, platform: Platform): Unit = platformOpt match {
+  def init(config: PipeConfig, platform: Platform): Unit = platformOpt match {
     case None => {
       platformOpt = Some(platform)
     }
@@ -63,7 +63,7 @@ abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifi
     }
   }
 
-  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], platform: UnaryPlatform[Input, Output]): Unit = {
+  def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], platform: UnaryPlatform[Input, Output]): Unit = {
     inputMap.registerConnector(platform.getUpstreamConnector())
     unaryPlatformOpt = Some(platform)
     init(conf, platform)
@@ -86,7 +86,7 @@ abstract class BinaryComputation[InputL <: Identifiable[InputL], InputR <: Ident
     }
   }
 
-  def init(conf: Config, inputMapL: DataStore[InputL], inputMapR: DataStore[InputR], outputMap: DataStore[Output], platform: BinaryPlatform[InputL,InputR,Output]): Unit = {
+  def init(conf: PipeConfig, inputMapL: DataStore[InputL], inputMapR: DataStore[InputR], outputMap: DataStore[Output], platform: BinaryPlatform[InputL,InputR,Output]): Unit = {
     inputMapL.registerConnector(platform.getUpstreamLConnector())
     inputMapR.registerConnector(platform.getUpstreamRConnector())
     binaryPlatformOpt = Some(platform)

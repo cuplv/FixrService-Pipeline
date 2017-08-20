@@ -7,6 +7,7 @@ import protopipes.data.BasicIdentity
 import protopipes.platforms.Platform
 import protopipes.store.DataStore
 import com.typesafe.config.Config
+import protopipes.configurations.PipeConfig
 
 /**
   * Created by edmundlam on 8/9/17.
@@ -17,7 +18,7 @@ case class SequencedConnectors[Data](headConnector:Connector[Data], endConnector
   headConnector.registerDownstreamConnector(endConnector)
   endConnector.registerUpstreamConnector(headConnector)
 
-  override def init(conf: Config): Unit = {
+  override def init(conf: PipeConfig): Unit = {
      headConnector.init(conf)
      endConnector.init(conf)
   }

@@ -1,10 +1,10 @@
 package protopipes.connectors.instances
 
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{PipeConfig, PlatformBuilder}
 import protopipes.connectors.{Connector, Status}
 import protopipes.connectors.Connector.Id
 import protopipes.connectors.Status.Status
-import protopipes.data.{Identifiable, BasicIdentity}
+import protopipes.data.{BasicIdentity, Identifiable}
 import protopipes.store.{DataMap, DataMultiMap, DataQueue, IdDataMap}
 import protopipes.store.instances.{InMemDataMap, InMemDataMultiMap, InMemDataQueue}
 import com.typesafe.config.Config
@@ -16,7 +16,7 @@ class JobQueue[Data] extends Connector[Data] {
 
   var queue: DataQueue[Data] = new InMemDataQueue[Data]
 
-  override def init(conf: Config): Unit = { }
+  override def init(conf: PipeConfig): Unit = { }
 
   override def terminate(): Unit = { }
 

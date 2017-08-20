@@ -1,7 +1,7 @@
 package protopipes.platforms.instances
 
 import protopipes.connectors.Connector.Id
-import protopipes.configurations.PlatformBuilder
+import protopipes.configurations.{PipeConfig, PlatformBuilder}
 import protopipes.computations.Mapper
 import protopipes.connectors.Status
 import protopipes.data.Identifiable
@@ -18,7 +18,7 @@ abstract class MapperPlatform[Input <: Identifiable[Input], Output <: Identifiab
 
   var mapperOpt: Option[Mapper[Input,Output]] = None
 
-  def init(conf: Config, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder, mapper: Mapper[Input,Output]): Unit = {
+  def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder, mapper: Mapper[Input,Output]): Unit = {
     init(conf, inputMap, outputMap, builder)
     mapperOpt = Some(mapper)
   }
