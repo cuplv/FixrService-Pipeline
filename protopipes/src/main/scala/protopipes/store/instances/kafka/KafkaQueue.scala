@@ -2,11 +2,13 @@ package protopipes.store.instances.kafka
 
 import java.util
 import java.util.Properties
+import java.util.function.Consumer
 
 import com.typesafe.config.Config
+import org.apache.kafka.clients.consumer
 import org.apache.kafka.common.serialization._
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import protopipes.configurations.PipeConfig
 import protopipes.connectors.Connector
 import protopipes.store.DataQueue
@@ -38,39 +40,44 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
   }
 
   override def init(conf: PipeConfig): Unit = {
-    topic(name)
-
+    topicOpt match {
+      case None => topic(name)
+      case _ =>
+    }
+    /*
     val consProps: Properties = new Properties()
-    consProps.put("bootstrap.servers", "localhost:9092")
-    consProps.put("group.id", "test3")
-    consProps.put("enable.auto.commit", "false")
-    consProps.put("auto.commit.interval.ms", "1000")
+    consProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
+    consProps.put(ConsumerConfig.GROUP_ID_CONFIG, "test3")
+    consProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
+    consProps.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000")
     consProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-    consProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
-    consProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+    consProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+    consProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer")
+    */
+    val kafkaConf = KafkaConfig.resolveKafkaConfig(name, conf)
+
     // val consumer = new KafkaConsumer[String,String](props)
     // consumer.subscribe(util.Arrays.asList(topicOpt.get))
     // consumerOpt = Some( consumer )
 
-    val iterator = new KafkaQueueIterator[Data](this, topicOpt.get, consProps)
+    val iterator = new KafkaQueueIterator[Data](this, topicOpt.get, kafkaConf.consumerProps)
     iteratorOpt = Some( iterator )
-    consPropsOpt = Some( consProps )
+    consPropsOpt = Some( kafkaConf.consumerProps )
 
-    import org.apache.kafka.clients.producer.KafkaProducer
-    import org.apache.kafka.clients.producer.Producer
+    /*
     val prodProps = new Properties()
-    prodProps.put("bootstrap.servers", "localhost:9092")
-    prodProps.put("acks", "all")
-    prodProps.put("retries", "0")
-    prodProps.put("batch.size", "16384")
-    prodProps.put("linger.ms", "1")
-    prodProps.put("buffer.memory", "33554432")
-    prodProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-    prodProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+    prodProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
+    prodProps.put(ProducerConfig.ACKS_CONFIG, "all")
+    prodProps.put(ProducerConfig.RETRIES_CONFIG, "0")
+    prodProps.put(ProducerConfig.BATCH_SIZE_CONFIG, "16384")
+    prodProps.put(ProducerConfig.LINGER_MS_CONFIG, "1")
+    prodProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432")
+    prodProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer")
+    prodProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer") */
 
-    val producer = new KafkaProducer[String, String](prodProps)
+    val producer = new KafkaProducer[String, String](kafkaConf.producerProps)
     producerOpt = Some(producer)
-    prodPropsOpt = Some(prodProps)
+    prodPropsOpt = Some(kafkaConf.producerProps)
   }
 
   override def put_(data: Seq[Data]): Unit = {

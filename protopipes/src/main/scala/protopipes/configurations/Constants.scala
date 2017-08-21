@@ -22,4 +22,6 @@ final object Constant {
   val QUEUE = "queue"
   val LIST  = "list"
 
+  val KAFKA = "kafka"
+
 }

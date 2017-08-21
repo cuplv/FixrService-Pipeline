@@ -17,7 +17,7 @@ abstract class Identifiable[A] {
       id
     }
   }
-  def getId(): Any = identity().getId()
+  def getId(): String = identity().getId()
   def setVersion(version: String): Unit = identityOpt = Some(identity().withVersion(version))
 }
 
@@ -35,23 +35,23 @@ abstract class Identity[A] { // extends Identifiable[A] {
 
   def withVersion(v: String): VersionedIdentity[A]
 
-  def getId(): Any
+  def getId(): String
 
 }
 
-case class BasicIdentity[A](id: Any) extends Identity[A] {
+case class BasicIdentity[A](id: String) extends Identity[A] {
 
   override def dropVersion(): BasicIdentity[A] = this
 
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
 
-  override def getId(): Any = id
+  override def getId(): String = id
 
   override def toString: String = id.toString
 
 }
 
-case class VersionedIdentity[A](id: Any, version: String) extends Identity[A] {
+case class VersionedIdentity[A](id: String, version: String) extends Identity[A] {
 
   def getVersion(): String = version
 
@@ -59,7 +59,7 @@ case class VersionedIdentity[A](id: Any, version: String) extends Identity[A] {
 
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
 
-  override def getId(): Any = id
+  override def getId(): String = id
 
   override def toString: String = s"$id#$version"
 
@@ -67,7 +67,7 @@ case class VersionedIdentity[A](id: Any, version: String) extends Identity[A] {
 
 object PairIdentity {
 
-  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): Any = (id1.getId(),id2.getId())
+  def mergeIds[A,B](id1: Identity[A], id2: Identity[B]): String = id1.getId() + ":Pair:" + id2.getId()
 
   /*
   def mergeVersions[A,B](id1: Identity[A], id2: Identity[B]): Option[String] = {
