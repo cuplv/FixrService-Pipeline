@@ -33,6 +33,8 @@ abstract class Identity[A] { // extends Identifiable[A] {
 
   def withVersion(v: String): VersionedIdentity[A]
 
+  def getVersion(): Option[String]
+
   def getId(): String
 
   def toJsonFormat(): JsValue
@@ -54,6 +56,8 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
 
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
 
+  override def getVersion(): Option[String] = None
+
   override def getId(): String = id
 
   override def toJsonFormat(): JsValue = this.toJson
@@ -66,11 +70,11 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
 
 case class VersionedIdentity[A](id: String, version: String) extends Identity[A] {
 
-  def getVersion(): String = version
-
   override def dropVersion(): BasicIdentity[A] = BasicIdentity[A](id)
 
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
+
+  override def getVersion(): Option[String] = Some(version)
 
   override def getId(): String = id
 

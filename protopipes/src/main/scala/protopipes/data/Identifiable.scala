@@ -21,6 +21,7 @@ abstract class Identifiable[A] {
     }
   }
   def getId(): String = identity().getId()
+  def getVersion(): Option[String] = identity().getVersion()
   def setVersion(version: String): Unit = identityOpt = Some(identity().withVersion(version))
 }
 
