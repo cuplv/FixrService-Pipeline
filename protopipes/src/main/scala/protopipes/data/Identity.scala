@@ -1,5 +1,8 @@
 package protopipes.data
 
+
+import spray.json.{JsValue, _}
+
 /**
   * Created by edmundlam on 8/8/17.
   */
@@ -20,7 +23,16 @@ abstract class Identity[A] { // extends Identifiable[A] {
 
   def getId(): String
 
+  def toJsonFormat(): JsValue
+
 }
+
+object IdentityToJson extends DefaultJsonProtocol {
+  implicit def basicIdentityToJson[A] = jsonFormat1(BasicIdentity[A])
+  implicit def VersionedIdentityToJson[A] = jsonFormat2(VersionedIdentity[A])
+}
+
+import IdentityToJson._
 
 case class BasicIdentity[A](id: String) extends Identity[A] {
 
@@ -31,6 +43,8 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
   override def getId(): String = id
 
   override def toString: String = s"Id($id)"
+
+  override def toJsonFormat(): JsValue = this.toJson
 
 }
 
@@ -46,16 +60,11 @@ case class VersionedIdentity[A](id: String, version: String) extends Identity[A]
 
   override def toString: String = s"Id($id)#$version"
 
+  override def toJsonFormat(): JsValue = this.toJson
+
 }
 
-import spray.json._
-
-object IdentityToJson extends DefaultJsonProtocol {
-  implicit def basicIdentityToJson[A] = jsonFormat1(BasicIdentity[A])
-  implicit def VersionedIdentityToJson[A] = jsonFormat2(VersionedIdentity[A])
-}
-
-import IdentityToJson._
+import IdentifiableToJson._
 
 class Dummy
 
@@ -82,6 +91,24 @@ object tester {
     val reVid = vjson.convertTo[VersionedIdentity[Dummy]]
 
     println(reVid)
+
+    val i = I("crap")
+
+    i.setVersion("v0.9")
+
+    val ijson = i.toJson
+
+    println(ijson)
+
+    val reI = ijson.convertTo[I[String]]
+
+    println(reI.toString + " " + reI.identity())
+
+    val test = "{ \"a\" : 2 }"
+
+    val jsontest = test.parseJson
+
+    println(jsontest)
 
   }
 

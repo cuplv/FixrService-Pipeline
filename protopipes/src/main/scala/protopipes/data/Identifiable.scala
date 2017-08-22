@@ -1,6 +1,7 @@
 package protopipes.data
 
 import protopipes.curators.VersionCurator
+import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, JsonFormat, RootJsonFormat}
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -8,7 +9,9 @@ import protopipes.curators.VersionCurator
 
 abstract class Identifiable[A] {
   var identityOpt: Option[Identity[A]] = None
+
   protected[this] def mkIdentity(): Identity[A]
+
   def identity(): Identity[A] = identityOpt match {
     case Some(id) => id
     case None => {
@@ -45,6 +48,38 @@ case class I[A](a: A) extends Identifiable[I[A]] {
   def i(): A = a
   override def mkIdentity(): Identity[I[A]] = BasicIdentity[I[A]](s"${a.toString()}")
   override def toString: String = s"${a.toString}"
+}
+
+object IdentifiableToJson extends DefaultJsonProtocol {
+
+  import IdentityToJson._
+
+  implicit object IToJson extends RootJsonFormat[I[String]] {
+
+    override def write(i: I[String]): JsValue = {
+      i.identityOpt match {
+        case Some(id) => JsObject("id" -> id.toJsonFormat(), "data" -> JsString(i.a))
+        case None => JsObject("data" -> JsString(i.a))
+      }
+    }
+
+    override def read(json: JsValue): I[String] = json match {
+      case obj: JsObject => {
+        val map = obj.fields
+        if (map.contains("id")) {
+          val idVal = map.get("id").get.asJsObject
+          val id = if (idVal.fields.contains("version")) idVal.convertTo[VersionedIdentity[I[String]]] else idVal.convertTo[BasicIdentity[I[String]]]
+          val i = I(map.get("data").get.convertTo[String])
+          i.identityOpt = Some(id)
+          i
+        } else {
+          I(map.get("data").get.convertTo[String])
+        }
+      }
+    }
+
+  }
+
 }
 
 case class U[A](a: A) extends Identifiable[U[A]] {

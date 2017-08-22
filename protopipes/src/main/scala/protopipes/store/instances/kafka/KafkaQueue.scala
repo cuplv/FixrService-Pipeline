@@ -11,6 +11,7 @@ import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import protopipes.configurations.PipeConfig
 import protopipes.connectors.Connector
+import protopipes.data.{DataSerializer, Identifiable}
 import protopipes.store.DataQueue
 import protopipes.store.instances.InMemDataQueue
 
@@ -31,8 +32,7 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
   var consPropsOpt: Option[Properties] = None
   var prodPropsOpt: Option[Properties] = None
 
-  def toStr(data: Data): String
-  def fromStr(str: String): Data
+  val serializer: DataSerializer[Data]
 
   def topic(topicName: String): KafkaQueue[Data] = {
     topicOpt = Some(topicName)
@@ -60,7 +60,7 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
     // consumer.subscribe(util.Arrays.asList(topicOpt.get))
     // consumerOpt = Some( consumer )
 
-    val iterator = new KafkaQueueIterator[Data](this, topicOpt.get, kafkaConf.consumerProps)
+    val iterator = new KafkaQueueIterator[Data](serializer, topicOpt.get, kafkaConf.consumerProps)
     iteratorOpt = Some( iterator )
     consPropsOpt = Some( kafkaConf.consumerProps )
 
@@ -84,14 +84,14 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
     val producer = producerOpt.get
     val topic = topicOpt.get
     data foreach {
-      d => producer.send(new ProducerRecord[String, String](topic, toStr(d), toStr(d)))
+      d => producer.send(new ProducerRecord[String, String](topic, serializer.serialize(d), serializer.serialize(d)))
     }
     iteratorOpt.get.pollForMore()
   }
 
   override def dequeue(): Option[Data] = iteratorOpt.get.dequeue()
 
-  override def iterator(): Iterator[Data] = new KafkaQueueIterator[Data](this, topicOpt.get, consPropsOpt.get)
+  override def iterator(): Iterator[Data] = new KafkaQueueIterator[Data](serializer, topicOpt.get, consPropsOpt.get)
 
   override def all(): Seq[Data] = iteratorOpt.get.innerQueue.all()
 
@@ -105,7 +105,7 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
 
 }
 
-class KafkaQueueIterator[Data](kafkaQueue: KafkaQueue[Data], topic: String, props: Properties) extends Iterator[Data] {
+class KafkaQueueIterator[Data](serializer: DataSerializer[Data], topic: String, props: Properties) extends Iterator[Data] {
 
   val innerQueue: DataQueue[Data] = new InMemDataQueue[Data]
   val consumer: KafkaConsumer[String,String] = new KafkaConsumer[String,String](props)
@@ -114,7 +114,7 @@ class KafkaQueueIterator[Data](kafkaQueue: KafkaQueue[Data], topic: String, prop
   def pollForMore(tries: Int = 2, timeout: Int = 100): Boolean = {
     (0 to tries) foreach {
       _ => for (record <- consumer.poll(timeout)) {
-        innerQueue.put( kafkaQueue.fromStr(record.value()) )
+        innerQueue.put( serializer.deserialize(record.value()) )
       }
     }
     innerQueue.size > 0
