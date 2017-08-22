@@ -46,8 +46,8 @@ case class Pair[L <: Identifiable[L],R <: Identifiable[R]](left: L, right: R) ex
 
 case class I[A](a: A) extends Identifiable[I[A]] {
   def i(): A = a
-  override def mkIdentity(): Identity[I[A]] = BasicIdentity[I[A]](s"${a.toString()}")
-  override def toString: String = s"${a.toString}"
+  override def mkIdentity(): Identity[I[A]] = BasicIdentity[I[A]](a.toString())
+  override def toString: String = a.toString
 }
 
 object IdentifiableToJson extends DefaultJsonProtocol {
@@ -85,7 +85,7 @@ object IdentifiableToJson extends DefaultJsonProtocol {
 case class U[A](a: A) extends Identifiable[U[A]] {
   def u(): A = a
   override def mkIdentity(): Identity[U[A]] = BasicIdentity[U[A]](java.util.UUID.randomUUID().toString)
-  override def toString: String = s"${a.toString}"
+  override def toString: String = a.toString
 }
 
 object Implicits {

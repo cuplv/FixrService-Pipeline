@@ -9,9 +9,21 @@ import spray.json.{JsValue, _}
 
 object Identity {
 
+  final val VERSION_DELIMITER = "-#-"
+
   def lift[Src,Dest](identity: Identity[Src]): Identity[Dest] = BasicIdentity[Dest](identity.getId())
 
   def toAny[Src](identity: Identity[Src]): Identity[Any] = BasicIdentity[Any](identity.getId())
+
+  def deserialize[A](str: String): Identity[A] = {
+    // println("Deserial this: " + str)
+    val trimmed = str.stripPrefix("\"").stripSuffix("\"")
+    // println("Trimmed: " + trimmed)
+    if (trimmed.contains(VERSION_DELIMITER)) {
+      val pair = trimmed.split(VERSION_DELIMITER)
+      VersionedIdentity[A](pair(0), pair(1))
+    } else BasicIdentity[A](trimmed)
+  }
 
 }
 
@@ -24,6 +36,8 @@ abstract class Identity[A] { // extends Identifiable[A] {
   def getId(): String
 
   def toJsonFormat(): JsValue
+
+  def serialize(): String
 
 }
 
@@ -42,9 +56,11 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
 
   override def getId(): String = id
 
-  override def toString: String = s"Id($id)"
-
   override def toJsonFormat(): JsValue = this.toJson
+
+  override def serialize(): String = id
+
+  override def toString: String = s"BasicIdentity(${id})"
 
 }
 
@@ -58,9 +74,11 @@ case class VersionedIdentity[A](id: String, version: String) extends Identity[A]
 
   override def getId(): String = id
 
-  override def toString: String = s"Id($id)#$version"
-
   override def toJsonFormat(): JsValue = this.toJson
+
+  override def serialize(): String = s"${id}${Identity.VERSION_DELIMITER}${version}"
+
+  override def toString: String = s"VersionedIdentity($id, $version)"
 
 }
 

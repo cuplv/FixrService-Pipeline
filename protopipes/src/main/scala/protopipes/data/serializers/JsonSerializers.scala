@@ -1,6 +1,6 @@
 package protopipes.data.serializers
 
-import protopipes.data.{BasicIdentity, Identifiable, VersionedIdentity}
+import protopipes.data.{BasicIdentity, Identifiable, Identity, VersionedIdentity}
 import spray.json._
 
 /**
@@ -23,7 +23,7 @@ trait IdentityJsonSerializer[Data <: Identifiable[Data]] extends JsonSerializer[
   override def serialize(d: Data): String = {
     val dataJson = serialize_(d)
     d.identityOpt match {
-      case Some(id) => JsObject(dataJson.fields + ("identity" -> id.toJsonFormat())).toString()
+      case Some(id) => JsObject(dataJson.fields + ("identity" -> JsString(id.serialize()))).toString()
       case None => dataJson.toString
     }
   }
@@ -32,11 +32,13 @@ trait IdentityJsonSerializer[Data <: Identifiable[Data]] extends JsonSerializer[
     val data = deserialize_(json)
     val map = json.fields
     if (map.contains("identity")) {
+      /*
       val idMap = map.get("identity").get.asJsObject.fields
       val id = if (idMap.contains("version")) VersionedIdentity[Data](idMap.get("id").get.toString(), idMap.get("version").get.toString())
-               else BasicIdentity[Data](idMap.get("id").get.toString)
-      data.identityOpt = Some(id)
+               else BasicIdentity[Data](idMap.get("id").get.toString) */
+      data.identityOpt = Some( Identity.deserialize( map.get("identity").get.toString() ) )
     }
+    println(s"I got this: $json")
     data
   }
 

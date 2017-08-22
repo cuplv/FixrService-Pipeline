@@ -29,7 +29,7 @@ trait IdentityStdSerializer[A <: Identifiable[A]] extends StdSerializer[A] {
   override def serialize(a: A): String = {
     val data = serialize_(a)
     a.identityOpt match {
-      case Some(id) => JsObject("identity" -> id.toJsonFormat(), "data" -> JsString(serialize_(a))).toString()
+      case Some(id) => JsObject("identity" -> JsString(id.serialize()), "data" -> JsString(serialize_(a))).toString()
       case None => JsObject("data" -> JsString(serialize_(a))).toString()
     }
   }
@@ -37,13 +37,15 @@ trait IdentityStdSerializer[A <: Identifiable[A]] extends StdSerializer[A] {
   override def deserialize(s: String): A = {
     val json = s.parseJson.asJsObject
     val map = json.fields
-    val a = deserialize_( map.get("data").get.toString() )
+    val a = deserialize_( map.get("data").get.toString().stripPrefix("\"").stripSuffix("\"") )
     if (map.contains("identity")) {
+      /*
       val idMap = map.get("identity").get.asJsObject.fields
       val id = if (idMap.contains("version")) VersionedIdentity[A](idMap.get("id").get.toString(),idMap.get("version").get.toString())
-      else BasicIdentity[A](idMap.get("id").get.toString)
-      a.identityOpt = Some(id)
+               else BasicIdentity[A](idMap.get("id").get.toString) */
+      a.identityOpt = Some( Identity.deserialize( map.get("identity").get.toString() ) )
     }
+    // println(s"I got this: $json")
     a
   }
 
