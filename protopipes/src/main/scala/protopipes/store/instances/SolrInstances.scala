@@ -264,35 +264,23 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
 
   override def contains(key: Key, data: Set[Data]): Boolean = data subsetOf get(key)
 
-  override def extract(): Seq[Set[Data]] = { ???
-    /*
-    val (mapOfSets, stuffToRemove) = getAllDocuments.foldRight((Map[String, Set[Data]](), List[String]())) {
-      case (map: Map[String@unchecked, Any@unchecked], (data, toRemove)) =>
-        (map.get("data"), map.get("_id_"), map.get("id")) match {
-          case (Some(jsonable: String), Some(iden: String), Some(id: String)) => data.get(iden) match {
-            case Some(x) => (data + (iden -> (x + deserialize(jsonable))), id :: toRemove)
-            case None => (data + (iden -> Set(deserialize(jsonable))), id :: toRemove)
-          }
-          case _ => (data, toRemove)
-        }
-    }
-    deleteDocuments(stuffToRemove)
-    mapOfSets.toSeq.unzip._2
-    */
+  override def extract(): Seq[Set[Data]] = {
+    val mapOfSets = all()
+    Http(url+"update").postData("{ \"delete\": { \"query\":\"*:*\" }, \"commit\": {}").header("Content-Type", "application/json")
+    mapOfSets
   }
 
-  override def size(): Int = { ???
-    /*
-    getAllDocuments.foldRight(Map[String, Unit]()) {
-      case (map, keysFound) =>
-        map.get("_id_") match {
-          case Some(x: String) => keysFound.get(x) match {
-            case Some(_) => keysFound
-            case None => keysFound + (x -> ())
+  override def size(): Int = {
+    getAllDocuments.foldRight(Map[JsString, Unit]()) {
+      case (jsObj, keysFound) =>
+        jsObj.fields.get("_id_") match{
+          case Some(id: JsString) => keysFound.get(id) match {
+            case Some(set) => keysFound
+            case None => keysFound + (id -> ())
           }
+          case _ => keysFound
         }
     }.size
-    */
   }
 }
 
