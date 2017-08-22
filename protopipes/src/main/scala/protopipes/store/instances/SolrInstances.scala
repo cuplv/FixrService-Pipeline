@@ -5,7 +5,6 @@ import protopipes.store.{DataMap, DataMultiMap, DataStore}
 
 import scala.util.parsing.json.JSON
 import scalaj.http.Http
-import spray.json._
 
 
 /**
@@ -20,11 +19,13 @@ object SolrInstances{
   }
 }
 
-abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data]{
-  if (needToCreate){
-    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+trait SolrSpecific[Key, Data <: Identifiable[Data]] {
+  var name = ""
+  var url = ""
+  def init(nm: String, URL: String): Unit = {
+    name = nm
+    url = URL
   }
-  val url: String = s"http://$solrLocation/solr/$coreName/"
 
   def keyToString(key: Key): String = {
     key match {
@@ -70,7 +71,26 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
     }
   }
 
-  def addToDocument(doc: Map[String, Any], key: Key): Unit = {
+  def getDocuments(id: String = name, field: String = "_id_", rows: String = "1000000000"): List[Map[String, Any]] = {
+    val queryURL = url+"select?wt=json&rows=" + rows + "&q="+field+"=\""+ id + "\""
+    val json = Http(queryURL).asString.body
+    JSON.parseFull(json) match{
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) => parsed.get("response") match{
+        case Some(response: Map[String@unchecked, Any@unchecked]) => response.get("docs") match{
+          case Some(docs: List[Map[String, Any]@unchecked]) => docs.foldRight(List[Map[String, Any]]()){
+            case (m: Map[String, Any], list) => m.get(field) match{
+              case Some(str: String) if str.equals(id) => m :: list
+              case _ => list
+            }
+          }
+        }
+        case None => List()
+      }
+      case None => List()
+    }
+  }
+
+  def addDocument(doc: Map[String, Any], key: Key): Unit = {
     val jsonMap = Map("add" -> Map("doc" -> doc), "commit" -> Map[String, Any]())
     val json = toJSON(jsonMap)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
@@ -98,27 +118,49 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
     }
   }
 
+  def getAllDocuments: List[Map[String, Any]] = {
+    val queryURL = url+"select?&rows=100000000&q=*:*"
+    val json = Http(queryURL).asString.body
+    JSON.parseFull(json) match {
+      case Some(parsed: Map[String@unchecked, Any@unchecked]) => parsed.get("response") match {
+        case Some(response: Map[String@unchecked, Any@unchecked]) => response.get("docs") match {
+          case Some(docs: List[Map[String, Any]@unchecked]) => docs
+          case _ => List()
+        }
+        case _ => List()
+      }
+      case _ => List()
+    }
+  }
+}
+
+abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Key, Data] {
+  if (needToCreate) {
+    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+  }
+  init(name, s"http://$solrLocation/solr/$coreName/")
+
   override def put_(key: Key, data: Data): Unit = {
     val kToString = keyToString(key)
-    val dMap: String = data match{
+    val dMap: String = data match {
       case i: Identifiable[_] => toJSON(Map("id" -> i.getId()))
       case _ => toJSON(data)
     }
-    val document = getDocument() match{
-      case Some(m: Map[String @ unchecked, Any @ unchecked]) =>
+    val document = getDocument(kToString) match {
+      case Some(m: Map[String@unchecked, Any@unchecked]) =>
         val newM = m - "_version_"
         newM + ("dataID" -> dMap, "data" -> toJson(data))
       case None =>
         Map("id" -> kToString, "dataID" -> dMap, "data" -> toJson(data))
     }
-    addToDocument(document, key)
+    addDocument(document, key)
   }
 
-  override def put_(data: Seq[Data]): Unit = { }
+  override def put_(data: Seq[Data]): Unit = {}
 
   override def get(key: Key): Option[Data] = {
-    getDocument() match{
-      case Some(m: Map[String @ unchecked, Any @ unchecked]) => m.get("data") match{
+    getDocument() match {
+      case Some(m: Map[String@unchecked, Any@unchecked]) => m.get("data") match {
         case Some(data: String) => Some(fromJson(data))
         case Some((data: String) :: _) => Some(fromJson(data))
         case _ => None
@@ -127,25 +169,17 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
     }
   }
 
-  override def contains(key: Key): Boolean = getDocument() match{
-    case Some(m: Map[String @ unchecked, Any @ unchecked]) => true
+  override def contains(key: Key): Boolean = getDocument() match {
+    case Some(m: Map[String@unchecked, Any@unchecked]) => true
     case _ => false
   }
 
   override def all(): Seq[Data] = {
-    val queryURL = url+"select?&rows=100000000&q=*:*"
-    val json = Http(queryURL).asString.body
-    JSON.parseFull(json) match {
-      case Some(parsed: Map[String@unchecked, Any@unchecked]) => parsed.get("response") match {
-        case Some(response: Map[String@unchecked, Any@unchecked]) => response.get("docs") match {
-          case Some(docs: List[Map[String, Any]@unchecked]) => docs.foldRight(List[Data]()) {
-            case (map: Map[String @ unchecked, Any @ unchecked], data) =>
-              map.get("data") match{
-                case Some(jsonable: String) => fromJson(jsonable) :: data
-              }
-          }
+    getAllDocuments.foldRight(List[Data]()) {
+      case (map: Map[String@unchecked, Any@unchecked], data) =>
+        map.get("data") match {
+          case Some(jsonable: String) => fromJson(jsonable) :: data
         }
-      }
     }
   }
 
@@ -184,27 +218,66 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
   override def iterator(): Iterator[Data] = ???
 }
 
-abstract class SolrMultiMap[Key, Data <: Identifiable[Data]] extends DataMultiMap[Key, Data]{
+abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Key, Data] {
+  if (needToCreate) {
+    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+  }
+  init(name, s"http://$solrLocation/solr/$coreName/")
+
   override def put_(data: Seq[Set[Data]]): Unit = {}
 
   override def put_(key: Key, data: Set[Data]): Unit = {
-    ???
+    val kToString = keyToString(key)
+    data.foreach{dta =>
+      val dMap: String = dta match {
+        case i: Identifiable[_] => toJSON(Map("id" -> i.getId()))
+        case _ => toJson(dta)
+      }
+      val doc = Map[String, Any]("id" -> s"${kToString}___$dMap", "data" -> toJson(dta), "dataID" -> dMap, "_id_" -> kToString)
+      addDocument(doc, key)
+    }
   }
 
   override def remove(keys: Seq[Key]): Unit = {
-    ???
+    keys.foreach(key => remove(key))
   }
 
   override def remove(key: Key): Unit = {
-    ???
+    deleteDocuments(getDocuments(keyToString(key)).foldRight(List[String]()) {
+      case (map, list) => map.get("id") match {
+        case Some(s: String) => s :: list
+        case _ => list
+      }
+    })
   }
 
   override def remove(key: Key, data: Set[Data]): Unit = {
-    ???
+    val serializedMap = data.foldRight(Map[String, Unit]()) {
+      case (dta, map) => map + (toJson(dta) -> ())
+    }
+    deleteDocuments(getDocuments(keyToString(key)).foldRight(List[String]()) {
+      case (map, toRemove) => (map.get("id"), map.get("data")) match {
+        case (Some(id: String), Some(dt: String)) => serializedMap.get(dt) match {
+          case Some(_) => id :: toRemove
+          case _ => toRemove
+        }
+      }
+    })
   }
 
   override def remove(data: Set[Data]): Unit = {
-    ???
+    val serializedMap = data.foldRight(Map[String, Unit]()) {
+      case (dta, map) => map + (toJson(dta) -> ())
+    }
+    val toDelete = getAllDocuments.foldRight(List[String]()){
+      case (doc, toRemove) => (doc.get("id"), doc.get("data")) match{
+        case (Some(id: String), Some(dta: String)) => serializedMap.get(dta) match{
+          case Some(_) => id :: toRemove
+          case _ => toRemove
+        }
+      }
+    }
+    deleteDocuments(toDelete)
   }
 
   override def iterator(): Iterator[Set[Data]] = ???
@@ -212,18 +285,55 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]] extends DataMultiMa
   override def iterator(key: Key): Iterator[Data] = ???
 
   override def get(key: Key): Set[Data] = {
-    ???
+    getDocuments(keyToString(key)).foldRight(Set[Data]()) {
+      case (m, set) => m.get("data") match {
+        case Some(str: String) => set + fromJson(str)
+        case None => set
+      }
+    }
   }
 
   override def all(): Seq[Set[Data]] = {
-    ???
+    getAllDocuments.foldRight(Map[String, Set[Data]]()) {
+      case (map: Map[String@unchecked, Any@unchecked], data) =>
+        (map.get("data"), map.get("_id_")) match {
+          case (Some(jsonable: String), Some(iden: String)) => data.get(iden) match {
+            case Some(x) => data + (iden -> (x + fromJson(jsonable)))
+            case None => data + (iden -> Set(fromJson(jsonable)))
+          }
+          case _ => data
+        }
+    }.toList.unzip._2
   }
 
-  override def contains(key: Key, data: Set[Data]): Boolean = ???
+  override def contains(key: Key, data: Set[Data]): Boolean = data subsetOf get(key)
 
-  override def extract(): Seq[Set[Data]] = ???
+  override def extract(): Seq[Set[Data]] = {
+    val (mapOfSets, stuffToRemove) = getAllDocuments.foldRight((Map[String, Set[Data]](), List[String]())) {
+      case (map: Map[String@unchecked, Any@unchecked], (data, toRemove)) =>
+        (map.get("data"), map.get("_id_"), map.get("id")) match {
+          case (Some(jsonable: String), Some(iden: String), Some(id: String)) => data.get(iden) match {
+            case Some(x) => (data + (iden -> (x + fromJson(jsonable))), id :: toRemove)
+            case None => (data + (iden -> Set(fromJson(jsonable))), id :: toRemove)
+          }
+          case _ => (data, toRemove)
+        }
+    }
+    deleteDocuments(stuffToRemove)
+    mapOfSets.toSeq.unzip._2
+  }
 
-  override def size(): Int = ???
+  override def size(): Int = {
+    getAllDocuments.foldRight(Map[String, Unit]()) {
+      case (map, keysFound) =>
+        map.get("_id_") match {
+          case Some(x: String) => keysFound.get(x) match {
+            case Some(_) => keysFound
+            case None => keysFound + (x -> ())
+          }
+        }
+    }.size
+  }
 }
 
 class SolrIterator[Data] extends Iterator[Data] {
