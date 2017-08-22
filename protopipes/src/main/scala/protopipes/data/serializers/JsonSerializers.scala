@@ -8,7 +8,7 @@ import spray.json._
   */
 trait JsonSerializer[Data] {
 
-  def serialize(d: Data): JsObject
+  def serialize(d: Data): String
 
   def deserialize(json: JsObject): Data
 
@@ -20,11 +20,11 @@ trait IdentityJsonSerializer[Data <: Identifiable[Data]] extends JsonSerializer[
 
   def deserialize_(json: JsObject): Data
 
-  override def serialize(d: Data): JsObject = {
+  override def serialize(d: Data): String = {
     val dataJson = serialize_(d)
     d.identityOpt match {
-      case Some(id) => JsObject(dataJson.fields + ("identity" -> id.toJsonFormat()))
-      case None => dataJson
+      case Some(id) => JsObject(dataJson.fields + ("identity" -> id.toJsonFormat())).toString()
+      case None => dataJson.toString
     }
   }
 
@@ -39,5 +39,7 @@ trait IdentityJsonSerializer[Data <: Identifiable[Data]] extends JsonSerializer[
     }
     data
   }
+
+  def deserialize(str: String): Data = deserialize( str.parseJson.asJsObject )
 
 }
