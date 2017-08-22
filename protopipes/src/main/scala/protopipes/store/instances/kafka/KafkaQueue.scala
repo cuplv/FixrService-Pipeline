@@ -11,7 +11,8 @@ import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import protopipes.configurations.PipeConfig
 import protopipes.connectors.Connector
-import protopipes.data.{DataSerializer, Identifiable}
+import protopipes.data.Identifiable
+import protopipes.data.serializers.StdSerializer
 import protopipes.store.DataQueue
 import protopipes.store.instances.InMemDataQueue
 
@@ -32,7 +33,7 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
   var consPropsOpt: Option[Properties] = None
   var prodPropsOpt: Option[Properties] = None
 
-  val serializer: DataSerializer[Data]
+  val serializer: StdSerializer[Data]
 
   def topic(topicName: String): KafkaQueue[Data] = {
     topicOpt = Some(topicName)
@@ -105,7 +106,7 @@ abstract class KafkaQueue[Data] extends DataQueue[Data] {
 
 }
 
-class KafkaQueueIterator[Data](serializer: DataSerializer[Data], topic: String, props: Properties) extends Iterator[Data] {
+class KafkaQueueIterator[Data](serializer: StdSerializer[Data], topic: String, props: Properties) extends Iterator[Data] {
 
   val innerQueue: DataQueue[Data] = new InMemDataQueue[Data]
   val consumer: KafkaConsumer[String,String] = new KafkaConsumer[String,String](props)

@@ -1,4 +1,6 @@
-package protopipes.data
+package protopipes.data.serializers
+
+import protopipes.data._
 
 import java.util
 
@@ -10,7 +12,7 @@ import spray.json._
   * Created by edmundlam on 8/21/17.
   */
 
-trait DataSerializer[A] {
+trait StdSerializer[A] {
 
   def serialize(a: A): String
 
@@ -18,7 +20,7 @@ trait DataSerializer[A] {
 
 }
 
-trait IdentityDataSerializer[A <: Identifiable[A]] extends DataSerializer[A] {
+trait IdentityStdSerializer[A <: Identifiable[A]] extends StdSerializer[A] {
 
   def serialize_(a: A): String
 
@@ -27,7 +29,7 @@ trait IdentityDataSerializer[A <: Identifiable[A]] extends DataSerializer[A] {
   override def serialize(a: A): String = {
     val data = serialize_(a)
     a.identityOpt match {
-      case Some(id) => JsObject("id" -> id.toJsonFormat(), "data" -> JsString(serialize_(a))).toString()
+      case Some(id) => JsObject("identity" -> id.toJsonFormat(), "data" -> JsString(serialize_(a))).toString()
       case None => JsObject("data" -> JsString(serialize_(a))).toString()
     }
   }
@@ -36,10 +38,10 @@ trait IdentityDataSerializer[A <: Identifiable[A]] extends DataSerializer[A] {
     val json = s.parseJson.asJsObject
     val map = json.fields
     val a = deserialize_( map.get("data").get.toString() )
-    if (map.contains("id")) {
-      val idMap = map.get("id").get.asJsObject.fields
+    if (map.contains("identity")) {
+      val idMap = map.get("identity").get.asJsObject.fields
       val id = if (idMap.contains("version")) VersionedIdentity[A](idMap.get("id").get.toString(),idMap.get("version").get.toString())
-               else BasicIdentity[A](idMap.get("id").get.toString)
+      else BasicIdentity[A](idMap.get("id").get.toString)
       a.identityOpt = Some(id)
     }
     a
@@ -47,7 +49,7 @@ trait IdentityDataSerializer[A <: Identifiable[A]] extends DataSerializer[A] {
 
 }
 
-object IStringSerializer extends DataSerializer[I[String]] {
+object IStringStdSerializer extends StdSerializer[I[String]] {
 
   override def serialize(a: I[String]): String = a.i
 
@@ -55,7 +57,7 @@ object IStringSerializer extends DataSerializer[I[String]] {
 
 }
 
-object IdentityIStringSerializer extends IdentityDataSerializer[I[String]] {
+object IStringIdentityStdSerializer extends IdentityStdSerializer[I[String]] {
 
   override def serialize_(a: I[String]): String = a.i
 
@@ -63,7 +65,7 @@ object IdentityIStringSerializer extends IdentityDataSerializer[I[String]] {
 
 }
 
-object IIntSerializer extends DataSerializer[I[Int]] {
+object IIntStdSerializer extends StdSerializer[I[Int]] {
 
   override def serialize(a: I[Int]): String = s"${a.i}"
 
@@ -71,10 +73,11 @@ object IIntSerializer extends DataSerializer[I[Int]] {
 
 }
 
-object IdentityIIntSerializer extends IdentityDataSerializer[I[Int]] {
+object IIntIdentityStdSerializer extends IdentityStdSerializer[I[Int]] {
 
   override def serialize_(a: I[Int]): String = s"${a.i}"
 
   override def deserialize_(s: String): I[Int] = I(s.toInt)
 
 }
+
