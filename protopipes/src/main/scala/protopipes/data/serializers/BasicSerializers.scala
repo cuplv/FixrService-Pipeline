@@ -28,15 +28,18 @@ trait BasicSerializer[A <: Identifiable[A]] {
   def deserialize(s: String): A = {
     val json = s.parseJson.asJsObject
     val map = json.fields
-    val a = deserialize_( map.get("data").get.toString().stripPrefix("\"").stripSuffix("\"").replace("\\\"", "\"") )
+    val a = deserialize_( BasicSerializer.escapeAString(map.get("data").get.toString()) )
     if (map.contains("bg_version")) {
-      a.setVersion( map.get("bg_version").get.toString().stripPrefix("\"").stripSuffix("\"").replace("\\\"", "\"") )
+      a.setVersion( BasicSerializer.escapeAString(map.get("bg_version").get.toString()) )
     }
     a
   }
 
 }
 
+object BasicSerializer{
+  def escapeAString(s: String) = s.stripPrefix("\"").stripSuffix("\"").replace("\\\"", "\"")
+}
 
 object IStringBasicSerializer extends BasicSerializer[I[String]] {
 

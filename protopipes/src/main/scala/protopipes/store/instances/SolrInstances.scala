@@ -96,7 +96,7 @@ trait SolrSpecific[Data <: Identifiable[Data]]{
   def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?&rows=100000000&q=*:*")
 }
 
-abstract class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Data] {
+class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Data] {
   if (needToCreate) {
     Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
   }
@@ -164,7 +164,7 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSeri
   override def iterator(): Iterator[Data] = new SolrIterator[Data](serializer, coreName, solrLocation)
 }
 
-abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Data] {
+class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Data] {
   if (needToCreate) {
     Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
   }
