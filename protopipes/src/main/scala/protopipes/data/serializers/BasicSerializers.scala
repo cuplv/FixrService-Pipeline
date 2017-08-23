@@ -28,9 +28,9 @@ trait BasicSerializer[A <: Identifiable[A]] {
   def deserialize(s: String): A = {
     val json = s.parseJson.asJsObject
     val map = json.fields
-    val a = deserialize_( map.get("data").get.toString().stripPrefix("\"").stripSuffix("\"") )
+    val a = deserialize_( map.get("data").get.toString().stripPrefix("\"").stripSuffix("\"").replace("\\\"", "\"") )
     if (map.contains("bg_version")) {
-      a.setVersion( map.get("bg_version").get.toString().stripPrefix("\"").stripSuffix("\"") )
+      a.setVersion( map.get("bg_version").get.toString().stripPrefix("\"").stripSuffix("\"").replace("\\\"", "\"") )
     }
     a
   }

@@ -2,12 +2,11 @@ package protopipes.store.instances
 
 import protopipes.data.Identifiable
 import protopipes.data.serializers.JsonSerializer
-import protopipes.exceptions.CallNotAllowException
+import protopipes.exceptions.{CallNotAllowException, NotInitializedException, ProtoPipeException}
 import protopipes.store.{DataMap, DataMultiMap, DataStore}
 import spray.json._
 
 import scala.util.Random
-import scala.util.parsing.json.JSON
 import scalaj.http.Http
 
 
@@ -23,7 +22,7 @@ object SolrInstances{
   }
 }
 
-trait SolrSpecific[Key, Data <: Identifiable[Data]] extends JsonSerializer[Data]{
+trait SolrSpecific[Data <: Identifiable[Data]]{
   var nam = ""
   var url = "http://localhost:8983/solr/gettingstarted/"
   def init(nm: String, URL: String): Unit = {
@@ -31,16 +30,26 @@ trait SolrSpecific[Key, Data <: Identifiable[Data]] extends JsonSerializer[Data]
     url = URL
   }
 
-  def keyToString(key: Key): String = {
+  def keyToString(key: Any): String = {
     key match {
       case i: Identifiable[_] => i.getId().toString
       case _ => key.toString
     }
   }
 
-  //def toJson(d: Data): String
-
-  //def fromJson(s: String): Data
+  def getDocumentsFromQuery(query: String): List[JsObject] = {
+    val queryURL = url+query
+    val json = Http(queryURL).asString.body
+    json.parseJson.asJsObject().fields.get("response") match {
+      case Some(response: JsValue) => response.asJsObject.fields.get("docs") match {
+        case Some(docs: JsArray) => docs.elements.toList.map(_.asJsObject)
+        case _ =>
+          throw new ProtoPipeException(Some(s"SolrMap $nam response is malformed. Are you sure you're really using Solr?"), None)
+      }
+      case _ =>
+        throw new ProtoPipeException(Some(s"Probably got an error in SolrMap $nam on query $query. Please fix your query."), None)
+    }
+  }
 
   def getDocument(id: String): Option[JsObject] = {
     def getDocumentFromList(list: List[JsObject], id: String): Option[JsObject] = list match{
@@ -50,39 +59,27 @@ trait SolrSpecific[Key, Data <: Identifiable[Data]] extends JsonSerializer[Data]
         case _ => getDocumentFromList(rest, id)
       }
     }
-    val queryURL = url+"select?wt=json&q=id=\"" + id + "\""
-    val json = Http(queryURL).asString.body
-    json.parseJson.asJsObject().fields.get("response") match{
-      case Some(response: JsValue) => response.asJsObject.fields.get("docs")  match{
-        case Some(docs: JsArray) => getDocumentFromList(docs.elements.toList.map(_.asJsObject), id)
-      }
-    }
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&q=id=\"" + id + "\"")
+    getDocumentFromList(docsToCheck, id)
   }
 
-  def getDocuments(id: String, field: String = "_id_", rows: String = "1000000000"): List[JsObject] = {
-    val queryURL = url+"select?wt=json&rows=" + rows + "&q="+field+"=\""+ id + "\""
-    val json = Http(queryURL).asString.body
-    json.parseJson.asJsObject.fields.get("response") match{
-      case Some(response: JsValue) => response.asJsObject.fields.get("docs") match{
-        case Some(docs: JsArray) => docs.elements.foldRight(List[JsObject]()){
-          case (v: JsValue, list) =>
-            val obj = v.asJsObject
-            obj.fields.get(field) match{
-              case Some(str: JsString) if str.value.equals(id) => obj :: list
-              case _ => list
-            }
+  def getDocuments(id: String, field: String = "_id_"): List[JsObject] = {
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&rows=1000000000&q="+field+"=\""+ id + "\"")
+    docsToCheck.foldRight(List[JsObject]()) {
+      case (v: JsValue, list) =>
+        val obj = v.asJsObject()
+        obj.fields.get(field) match {
+          case Some(str: JsString) if str.value.equals(id) => obj :: list
+          case _ => list
         }
-        case _ => List()
-      }
-      case _ => List()
     }
   }
 
-  def addDocument(doc: JsObject, key: Key): Unit = {
+  def addDocument(doc: JsObject, key: String): Unit = {
     val json = JsObject(Map("add" -> JsObject(Map("doc" -> doc)), "commit" -> JsObject())).toString()
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     result.parseJson.asJsObject.fields.get("error") match{
-      case Some(x) => throw new Exception(s"Could not update the DataMap $nam on key(s) $key.")
+      case Some(x) => throw new Exception(s"Could not update the core $nam on key $key.")
       case _ => ()
     }
   }
@@ -91,34 +88,25 @@ trait SolrSpecific[Key, Data <: Identifiable[Data]] extends JsonSerializer[Data]
     val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector))).toString
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     result.parseJson.asJsObject.fields.get("error") match{
-      case Some(x) => throw new Exception(s"Could not update the DataMap $nam on ID(s) $ids.")
+      case Some(x) => throw new Exception(s"Could not update the core $nam on ID(s) $ids.")
       case _ => ()
     }
   }
 
-  def getAllDocuments: List[JsObject] = {
-    val queryURL = url+"select?&rows=100000000&q=*:*"
-    val json = Http(queryURL).asString.body
-    json.parseJson.asJsObject.fields.get("response") match {
-      case Some(response: JsValue) => response.asJsObject.fields.get("docs") match{
-        case Some(docs: JsArray) => docs.elements.toList.map(_.asJsObject)
-        case _ => List()
-      }
-    }
-  }
+  def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?&rows=100000000&q=*:*")
 }
 
-abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Key, Data] {
+abstract class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Data] {
   if (needToCreate) {
     Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
   }
-  init(name, s"http://$solrLocation/solr/$coreName/")
+  init(coreName, s"http://$solrLocation/solr/$coreName/")
 
   override def put_(key: Key, data: Data): Unit = {
     val kToString = keyToString(key)
-    val document = serializeToJson(data)
-    val doc = JsObject(document.fields + ("id" -> JsString(data.getId())))
-    addDocument(doc, key)
+    val document = serializer.serializeToJson(data)
+    val doc = JsObject(document.fields + ("id" -> JsString(kToString)))
+    addDocument(doc, kToString)
   }
 
   override def put_(data: Seq[Data]): Unit = {}
@@ -126,7 +114,7 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
   override def get(key: Key): Option[Data] = {
     getDocument(keyToString(key)) match{
       case Some(jsObject: JsObject) =>
-        Some(deserialize(JsObject(jsObject.fields -- List("id", "_version_")).toString))
+        Some(serializer.deserialize(JsObject(jsObject.fields -- List("id", "_version_")).toString))
       case _ => None
     }
   }
@@ -140,7 +128,7 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
     getAllDocuments.foldRight(List[Data]()) {
       case (jsObj, data) =>
         val jsonable = JsObject(jsObj.fields -- List("id", "_version_")).toString
-        deserialize(jsonable) :: data
+        serializer.deserialize(jsonable) :: data
     }
   }
 
@@ -173,10 +161,10 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](coreName: String, so
     }
   }
 
-  override def iterator(): Iterator[Data] = ???
+  override def iterator(): Iterator[Data] = new SolrIterator[Data](serializer, coreName, solrLocation)
 }
 
-abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Key, Data] {
+abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Data] {
   if (needToCreate) {
     Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
   }
@@ -187,10 +175,10 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
   override def put_(key: Key, data: Set[Data]): Unit = {
     val kToString = keyToString(key)
     data.foreach{dta =>
-      val document = serializeToJson(dta)
+      val document = serializer.serializeToJson(dta)
       val doc = JsObject(document.fields +
-        ("_id_" -> JsString(dta.getId()), "id" -> JsString(s"${kToString}___${dta.getId()}_${Random.nextInt(99999)}")))
-      addDocument(doc, key)
+        ("_id_" -> JsString(kToString), "id" -> JsString(s"${kToString}___${dta.getId()}_${Random.nextInt(99999)}")))
+      addDocument(doc, kToString)
     }
   }
 
@@ -209,7 +197,7 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
 
   override def remove(key: Key, data: Set[Data]): Unit = {
     val serializedMap = data.foldRight(Map[String, Unit]()) {
-      case (dta, map) => map + (serialize(dta) -> ())
+      case (dta, map) => map + (serializer.serialize(dta) -> ())
     }
     deleteDocuments(getDocuments(keyToString(key)).foldRight(List[String]()){
       case (jsObj, toRemove) =>
@@ -225,7 +213,7 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
 
   override def remove(data: Set[Data]): Unit = {
     val serializedMap = data.foldRight(Map[String, Unit]()) {
-      case (dta, map) => map + (serialize(dta) -> ())
+      case (dta, map) => map + (serializer.serialize(dta) -> ())
     }
     deleteDocuments(getAllDocuments.foldRight(List[String]()){
       case (jsObj, toRemove) =>
@@ -239,13 +227,13 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
     })
   }
 
-  override def iterator(): Iterator[Set[Data]] = throw new CallNotAllowException(???, None)
+  override def iterator(): Iterator[Set[Data]] = throw new CallNotAllowException("Solr does not easily allow an iterator of sets.", None)
 
-  override def iterator(key: Key): Iterator[Data] = ???
+  override def iterator(key: Key): Iterator[Data] = new SolrIterator[Data](serializer, coreName, solrLocation, "_id_:\"" + keyToString(key) + "\"")
 
   override def get(key: Key): Set[Data] = {
     getDocuments(keyToString(key)).foldRight(Set[Data]()) {
-      case (jsObj, set) => set + deserialize(jsObj.toString)
+      case (jsObj, set) => set + serializer.deserialize(jsObj.toString)
     }
   }
 
@@ -254,8 +242,8 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
       case (jsObj, data) =>
         jsObj.fields.get("_id_") match{
           case Some(id: JsString) => data.get(id) match {
-            case Some(set) => data + (id -> (set + deserialize(jsObj.toString)))
-            case None => data + (id -> Set(deserialize(jsObj.toString)))
+            case Some(set) => data + (id -> (set + serializer.deserialize(jsObj.toString)))
+            case None => data + (id -> Set(serializer.deserialize(jsObj.toString)))
           }
           case _ => data
         }
@@ -284,10 +272,37 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](coreName: String, s
   }
 }
 
-class SolrIterator[Data] extends Iterator[Data] {
+class SolrIterator[Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String = "gettingstarted", solrLocation: String = "localhost:8983", query: String = "*:*") extends Iterator[Data] with SolrSpecific[Data] {
+  init(coreName, s"http://$solrLocation/solr/$coreName/")
+  var currentOffset = 0
+  var currentDataList: List[Data] = List()
 
-  override def next(): Data = ???
+  def nextDocuments(): List[Data] = {
+    val nextDocs = getDocumentsFromQuery(s"select?q=$query&rows=10&start=$currentOffset&wt=json").foldRight(List[Data]()){
+      case (doc, dataList) => serializer.deserialize(new JsObject(doc.fields -- List("id", "_version_", "_id_")).toString()) :: dataList
+    }
+    currentOffset += 10
+    nextDocs
+  }
 
-  override def hasNext: Boolean = ???
+  override def next(): Data = currentDataList match{
+    case Nil => nextDocuments() match{
+      case Nil => throw new Exception("The SolrIterator does not have another value.")
+      case head :: rest =>
+        currentDataList = rest
+        head
+    }
+    case head :: rest =>
+      currentDataList = rest
+      head
+  }
+
+  override def hasNext: Boolean = currentDataList match{
+    case Nil => nextDocuments() match{
+      case Nil => false
+      case _ => true
+    }
+    case _ => true
+  }
 
 }
