@@ -114,7 +114,7 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSeri
   override def get(key: Key): Option[Data] = {
     getDocument(keyToString(key)) match{
       case Some(jsObject: JsObject) =>
-        Some(serializer.deserialize(JsObject(jsObject.fields -- List("id", "_version_")).toString))
+        Some(serializer.deserialize_(JsObject(jsObject.fields -- List("id", "_version_")).toString))
       case _ => None
     }
   }
@@ -128,7 +128,7 @@ abstract class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSeri
     getAllDocuments.foldRight(List[Data]()) {
       case (jsObj, data) =>
         val jsonable = JsObject(jsObj.fields -- List("id", "_version_")).toString
-        serializer.deserialize(jsonable) :: data
+        serializer.deserialize_(jsonable) :: data
     }
   }
 
@@ -213,7 +213,7 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSer
 
   override def remove(data: Set[Data]): Unit = {
     val serializedMap = data.foldRight(Map[String, Unit]()) {
-      case (dta, map) => map + (serializer.serialize(dta) -> ())
+      case (dta, map) => map + (serializer.serialize_(dta) -> ())
     }
     deleteDocuments(getAllDocuments.foldRight(List[String]()){
       case (jsObj, toRemove) =>
@@ -233,7 +233,7 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSer
 
   override def get(key: Key): Set[Data] = {
     getDocuments(keyToString(key)).foldRight(Set[Data]()) {
-      case (jsObj, set) => set + serializer.deserialize(jsObj.toString)
+      case (jsObj, set) => set + serializer.deserialize_(jsObj.toString)
     }
   }
 
@@ -242,8 +242,8 @@ abstract class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSer
       case (jsObj, data) =>
         jsObj.fields.get("_id_") match{
           case Some(id: JsString) => data.get(id) match {
-            case Some(set) => data + (id -> (set + serializer.deserialize(jsObj.toString)))
-            case None => data + (id -> Set(serializer.deserialize(jsObj.toString)))
+            case Some(set) => data + (id -> (set + serializer.deserialize_(jsObj.toString)))
+            case None => data + (id -> Set(serializer.deserialize_(jsObj.toString)))
           }
           case _ => data
         }
@@ -279,7 +279,7 @@ class SolrIterator[Data <: Identifiable[Data]](serializer: JsonSerializer[Data],
 
   def nextDocuments(): List[Data] = {
     val nextDocs = getDocumentsFromQuery(s"select?q=$query&rows=10&start=$currentOffset&wt=json").foldRight(List[Data]()){
-      case (doc, dataList) => serializer.deserialize(new JsObject(doc.fields -- List("id", "_version_", "_id_")).toString()) :: dataList
+      case (doc, dataList) => serializer.deserialize_(new JsObject(doc.fields -- List("id", "_version_", "_id_")).toString()) :: dataList
     }
     currentOffset += 10
     nextDocs

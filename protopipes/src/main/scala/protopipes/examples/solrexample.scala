@@ -30,7 +30,7 @@ object solrexample {
   def main(args: Array[String]): Unit = {
     val serializer = SerializeSolrTest
     println(SolrTest())
-    println(serializer.serialize(SolrTest()))
-    println(serializer.deserialize(serializer.serialize(SolrTest())))
+    println(serializer.serialize_(SolrTest()))
+    println(serializer.deserialize_(serializer.serialize_(SolrTest())))
   }
 }
