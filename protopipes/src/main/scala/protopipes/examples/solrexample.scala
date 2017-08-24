@@ -2,7 +2,7 @@ package protopipes.examples
 
 import protopipes.data.{BasicIdentity, I, Identifiable, Identity}
 import protopipes.data.serializers.JsonSerializer
-import protopipes.store.instances.SolrDataMap
+import protopipes.store.instances.{SolrDataMap, SolrMultiMap}
 import spray.json._
 
 /**
@@ -12,7 +12,7 @@ case class SolrTest(genericList: List[Int] = List(1,2,3), genericString: String 
   override def mkIdentity(): Identity[SolrTest] = BasicIdentity("?!?!?")
 }
 
-case class SolrTest2(solrtest: SolrTest) extends Identifiable[SolrTest2]{
+case class SolrTest2(solrtest: Option[SolrTest]) extends Identifiable[SolrTest2]{
   override def mkIdentity(): Identity[SolrTest2] = BasicIdentity("?!?!?")
 }
 
@@ -21,19 +21,66 @@ object SolrProtocol extends DefaultJsonProtocol {
   implicit val solr2: JsonFormat[SolrTest2] = jsonFormat1(SolrTest2)
 }
 
-object SerializeSolrTest extends JsonSerializer[SolrTest2] {
+object SerializeSolrTest extends JsonSerializer[SolrTest] {
   import SolrProtocol._
-  override def serializeToJson_(d: SolrTest2): JsObject = d.toJson.asJsObject
+  override def serializeToJson_(d: SolrTest): JsObject = d.toJson.asJsObject
 
-  override def deserialize_(json: JsObject): SolrTest2 = json.convertTo[SolrTest2]
+  override def deserialize_(json: JsObject): SolrTest = json.convertTo[SolrTest]
 }
 
 object solrexample {
+  val serializer = SerializeSolrTest
+  def testSolrMap(): Unit = {
+    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "test")
+    sDataMap.put("testOne", SolrTest())
+    sDataMap.put("testTwo", SolrTest(List(4,5,6), "!!!"))
+    println(sDataMap.get("testOne"))
+    println(sDataMap.get("testTwo"))
+    println(sDataMap.all())
+    println(sDataMap.size())
+    println(sDataMap.extract())
+    println(sDataMap.get("testOne"))
+    sDataMap.put("testThree", SolrTest(List(1,1,1,1,1,1), "SolrTest"))
+    println(sDataMap.get("testThree"))
+    sDataMap.remove("testThree")
+    println(sDataMap.get("testThree"))
+  }
+
+  def testSolrMultiMap(): Unit = {
+    val sMultiMap = new SolrMultiMap[String, SolrTest](serializer, "test")
+    sMultiMap.put("testOne", Set(SolrTest(), SolrTest(List(2,3,4,5)), SolrTest(List(1,2,3), "Hey", 12)))
+    sMultiMap.put("testTwo", Set(SolrTest(), SolrTest(List(), "", 0)))
+    println(sMultiMap.get("testOne"))
+    println(sMultiMap.get("testTwo"))
+    println(sMultiMap.all())
+    println(sMultiMap.size())
+    sMultiMap.extract()
+    sMultiMap.put("testThree", Set(SolrTest(List(1,2,3,4,5)), SolrTest(List()), SolrTest(), SolrTest(List(5,5,5))))
+    println(sMultiMap.get("testThree"))
+    sMultiMap.remove("testThree")
+    println(sMultiMap.get("testThree"))
+  }
+
+  def testSolrIterator(): Unit = {
+    def addMoreObjects(sDataMap: SolrDataMap[String, SolrTest], objectsLeft: Int): Unit = objectsLeft match {
+      case 0 => ()
+      case x =>
+        sDataMap.put(objectsLeft.toString, SolrTest(List(1,2,3), "Hey", objectsLeft))
+        addMoreObjects(sDataMap, objectsLeft-1)
+    }
+    def extractFromIterator(iterator: Iterator[SolrTest]): Unit = if (iterator.hasNext){
+      println(iterator.next())
+      extractFromIterator(iterator)
+    } else ()
+    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "test")
+    addMoreObjects(sDataMap, 1000)
+    val solrIterator = sDataMap.iterator()
+    extractFromIterator(solrIterator)
+  }
+
   def main(args: Array[String]): Unit = {
-    val serializer = SerializeSolrTest
-    val sDataMap = new SolrDataMap[String, SolrTest2](serializer, "test")
-    println(SolrTest2(SolrTest()))
-    println(serializer.serialize_(SolrTest2(SolrTest())))
-    println(serializer.deserialize_(serializer.serialize_(SolrTest2(SolrTest()))))
+    import SolrProtocol._
+    println(SolrTest2(None).toJson)
+    println(SolrTest2(Some(SolrTest())).toJson)
   }
 }

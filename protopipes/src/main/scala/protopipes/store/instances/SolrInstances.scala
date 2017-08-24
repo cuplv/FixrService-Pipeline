@@ -6,7 +6,6 @@ import protopipes.exceptions.{CallNotAllowException, NotInitializedException, Pr
 import protopipes.store.{DataMap, DataMultiMap, DataStore}
 import spray.json._
 
-import scala.util.Random
 import scalaj.http.Http
 
 
@@ -22,13 +21,8 @@ object SolrInstances{
   }
 }
 
-trait SolrSpecific[Data <: Identifiable[Data]]{
-  var nam = ""
-  var url = "http://localhost:8983/solr/gettingstarted/"
-  def init(nm: String, URL: String): Unit = {
-    nam = nm
-    url = URL
-  }
+class SolrBackend[Data <: Identifiable[Data]](nam: String, url: String){
+  var templateOpt: Option[JsObject] = None
 
   def keyToString(key: Any): String = {
     key match {
@@ -42,7 +36,7 @@ trait SolrSpecific[Data <: Identifiable[Data]]{
     val json = Http(queryURL).asString.body
     json.parseJson.asJsObject().fields.get("response") match {
       case Some(response: JsValue) => response.asJsObject.fields.get("docs") match {
-        case Some(docs: JsArray) => docs.elements.toList.map(_.asJsObject)
+        case Some(docs: JsArray) => docs.elements.toList.map{doc => mkDocDeserializable(doc.asJsObject)}
         case _ =>
           throw new ProtoPipeException(Some(s"SolrMap $nam response is malformed. Are you sure you're really using Solr?"), None)
       }
@@ -59,12 +53,12 @@ trait SolrSpecific[Data <: Identifiable[Data]]{
         case _ => getDocumentFromList(rest, id)
       }
     }
-    val docsToCheck = getDocumentsFromQuery("select?wt=json&q=id=\"" + id + "\"")
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&q=id:\"" + id + "\"")
     getDocumentFromList(docsToCheck, id)
   }
 
   def getDocuments(id: String, field: String = "_id_"): List[JsObject] = {
-    val docsToCheck = getDocumentsFromQuery("select?wt=json&rows=1000000000&q="+field+"=\""+ id + "\"")
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&rows=1000000000&q="+field+":\""+ id + "\"")
     docsToCheck.foldRight(List[JsObject]()) {
       case (v: JsValue, list) =>
         val obj = v.asJsObject()
@@ -82,10 +76,14 @@ trait SolrSpecific[Data <: Identifiable[Data]]{
       case Some(x) => throw new Exception(s"Could not update the core $nam on key $key.")
       case _ => ()
     }
+    templateOpt match{
+      case None => templateOpt = Some(doc)
+      case _ => ()
+    }
   }
 
   def deleteDocuments(ids: List[String]): Unit = {
-    val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector))).toString
+    val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector), "commit" -> JsObject())).toString
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     result.parseJson.asJsObject.fields.get("error") match{
       case Some(x) => throw new Exception(s"Could not update the core $nam on ID(s) $ids.")
@@ -93,58 +91,79 @@ trait SolrSpecific[Data <: Identifiable[Data]]{
     }
   }
 
-  def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?&rows=100000000&q=*:*")
+  def mkDocDeserializable(doc: JsObject): JsObject = templateOpt match{
+    case None => doc
+    case Some(template) =>
+      JsObject(template.fields.map{
+        case (key, jsValue) => (jsValue, doc.fields.get(key)) match{
+          case (thisValue, None) => thisValue.getClass.getName match{
+            case "spray.json.JsArray" => (key, JsArray())
+            case "spray.json.JsString" => (key, JsString(""))
+            //Next line should NEVER happen as of this version, but I may add functionality for that later?
+            case "spray.json.JsObject" => (key, JsObject())
+            case s => throw new Exception(s"Cannot have a null version of $s...")
+          }
+          case (_: JsArray, Some(trueValue: JsArray)) => (key, trueValue)
+          case (_: JsArray, Some(trueValue)) => (key, JsArray(trueValue))
+          case (_, Some(trueValue: JsArray)) => (key, trueValue.elements.head)
+          case (_, Some(trueValue)) => (key, trueValue)
+        }
+      })
+  }
+
+  def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?wt=json&rows=100000000&q=*:*")
 }
 
-class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] with SolrSpecific[Data] {
+class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMap[Key, Data] {
   if (needToCreate) {
-    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1").asString.body
   }
-  init(coreName, s"http://$solrLocation/solr/$coreName/")
+  val url = s"http://$solrLocation/solr/$coreName/"
+  val solrBack: SolrBackend[Data] = new SolrBackend[Data](coreName, url)
 
   override def put_(key: Key, data: Data): Unit = {
-    val kToString = keyToString(key)
+    val kToString = solrBack.keyToString(key)
     val document = serializer.serializeToJson(data)
     val doc = JsObject(document.fields + ("id" -> JsString(kToString)))
-    addDocument(doc, kToString)
+    solrBack.addDocument(doc, kToString)
   }
 
   override def put_(data: Seq[Data]): Unit = {}
 
   override def get(key: Key): Option[Data] = {
-    getDocument(keyToString(key)) match{
+    solrBack.getDocument(solrBack.keyToString(key)) match{
       case Some(jsObject: JsObject) =>
-        Some(serializer.deserialize_(JsObject(jsObject.fields -- List("id", "_version_")).toString))
+        Some(serializer.deserialize_(JsObject(jsObject.fields -- List("id")).toString))
       case _ => None
     }
   }
 
-  override def contains(key: Key): Boolean = getDocument(keyToString(key)) match {
+  override def contains(key: Key): Boolean = solrBack.getDocument(solrBack.keyToString(key)) match {
     case Some(_) => true
     case _ => false
   }
 
   override def all(): Seq[Data] = {
-    getAllDocuments.foldRight(List[Data]()) {
+    solrBack.getAllDocuments.foldRight(List[Data]()) {
       case (jsObj, data) =>
-        val jsonable = JsObject(jsObj.fields -- List("id", "_version_")).toString
+        val jsonable = JsObject(jsObj.fields -- List("id")).toString
         serializer.deserialize_(jsonable) :: data
     }
   }
 
   override def remove(key: Key): Unit = {
-    deleteDocuments(List(keyToString(key)))
+    solrBack.deleteDocuments(List(solrBack.keyToString(key)))
   }
 
   override def remove(keys: Seq[Key]): Unit = {
-    deleteDocuments(keys.foldRight(List.empty[String]){
-      case (key, list) => keyToString(key) :: list
+    solrBack.deleteDocuments(keys.foldRight(List.empty[String]){
+      case (key, list) => solrBack.keyToString(key) :: list
     })
   }
 
   override def extract(): Seq[Data] = {
     val toReturn = all()
-    Http(url+"update").postData("{ \"delete\": { \"query\":\"*:*\" }, \"commit\": {}").header("Content-Type", "application/json")
+    Http(url+"update").postData("{\"delete\": { \"query\":\"*:*\"}, \"commit\": {}}").header("Content-Type", "application/json").asString.body
     toReturn
   }
 
@@ -161,24 +180,25 @@ class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Da
     }
   }
 
-  override def iterator(): Iterator[Data] = new SolrIterator[Data](serializer, coreName, solrLocation)
+  override def iterator(): Iterator[Data] = new SolrIterator[Data](serializer, solrBack, coreName, solrLocation)
 }
 
-class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] with SolrSpecific[Data] {
+class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, solrLocation: String = "localhost:8983", needToCreate: Boolean = false) extends DataMultiMap[Key, Data] {
   if (needToCreate) {
-    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1")
+    Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$coreName&numShards=1").asString.body
   }
-  init(name, s"http://$solrLocation/solr/$coreName/")
+  val url = s"http://$solrLocation/solr/$coreName/"
+  val solrBack: SolrBackend[Data] = new SolrBackend[Data](coreName, s"http://$solrLocation/solr/$coreName/")
 
   override def put_(data: Seq[Set[Data]]): Unit = {}
 
   override def put_(key: Key, data: Set[Data]): Unit = {
-    val kToString = keyToString(key)
+    val kToString = solrBack.keyToString(key)
     data.foreach{dta =>
       val document = serializer.serializeToJson(dta)
       val doc = JsObject(document.fields +
-        ("_id_" -> JsString(kToString), "id" -> JsString(s"${kToString}___${dta.getId()}_${Random.nextInt(99999)}")))
-      addDocument(doc, kToString)
+        ("_id_" -> JsString(kToString), "id" -> JsString(s"${kToString}___${dta.getId()}_${dta.toString}")))
+      solrBack.addDocument(doc, kToString)
     }
   }
 
@@ -187,7 +207,7 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
   }
 
   override def remove(key: Key): Unit = {
-    deleteDocuments(getDocuments(keyToString(key)).foldRight(List[String]()) {
+    solrBack.deleteDocuments(solrBack.getDocuments(solrBack.keyToString(key)).foldRight(List[String]()) {
       case (jsObj, list) => jsObj.fields.get("id") match{
         case Some(s: JsString) => s.value :: list
         case _ => list
@@ -199,9 +219,9 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
     val serializedMap = data.foldRight(Map[String, Unit]()) {
       case (dta, map) => map + (serializer.serialize(dta) -> ())
     }
-    deleteDocuments(getDocuments(keyToString(key)).foldRight(List[String]()){
+    solrBack.deleteDocuments(solrBack.getDocuments(solrBack.keyToString(key)).foldRight(List[String]()){
       case (jsObj, toRemove) =>
-        serializedMap.get(JsObject(jsObj.fields -- List("id", "_version_", "_id_")).toString()) match {
+        serializedMap.get(JsObject(jsObj.fields -- List("id", "_id_")).toString()) match {
           case Some(_) => jsObj.fields.get("id") match{
             case Some(id: JsString) => id.value :: toRemove
             case _ => toRemove
@@ -215,9 +235,9 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
     val serializedMap = data.foldRight(Map[String, Unit]()) {
       case (dta, map) => map + (serializer.serialize_(dta) -> ())
     }
-    deleteDocuments(getAllDocuments.foldRight(List[String]()){
+    solrBack.deleteDocuments(solrBack.getAllDocuments.foldRight(List[String]()){
       case (jsObj, toRemove) =>
-        serializedMap.get(JsObject(jsObj.fields -- List("id", "_version_", "_id_")).toString()) match {
+        serializedMap.get(JsObject(jsObj.fields -- List("id", "_id_")).toString()) match {
           case Some(_) => jsObj.fields.get("id") match{
             case Some(id: JsString) => id.value :: toRemove
             case _ => toRemove
@@ -227,18 +247,20 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
     })
   }
 
-  override def iterator(): Iterator[Set[Data]] = throw new CallNotAllowException("Solr does not easily allow an iterator of sets.", None)
+  override def iterator(): Iterator[Set[Data]] =
+    throw new CallNotAllowException("Solr does not easily allow an iterator of sets.", None)
 
-  override def iterator(key: Key): Iterator[Data] = new SolrIterator[Data](serializer, coreName, solrLocation, "_id_:\"" + keyToString(key) + "\"")
+  override def iterator(key: Key): Iterator[Data] =
+    new SolrIterator[Data](serializer, solrBack, coreName, solrLocation, "_id_:\"" + solrBack.keyToString(key) + "\"")
 
   override def get(key: Key): Set[Data] = {
-    getDocuments(keyToString(key)).foldRight(Set[Data]()) {
+    solrBack.getDocuments(solrBack.keyToString(key)).foldRight(Set[Data]()) {
       case (jsObj, set) => set + serializer.deserialize_(jsObj.toString)
     }
   }
 
   override def all(): Seq[Set[Data]] = {
-    getAllDocuments.foldRight(Map[JsString, Set[Data]]()) {
+    solrBack.getAllDocuments.foldRight(Map[JsString, Set[Data]]()) {
       case (jsObj, data) =>
         jsObj.fields.get("_id_") match{
           case Some(id: JsString) => data.get(id) match {
@@ -254,12 +276,12 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
 
   override def extract(): Seq[Set[Data]] = {
     val mapOfSets = all()
-    Http(url+"update").postData("{ \"delete\": { \"query\":\"*:*\" }, \"commit\": {}").header("Content-Type", "application/json")
+    Http(url+"update").postData("{\"delete\": { \"query\":\"*:*\"}, \"commit\": {}}").header("Content-Type", "application/json").asString.body
     mapOfSets
   }
 
   override def size(): Int = {
-    getAllDocuments.foldRight(Map[JsString, Unit]()) {
+    solrBack.getAllDocuments.foldRight(Map[JsString, Unit]()) {
       case (jsObj, keysFound) =>
         jsObj.fields.get("_id_") match{
           case Some(id: JsString) => keysFound.get(id) match {
@@ -272,21 +294,21 @@ class SolrMultiMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[D
   }
 }
 
-class SolrIterator[Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String = "gettingstarted", solrLocation: String = "localhost:8983", query: String = "*:*") extends Iterator[Data] with SolrSpecific[Data] {
-  init(coreName, s"http://$solrLocation/solr/$coreName/")
+class SolrIterator[Data <: Identifiable[Data]](serializer: JsonSerializer[Data], solrBackend: SolrBackend[Data], coreName: String = "gettingstarted", solrLocation: String = "localhost:8983", query: String = "*:*") extends Iterator[Data] {
   var currentOffset = 0
   var currentDataList: List[Data] = List()
 
   def nextDocuments(): List[Data] = {
-    val nextDocs = getDocumentsFromQuery(s"select?q=$query&rows=10&start=$currentOffset&wt=json").foldRight(List[Data]()){
-      case (doc, dataList) => serializer.deserialize_(new JsObject(doc.fields -- List("id", "_version_", "_id_")).toString()) :: dataList
+    val nextDocs = solrBackend.getDocumentsFromQuery(s"select?q=$query&rows=10&start=$currentOffset&wt=json").foldRight(List[Data]()){
+      case (doc, dataList) => serializer.deserialize_(new JsObject(doc.fields -- List("id", "_id_")).toString()) :: dataList
     }
     currentOffset += 10
     nextDocs
   }
 
   override def next(): Data = currentDataList match{
-    case Nil => nextDocuments() match{
+    case Nil =>
+      nextDocuments() match{
       case Nil => throw new Exception("The SolrIterator does not have another value.")
       case head :: rest =>
         currentDataList = rest
@@ -300,7 +322,9 @@ class SolrIterator[Data <: Identifiable[Data]](serializer: JsonSerializer[Data],
   override def hasNext: Boolean = currentDataList match{
     case Nil => nextDocuments() match{
       case Nil => false
-      case _ => true
+      case docs =>
+        currentDataList = docs
+        true
     }
     case _ => true
   }
