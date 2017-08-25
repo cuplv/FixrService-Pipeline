@@ -2,8 +2,9 @@ package protopipes.examples
 
 import protopipes.data.{BasicIdentity, I, Identifiable, Identity}
 import protopipes.data.serializers.JsonSerializer
-import protopipes.store.instances.{SolrDataMap, SolrMultiMap}
+import protopipes.store.instances.solr.{SolrDataMap, SolrMultiMap}
 import spray.json._
+
 
 /**
   * Created by chanceroberts on 8/23/17.
@@ -31,9 +32,9 @@ object SerializeSolrTest extends JsonSerializer[SolrTest] {
 object solrexample {
   val serializer = SerializeSolrTest
   def testSolrMap(): Unit = {
-    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "test")
+    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "testOne")
     sDataMap.put("testOne", SolrTest())
-    sDataMap.put("testTwo", SolrTest(List(4,5,6), "!!!"))
+    sDataMap.put("testTwo", SolrTest(List(), ""))
     println(sDataMap.get("testOne"))
     println(sDataMap.get("testTwo"))
     println(sDataMap.all())
@@ -79,8 +80,7 @@ object solrexample {
   }
 
   def main(args: Array[String]): Unit = {
-    import SolrProtocol._
-    println(SolrTest2(None).toJson)
-    println(SolrTest2(Some(SolrTest())).toJson)
+    //println(Http("http://localhost:8983/solr/notACore/select?q=\"*:*\"&wt=json").asString.body.parseJson)
+    testSolrMap()
   }
 }

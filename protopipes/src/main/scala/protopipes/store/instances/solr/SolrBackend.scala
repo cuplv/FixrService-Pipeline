@@ -1,0 +1,190 @@
+package protopipes.store.instances.solr
+
+import java.io.{BufferedWriter, File, FileWriter}
+
+import com.typesafe.config.{Config, ConfigFactory}
+import protopipes.configurations.{ConfOpt, Constant, PipeConfig}
+import protopipes.data.Identifiable
+import protopipes.exceptions.ProtoPipeException
+import spray.json._
+
+import scala.collection.JavaConverters._
+import scala.io.Source
+import scalaj.http.Http
+
+/**
+  * Created by chanceroberts on 8/25/17.
+  */
+class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
+  val solrFallbackConf: Config = ConfigFactory.parseMap(
+    Map[String, Any]("solrLocation" -> "localhost:8983", "solrServerLocation" -> "~/solr/server",
+      "solrCoreInformation" -> "~/solr/server/solr/configsets/data_driven_schema_configs/conf", "isCloud" -> false).asJava)
+  val solrNormalConfig: Config = try{
+    config.getConfig(Constant.PROTOPIPES).getConfig("_solr")
+  } catch{
+    case e: Exception => ConfigFactory.parseMap(Map[String, Any]().asJava)
+  }
+  val solrConfig: Config = PipeConfig.resolveOptions(solrFallbackConf, ConfOpt.typesafeConfig(solrNormalConfig))
+  val solrLocation: String = solrConfig.getString("solrLocation")
+  val solrServerLocation: String = solrConfig.getString("solrServerLocation")
+  val url = s"http://$solrLocation/solr/$nam/"
+  var templateOpt: Option[JsObject] = None
+  try {
+    //Make sure the core doesn't actually exist first.
+    Http(url + "select?wt=json&q=\"*:*\"").asString.body.parseJson
+  } catch {
+    case _: JsonParser.ParsingException => createCore()
+    case e: Exception => throw new ProtoPipeException(Some(s"Solr Core $nam may be malformed."), Some(e))
+  }
+
+  def createCore(): Unit = {
+    def copyAFile(src: String, dest: String) = {
+      val destFile = new File(dest)
+      destFile.createNewFile()
+      val destWriter = new BufferedWriter(new FileWriter(destFile))
+      val srcReader = Source.fromFile(src)
+      srcReader.getLines().foreach(line => destWriter.write(line))
+      srcReader.close()
+      destWriter.close()
+    }
+    if (solrConfig.getBoolean("isCloud")) {
+      Http(s"http://$solrLocation/solr/admin/collections?action=CREATE&name=$nam&numShards=1").asString.body
+    } else {
+      val newCore = new File(s"$solrServerLocation/solr/$nam")
+      if (!newCore.isDirectory) newCore.mkdir()
+      val confInfo = new File(s"$solrServerLocation/solr/$nam/conf")
+      if (!confInfo.isDirectory) confInfo.mkdir()
+      val solrInformation = new File(solrConfig.getString("solrCoreInformation"))
+      def recursivelyCopy(newFile: File): Unit ={
+        newFile.listFiles().foreach{
+          file =>
+            val dest = file.getPath.diff(solrInformation.getPath)
+            if (file.isDirectory){
+              new File(s"$solrServerLocation/solr/$nam/conf$dest").mkdir()
+              recursivelyCopy(file)
+            }
+            else{
+              copyAFile(file.getPath, s"$solrServerLocation/solr/$nam/conf$dest")
+            }
+        }
+      }
+      if (solrInformation.isDirectory) recursivelyCopy(solrInformation)
+      else throw new ProtoPipeException(Some("solrCoreInformation was expected to be a directory."), None)
+      Http(s"http://$solrLocation/solr/admin/cores?action=CREATE&name=$nam").asString.body
+    }
+  }
+
+  def keyToString(key: Any): String = {
+    key match {
+      case i: Identifiable[_] => i.getId().toString
+      case _ => key.toString
+    }
+  }
+
+  def getDocumentsFromQuery(query: String): List[JsObject] = {
+    val queryURL = url+query
+    val json = Http(queryURL).asString.body
+    json.parseJson.asJsObject().fields.get("response") match {
+      case Some(response: JsValue) => response.asJsObject.fields.get("docs") match {
+        case Some(docs: JsArray) => docs.elements.toList.map{doc => mkDocDeserializable(doc.asJsObject)}
+        case _ =>
+          throw new ProtoPipeException(Some(s"SolrMap $nam response is malformed. Are you sure you're really using Solr?"), None)
+      }
+      case _ =>
+        throw new ProtoPipeException(Some(s"Probably got an error in SolrMap $nam on query $query. Please fix your query."), None)
+    }
+  }
+
+  def getDocument(id: String): Option[JsObject] = {
+    def getDocumentFromList(list: List[JsObject], id: String): Option[JsObject] = list match{
+      case Nil => None
+      case first :: rest => first.fields.get("id") match{
+        case Some(x: JsString) if x.value.equals(id) => Some(first)
+        case _ => getDocumentFromList(rest, id)
+      }
+    }
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&q=id:\"" + id + "\"")
+    getDocumentFromList(docsToCheck, id)
+  }
+
+  def getDocuments(id: String, field: String = "_id_"): List[JsObject] = {
+    val docsToCheck = getDocumentsFromQuery("select?wt=json&rows=1000000000&q="+field+":\""+ id + "\"")
+    docsToCheck.foldRight(List[JsObject]()) {
+      case (v: JsValue, list) =>
+        val obj = v.asJsObject()
+        obj.fields.get(field) match {
+          case Some(str: JsString) if str.value.equals(id) => obj :: list
+          case _ => list
+        }
+    }
+  }
+
+  def addDocument(doc: JsObject, key: String): Unit = {
+    /*val newDoc = JsObject(doc.fields.map{
+      case (str, JsString("")) => (str, JsString("_empty_JsString"))
+      case (str, JsArray(Vector())) => (str, JsArray(Vector(JsString("_empty_JsArray"))))
+      case (str, jsValue) => (str, jsValue)
+    })*/
+    val json = JsObject(Map("add" -> JsObject(Map("doc" -> doc)), "commit" -> JsObject())).toString()
+    println(json)
+    val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
+    println(result)
+    result.parseJson.asJsObject.fields.get("error") match{
+      case Some(x) => throw new Exception(s"Could not update the core $nam on key $key.")
+      case _ => ()
+    }
+    templateOpt match{
+      case None => templateOpt = Some(doc)
+      case _ => ()
+    }
+  }
+
+  def deleteDocuments(ids: List[String]): Unit = {
+    val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector), "commit" -> JsObject())).toString
+    val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
+    result.parseJson.asJsObject.fields.get("error") match{
+      case Some(x) => throw new Exception(s"Could not update the core $nam on ID(s) $ids.")
+      case _ => ()
+    }
+  }
+
+  def mkDocDeserializable(doc: JsObject): JsObject = templateOpt match {
+    case None => doc
+    case Some(template) =>
+      JsObject(doc.fields.foldRight(Map[String, JsValue]()){
+        case ((key, jsValue), fieldMap) => key match{
+          case "_version_" => fieldMap
+          case _ => (jsValue, template.fields.get(key)) match {
+            /*case (JsArray(Vector(JsString("_empty_JsArray"))), _) => fieldMap + (key -> JsArray())
+            case (JsString("_empty_JsString"), _) => fieldMap + (key -> JsString(""))*/
+            case (trueValue: JsArray, Some(_: JsArray)) => fieldMap + (key -> trueValue)
+            case (trueValue, Some(_: JsArray)) => fieldMap + (key -> JsArray(trueValue))
+            case (trueValue: JsArray, Some(_)) => fieldMap + (key -> trueValue.elements.head)
+            case (trueValue, _) => fieldMap + (key -> trueValue)
+          }
+        }
+      })
+  }
+  /*templateOpt match{
+    case None => doc
+    case Some(template) =>
+      JsObject(template.fields.map{
+        case (key, jsValue) => (jsValue, doc.fields.get(key)) match{
+          case (thisValue, None) => thisValue match{
+            case _: JsArray => (key, JsArray())
+            case _: JsString => (key, JsString(""))
+            //Next line should NEVER happen as of this version, but I may add functionality for that later?
+            case _: JsObject => (key, JsObject())
+            case s => throw new Exception(s"Cannot have a null version of $s...")
+          }
+          case (_: JsArray, Some(trueValue: JsArray)) => (key, trueValue)
+          case (_: JsArray, Some(trueValue)) => (key, JsArray(trueValue))
+          case (_, Some(trueValue: JsArray)) => (key, trueValue.elements.head)
+          case (_, Some(trueValue)) => (key, trueValue)
+        }
+      })
+  }*/
+
+  def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?wt=json&rows=100000000&q=*:*")
+}
+
