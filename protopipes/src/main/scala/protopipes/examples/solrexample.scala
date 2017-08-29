@@ -32,7 +32,7 @@ object SerializeSolrTest extends JsonSerializer[SolrTest] {
 object solrexample {
   val serializer = SerializeSolrTest
   def testSolrMap(): Unit = {
-    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "testOne")
+    val sDataMap = new SolrDataMap[String, SolrTest](serializer, "test")
     sDataMap.put("testOne", SolrTest())
     sDataMap.put("testTwo", SolrTest(List(), ""))
     println(sDataMap.get("testOne"))

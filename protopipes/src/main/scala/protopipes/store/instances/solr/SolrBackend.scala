@@ -18,7 +18,8 @@ import scalaj.http.Http
 class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   val solrFallbackConf: Config = ConfigFactory.parseMap(
     Map[String, Any]("solrLocation" -> "localhost:8983", "solrServerLocation" -> "~/solr/server",
-      "solrCoreInformation" -> "~/solr/server/solr/configsets/data_driven_schema_configs/conf", "isCloud" -> false).asJava)
+      "solrCoreInformation" -> "~/solr/server/solr/configsets/data_driven_schema_configs/conf", "isCloud" -> false,
+      "canRemoveStuff" -> true).asJava)
   val solrNormalConfig: Config = try{
     config.getConfig(Constant.PROTOPIPES).getConfig("_solr")
   } catch{
@@ -28,7 +29,9 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   val solrLocation: String = solrConfig.getString("solrLocation")
   val solrServerLocation: String = solrConfig.getString("solrServerLocation")
   val url = s"http://$solrLocation/solr/$nam/"
+  var fieldsAdded: Map[String, Unit] = Map()
   var templateOpt: Option[JsObject] = None
+  val canRemoveStuff: Boolean = solrConfig.getBoolean("canRemoveStuff")
   try {
     //Make sure the core doesn't actually exist first.
     Http(url + "select?wt=json&q=\"*:*\"").asString.body.parseJson
@@ -120,12 +123,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   }
 
   def addDocument(doc: JsObject, key: String): Unit = {
-    /*val newDoc = JsObject(doc.fields.map{
-      case (str, JsString("")) => (str, JsString("_empty_JsString"))
-      case (str, JsArray(Vector())) => (str, JsArray(Vector(JsString("_empty_JsArray"))))
-      case (str, jsValue) => (str, jsValue)
-    })*/
-    val json = JsObject(Map("add" -> JsObject(Map("doc" -> doc)), "commit" -> JsObject())).toString()
+    val newDoc = if (canRemoveStuff) saveTheOmitted(doc) else doc
+    val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
     println(json)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     println(result)
@@ -154,36 +153,46 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
       JsObject(doc.fields.foldRight(Map[String, JsValue]()){
         case ((key, jsValue), fieldMap) => key match{
           case "_version_" => fieldMap
+          case "_EmptyFields" if canRemoveStuff => jsValue match{
+            case x: JsArray => x.elements.foldRight(fieldMap){
+              case (s: JsString, fMap) =>
+                fMap + (s.value->JsArray(Vector()))
+              case (_, fMap) => fMap
+            }
+            case _ => fieldMap + ("_EmptyFields" -> jsValue)
+          }
           case _ => (jsValue, template.fields.get(key)) match {
-            /*case (JsArray(Vector(JsString("_empty_JsArray"))), _) => fieldMap + (key -> JsArray())
-            case (JsString("_empty_JsString"), _) => fieldMap + (key -> JsString(""))*/
+            case (trueValue: JsArray, Some(_: JsArray)) if canRemoveStuff =>
+              fieldMap + (key -> JsArray(trueValue.elements.map{
+                case JsString(" ") => JsString("")
+                case x => x
+              }))
             case (trueValue: JsArray, Some(_: JsArray)) => fieldMap + (key -> trueValue)
             case (trueValue, Some(_: JsArray)) => fieldMap + (key -> JsArray(trueValue))
             case (trueValue: JsArray, Some(_)) => fieldMap + (key -> trueValue.elements.head)
+            case (JsString("_ _"), _) if canRemoveStuff => fieldMap + (key -> JsString(""))
             case (trueValue, _) => fieldMap + (key -> trueValue)
           }
         }
       })
   }
-  /*templateOpt match{
-    case None => doc
-    case Some(template) =>
-      JsObject(template.fields.map{
-        case (key, jsValue) => (jsValue, doc.fields.get(key)) match{
-          case (thisValue, None) => thisValue match{
-            case _: JsArray => (key, JsArray())
-            case _: JsString => (key, JsString(""))
-            //Next line should NEVER happen as of this version, but I may add functionality for that later?
-            case _: JsObject => (key, JsObject())
-            case s => throw new Exception(s"Cannot have a null version of $s...")
-          }
-          case (_: JsArray, Some(trueValue: JsArray)) => (key, trueValue)
-          case (_: JsArray, Some(trueValue)) => (key, JsArray(trueValue))
-          case (_, Some(trueValue: JsArray)) => (key, trueValue.elements.head)
-          case (_, Some(trueValue)) => (key, trueValue)
-        }
-      })
-  }*/
+
+  def saveTheOmitted(doc: JsObject): JsObject = {
+    val newDocFields = doc.fields.foldRight((Map[String, JsValue](), List[JsString]())){
+      case ((str, jsValue), (mp, missingFields)) => jsValue match{
+        case JsArray(Vector()) => (mp, JsString(str) :: missingFields)
+        case JsString("") => (mp + (str->JsString("_ _")), missingFields)
+        case j: JsArray => (mp + (str->JsArray(j.elements.foldRight(List[JsValue]()){
+          case (jsV, lis) => (jsValue match{
+            case JsString("") => JsString("_ _")
+            case x => x
+          }) :: lis
+        }.toVector)), missingFields)
+        case _ => (mp + (str->jsValue), missingFields)
+      }
+    }
+    JsObject(newDocFields._1 + ("_EmptyFields" -> JsArray(newDocFields._2.toVector)))
+  }
 
   def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?wt=json&rows=100000000&q=*:*")
 }
