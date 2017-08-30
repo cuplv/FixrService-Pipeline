@@ -125,9 +125,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   def addDocument(doc: JsObject, key: String): Unit = {
     val newDoc = if (canRemoveStuff) saveTheOmitted(doc) else doc
     val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
-    println(json)
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
-    println(result)
     result.parseJson.asJsObject.fields.get("error") match{
       case Some(x) => throw new Exception(s"Could not update the core $nam on key $key.")
       case _ => ()

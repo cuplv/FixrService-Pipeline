@@ -17,7 +17,7 @@ import scalaj.http.Http
 case class SolrClassObject(name: String, args: List[Any])
 
 object SolrInstances{
-  def createIdDataMap[Data <: Identifiable[Data]](name: String): DataStore[Data] = {
+  def createDataMap[Data <: Identifiable[Data]](name: String): DataStore[Data] = {
     ???
   }
 }
