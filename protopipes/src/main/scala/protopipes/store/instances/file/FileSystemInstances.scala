@@ -103,14 +103,7 @@ class FileSystemDataMultiMap[Input <: Identifiable[Input], Output <: I[String]](
 
   override def remove(keys: Seq[Input]): Unit = ???
 
-  override def remove(data: Set[Output]): Unit = {
-    data foreach(file =>
-      try{
-        ???
-      } catch{
-        case e: Exception => println(s"File $file has not been deleted properly or was not found in the File System.")
-      })
-  }
+  override def remove(data: Set[Output]): Unit = ???
 
   override def remove(key: Input): Unit = ???
 
@@ -132,7 +125,25 @@ class FileSystemDataMultiMap[Input <: Identifiable[Input], Output <: I[String]](
 }
 
 class FileSystemIterator[Output <: I[String]](subdirectory: String) extends Iterator[Output]{
-  override def next(): Output = ???
+  var files: List[String] = developQueue(subdirectory)
 
-  override def hasNext: Boolean = ???
+  private def developQueue(subdir: String): List[String] = {
+    new File(subdir).listFiles().toList.flatMap{
+      file =>
+        if (file.isDirectory) developQueue(s"$subdir/${file.getName}")
+        else List(file.getName)
+    }
+  }
+
+  override def next(): Output = files match{
+    case Nil => throw new Exception("File System Iterator does not have any values left.")
+    case head :: rest =>
+      val ret = Source.fromFile(head).getLines().foldRight("") {
+        case (line, fileContent) => s"$line\n$fileContent"
+      }
+      files = rest
+      I(ret).asInstanceOf[Output]
+  }
+
+  override def hasNext: Boolean = files.nonEmpty
 }
