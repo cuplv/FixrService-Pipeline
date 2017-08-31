@@ -56,7 +56,7 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
   override def remove(keys: Seq[Input]): Unit =
     keys.foreach(key => new File(s"$subdirectory/${key.getId()}").delete())
 
-  override def iterator(): Iterator[Output] = ???
+  override def iterator(): Iterator[Output] = new FileSystemIterator[Output](subdirectory)
 
   override def get(key: Input): Option[Output] = {
     try {
