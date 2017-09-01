@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import com.typesafe.config.{Config, ConfigFactory}
 import protopipes.configurations.{ConfOpt, Constant, PipeConfig}
 import protopipes.data.Identifiable
-import protopipes.exceptions.ProtoPipeException
+import protopipes.exceptions.{NotInitializedException, ProtoPipeException}
 import spray.json._
 
 import scala.collection.JavaConverters._
@@ -36,11 +36,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     //Make sure the core doesn't actually exist first.
     Http(url + "select?wt=json&q=\"*:*\"").asString.body.parseJson
   } catch {
-    case _: JsonParser.ParsingException =>
-      if (hasSchema)
-        throw new ProtoPipeException(Some(s"Solr Core $nam needs to have a schema to proceed."))
-      else createCore()
-    case e: Exception => throw new ProtoPipeException(Some(s"Solr Core $nam may be malformed."), Some(e))
+    case e: Exception =>
+      throw new NotInitializedException(s"Core $nam", s"Creating a Data Store on core $nam.", None)
   }
 
   def keyToString(key: Any): String = {
