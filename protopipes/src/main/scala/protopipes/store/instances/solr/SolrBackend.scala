@@ -31,6 +31,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   val url = s"http://$solrLocation/solr/$nam/"
   var fieldsAdded: Map[String, Unit] = Map()
   var templateOpt: Option[JsObject] = None
+  var toCommit: Boolean = false
   val hasSchema: Boolean = solrConfig.getBoolean("hasSchema")
   try {
     //Make sure the core doesn't actually exist first.
@@ -66,6 +67,10 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   }
 
   def getDocument(id: String): Option[JsObject] = {
+    if (toCommit){
+      Http(url+"update").postData("{ \"commit\": {} }").asString.body
+      toCommit = false
+    }
     def getDocumentFromList(list: List[JsObject], id: String): Option[JsObject] = list match{
       case Nil => None
       case first :: rest => first.fields.get("id") match{
@@ -91,7 +96,9 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def addDocument(doc: JsObject, key: String): Unit = {
     val newDoc = if (hasSchema) doc else saveTheOmitted(doc)
-    val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
+    val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)))).toString()
+    toCommit = true
+    //JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     result.parseJson.asJsObject.fields.get("error") match{
       case Some(x) => throw new Exception(s"Could not update the core $nam on key $key.")
@@ -104,7 +111,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   }
 
   def deleteDocuments(ids: List[String]): Unit = {
-    val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector), "commit" -> JsObject())).toString
+    val json = JsObject(Map("delete" -> JsArray(ids.map(JsString(_)).toVector))).toString() //, "commit" -> JsObject())).toString
+    toCommit = true
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body
     result.parseJson.asJsObject.fields.get("error") match{
       case Some(x) => throw new Exception(s"Could not update the core $nam on ID(s) $ids.")

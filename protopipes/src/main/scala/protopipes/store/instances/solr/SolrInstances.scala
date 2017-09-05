@@ -33,7 +33,15 @@ class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Da
     solrBack.addDocument(doc, kToString)
   }
 
-  override def put_(data: Seq[Data]): Unit = {}
+  override def put_(data: Seq[Data]): Unit = {
+    data.foreach{
+      dta =>
+        val key = dta.getId()
+        val document = serializer.serializeToJson(dta)
+        val doc = JsObject(document.fields + ("id" -> JsString(key)))
+        solrBack.addDocument(doc, key)
+    }
+  }
 
   override def get(key: Key): Option[Data] = {
     solrBack.getDocument(solrBack.keyToString(key)) match{
