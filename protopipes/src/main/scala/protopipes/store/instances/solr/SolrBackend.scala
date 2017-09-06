@@ -38,7 +38,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     Http(url + "select?wt=json&q=\"*:*\"").asString.body.parseJson
   } catch {
     case e: Exception =>
-      throw new NotInitializedException(s"Core $nam", s"Creating a Data Store on core $nam.", None)
+      createCore()
+      //throw new NotInitializedException(s"Core $nam", s"Creating a Data Store on core $nam.", None)
   }
 
   def keyToString(key: Any): String = {
@@ -68,7 +69,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def getDocument(id: String): Option[JsObject] = {
     if (toCommit){
-      Http(url+"update").postData("{ \"commit\": {} }").asString.body
+      Http(url+"update").postData("{ \"commit\": {} }".getBytes).header("Content-Type", "application/json").asString.body
       toCommit = false
     }
     def getDocumentFromList(list: List[JsObject], id: String): Option[JsObject] = list match{

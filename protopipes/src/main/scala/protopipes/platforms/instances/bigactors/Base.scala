@@ -64,6 +64,7 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
     case AddedWorker(worker: ActorRef) =>
       jobsLeft match{
         case job :: rest =>
+          println(AddedWorker(worker), job, rest)
           worker ! job
           become(state(rest, worker :: workerList))
         case Nil => become(state(jobsLeft, worker :: workerList, isWorking+(worker->true)))
@@ -105,8 +106,8 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
     case Terminate() =>
       workerList.foreach(_ ! DoNotAlertSupervisor())
       workerList.foreach(_ ! PoisonPill)
-    case AddedJobs(inputs: List[Input@unchecked]) => become(state(jobsLeft ::: inputs, workerList, isWorking));
-    case ("AddedJob", input: Input@unchecked) => become(state(jobsLeft ::: List(input), workerList, isWorking));
+    case AddedJobs(inputs: List[Input@unchecked]) => become(state(jobsLeft ::: inputs, workerList, isWorking))
+    case ("AddedJob", input: Input@unchecked) => become(state(jobsLeft ::: List(input), workerList, isWorking))
     case other => println(s"$other was sent with nothing occurring.")
   }
 
@@ -141,6 +142,7 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
   def receive: Receive = {
     case DoNotAlertSupervisor() => alertSupervisor = false
     case job: Input @ unchecked =>
+      println(s"$self received job $job!")
       currInput = Some(job)
       longestTimeWaiting match{
         case Duration.Inf => platform.compute(job)
@@ -234,8 +236,6 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
     supervisor ! Terminate()
     actorSystem.terminate
   }
-
-  override def getErrorCurator(): ErrorCurator[Input] = getErrorCurator()
 }
 
 abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
