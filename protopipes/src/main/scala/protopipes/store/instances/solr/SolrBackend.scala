@@ -84,6 +84,10 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   }
 
   def getDocuments(id: String, field: String = "_id_"): List[JsObject] = {
+    if (toCommit){
+      Http(url+"update").postData("{ \"commit\": {} }".getBytes).header("Content-Type", "application/json").asString.body
+      toCommit = false
+    }
     val docsToCheck = getDocumentsFromQuery("select?wt=json&rows=1000000000&q="+field+":\""+ id + "\"")
     docsToCheck.foldRight(List[JsObject]()) {
       case (v: JsValue, list) =>

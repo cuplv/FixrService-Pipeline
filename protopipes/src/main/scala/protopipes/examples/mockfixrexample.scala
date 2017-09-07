@@ -74,7 +74,7 @@ object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
 
 case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends Mapper[GitID, GitRepo]{
   override def compute(input: GitID): List[GitRepo] = {
-    /*try {
+    try {
       val repos = new File(repoFolderLocation)
       if (!repos.exists) repos.mkdir()
       val userRepos = new File(s"$repoFolderLocation/${input.user}")
@@ -83,15 +83,13 @@ case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends M
       val trueRepo = new File(s"$repoFolderLocation/$repoLocation")
       if (!(trueRepo.isDirectory && trueRepo.length() > 0)) {
         s"git clone https://github.com/$repoLocation $repoFolderLocation/$repoLocation".!
-        List(GitRepo(input.user, input.repo, repoLocation))
+        List(GitRepo(input.user, input.repo, s"$repoFolderLocation/$repoLocation"))
       } else
         throw new UserComputationException("Repo that should be cloned has stuff in it.", None)
     } catch{
       case u: UserComputationException => throw u
       case e: Exception => throw new UserComputationException("File System is not formatted correctly?", Some(e))
-    }*/
-    //Until BigActor behaves, this is what it will be. I don't want to keep removing repos.
-    List(GitRepo(input.user, input.repo, s"$repoFolderLocation/${input.user}/${input.repo}"))
+    }
   }
 }
 
@@ -204,8 +202,8 @@ object mockfixrexample {
     val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
     val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
     import protopipes.pipes.Implicits._
-    val pipe = gitID :--Clone()-->clonedMap
-    //val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap:--FeatureExtraction()-->featureMap
+    //val pipe = gitID :--Clone()-->clonedMap
+    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap:--FeatureExtraction()-->featureMap
     pipe.check(config)
     pipe.init(config)
     textMap.all().foreach{

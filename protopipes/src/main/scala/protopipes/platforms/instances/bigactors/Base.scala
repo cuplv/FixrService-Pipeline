@@ -64,10 +64,9 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
     case AddedWorker(worker: ActorRef) =>
       jobsLeft match{
         case job :: rest =>
-          println(AddedWorker(worker), job, rest)
           worker ! job
-          become(state(rest, worker :: workerList))
-        case Nil => become(state(jobsLeft, worker :: workerList, isWorking+(worker->true)))
+          become(state(rest, worker :: workerList, isWorking+(worker->true)))
+        case Nil => become(state(jobsLeft, worker :: workerList, isWorking+(worker->false)))
       }
     case AskForJob(worker: ActorRef) => jobsLeft match{
       case Nil =>
@@ -106,13 +105,26 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
     case Terminate() =>
       workerList.foreach(_ ! DoNotAlertSupervisor())
       workerList.foreach(_ ! PoisonPill)
-    case AddedJobs(inputs: List[Input@unchecked]) => become(state(jobsLeft ::: inputs, workerList, isWorking))
-    case ("AddedJob", input: Input@unchecked) => become(state(jobsLeft ::: List(input), workerList, isWorking))
+    case AddedJobs(inputs: List[Input@unchecked]) =>
+      val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: inputs, workerList, isWorking)
+      become(state(newJobs, workerList, newIsWorking))
+    case ("AddedJob", input: Input@unchecked) =>
+      val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: List(input), workerList, isWorking)
+      become(state(newJobs, workerList, newIsWorking))
     case other => println(s"$other was sent with nothing occurring.")
   }
 
   def receive(): Receive = {
     case _ => throw new Exception("The Big Actor Supervisor is never supposed to be at this state.")
+  }
+
+  def giveJobsToWorkers(jobs: List[Input], workers: List[ActorRef], isWorking: Map[ActorRef, Boolean]): (List[Input], Map[ActorRef, Boolean]) = (jobs, workers) match{
+    case (Nil, _) | (_, Nil) => (jobs, isWorking)
+    case (job :: otherJobs, worker :: rest) if !isWorking(worker) =>
+      worker ! job
+      giveJobsToWorkers(otherJobs, rest, isWorking+(worker->true))
+    case (_, worker :: rest) =>
+      giveJobsToWorkers(jobs, rest, isWorking)
   }
 }
 
@@ -142,7 +154,6 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
   def receive: Receive = {
     case DoNotAlertSupervisor() => alertSupervisor = false
     case job: Input @ unchecked =>
-      println(s"$self received job $job!")
       currInput = Some(job)
       longestTimeWaiting match{
         case Duration.Inf => platform.compute(job)
