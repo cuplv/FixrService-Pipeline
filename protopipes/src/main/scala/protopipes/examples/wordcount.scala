@@ -27,16 +27,9 @@ case class Count(word: String, count: Int) extends Identifiable[Count] {
 
 }
 
-case class CountOccurrence() extends Reducer[I[String],Count] {
-
+case class CountOccurrence() extends
+  Reducer[I[String],Count](i => BasicIdentity(i.a), i => o => Count(i.a, o.count + 1), Count("",0)) {
   override val versionOpt = Some("v0.12")
-
-  override def groupBy(input: I[String]): Identity[Count] = BasicIdentity(input.a)
-
-  override def fold(input: I[String], output: Count): Count = Count(input.a, output.count + 1)
-
-  override def zero(): Count = Count("", 0)
-
 }
 
 object wordcount {

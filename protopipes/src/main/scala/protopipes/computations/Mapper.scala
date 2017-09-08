@@ -13,7 +13,10 @@ import protopipes.store.DataStore
   * Created by edmundlam on 8/14/17.
   */
 
-abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
+class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
+        (op: Input => List[Output]) extends UnaryComputation[Input,Output] {
+
+  def getOp = op
 
   def withConfig(newConfigOption: ConfOpt): Mapper[Input,Output] = {
     configOption = newConfigOption
@@ -22,20 +25,20 @@ abstract class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Outpu
 
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
     val rconf = PipeConfig.resolveOptions(conf, configOption)
-    val builder = PlatformBuilder.load(rconf)
+    val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input,Output] = builder.mapperPlatform[Input,Output]()
+    platform.setComputation(this)
     platform.init(rconf, inputMap, outputMap, builder)
     // platform.setMapper(this)
-    platform.setComputation(this)
     init(rconf, inputMap, outputMap, platform)
   }
 
-  def compute(input: Input): List[Output]
+  // def compute(input: Input): List[Output]
 
   def tryCompute(input: Input): Option[List[Output]] = {
     val platform = getUnaryPlatform()
     try {
-      val outputs = compute(input).map(
+      val outputs = op(input).map(
         output => {
           val voutput = platform.getVersionCurator().stampVersion(output)
           platform.getOutputMap().put(voutput)

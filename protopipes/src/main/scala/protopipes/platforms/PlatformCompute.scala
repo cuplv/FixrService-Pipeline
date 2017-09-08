@@ -33,7 +33,7 @@ trait ComputesMap[Input <: Identifiable[Input], Output <: Identifiable[Output]] 
 
   def tryCompute(upstreamConnector: Connector[Input], mapper: Mapper[Input, Output], input: Input, outputMap: DataStore[Output]): List[Output] = {
     try {
-      val outputs = mapper.compute(input).map(
+      val outputs = mapper.getOp(input).map(
         output => {
           outputMap.put(output)
           output
@@ -51,6 +51,7 @@ trait ComputesMap[Input <: Identifiable[Input], Output <: Identifiable[Output]] 
 
 }
 
+/*
 trait ComputesReduce[Input <: Identifiable[Input], Output <: Identifiable[Output]] {
 
   var reducerOpt: Option[Reducer[Input,Output]] = None
@@ -129,4 +130,4 @@ trait ComputesPairwiseCompose[InputL <: Identifiable[InputL], InputR <: Identifi
     }
   }
 
-}
+} */

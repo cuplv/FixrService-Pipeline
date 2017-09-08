@@ -89,6 +89,18 @@ object Implicits {
 case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], mapper: Mapper[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
 
+  /*
+  var mapperOpt: Option[Mapper[Input,Output]] = None
+
+  def getMapper: Mapper[Input,Output] = mapperOpt match {
+    case Some(mapper) => mapper
+    case None => {
+      val mapper = new Mapper[Input,Output](fmap)
+      mapperOpt = Some(mapper)
+      mapper
+    }
+  } */
+
   override def check(conf: PipeConfig): Unit = {
     p1.check(conf)
     mapper.check(conf, p1.end(), p2.head())
@@ -227,6 +239,18 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
 
 case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (mapper: Mapper[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
+
+  /*
+  var mapperOpt: Option[Mapper[Input,Output]] = None
+
+  def getMapper: Mapper[Input,Output] = mapperOpt match {
+    case Some(mapper) => mapper
+    case None => {
+      val mapper = new Mapper[Input,Output](fmap)
+      mapperOpt = Some(mapper)
+      mapper
+    }
+  } */
 
   override def check(conf: PipeConfig, input: DataStore[Input]): Unit = {
     mapper.check(conf, input, p.head())

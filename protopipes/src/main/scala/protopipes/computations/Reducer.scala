@@ -13,8 +13,12 @@ import protopipes.store.{DataMap, DataStore}
   * Created by edmundlam on 8/14/17.
   */
 
+// case class Reduce[Input,Output](groupBy: Input => Identity[Output], fold: Input => Output => Output, zero: Output)
 
-abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]] extends UnaryComputation[Input,Output] {
+class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
+   ( groupBy: Input => Identity[Output]
+   , fold: Input => Output => Output
+   , zero: Output) extends UnaryComputation[Input,Output] {
 
   def withConfig(newConfigOption: ConfOpt): Reducer[Input,Output] = {
     configOption = newConfigOption
@@ -30,7 +34,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
 
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
     val rconf = PipeConfig.resolveOptions(conf, configOption)
-    val builder = PlatformBuilder.load(rconf)
+    val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input, Output] = builder.reducerPlatform[Input,Output]()
     platform.init(rconf, inputMap, outputMap, builder)
     // platform.setReducer(this)
@@ -38,11 +42,11 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
     init(rconf, inputMap, outputMap, platform)
   }
 
-  def groupBy(input: Input): Identity[Output]
+  // def groupBy(input: Input): Identity[Output]
 
-  def fold(input: Input, output: Output): Output
+  // def fold(input: Input, output: Output): Output
 
-  def zero(): Output
+  // def zero(): Output
 
   def tryGroupBy(input: Input): Option[Identity[Output]] = {
     val platform = getUnaryPlatform()
@@ -62,7 +66,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
   def tryFold(input: Input, output: Output): Option[Output] = {
     val platform = getUnaryPlatform()
     try {
-      val newOutput = platform.getVersionCurator().stampVersion(fold(input, output))
+      val newOutput = platform.getVersionCurator().stampVersion(fold(input)(output))
       platform.getUpstreamConnector.reportUp(Status.Done, input)
       platform.getProvenanceCurator.reportProvenance(input, output)
       Some(newOutput)
@@ -78,7 +82,7 @@ abstract class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Outp
   def tryZero(): Option[Output] = {
     val platform = getUnaryPlatform()
     try {
-      Some(zero())
+      Some(zero)
     } catch {
       case ex: Exception => {
         // TODO: Log this somewhere

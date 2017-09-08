@@ -16,9 +16,17 @@ import scala.util.Random
 /**
   * Created by edmundlam on 8/8/17.
   */
+/*
+case class PairwiseCompose[InputL,InputR,Output](filter: InputL => InputR => Boolean, compose: InputL => InputR => Output)
 
-abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
-     extends BinaryComputation[InputL,InputR,Output] {
+object PairwiseCompose {
+  def cartesian[InputL,InputR]: PairwiseCompose[InputL,InputR,protopipes.data.Pair[InputL,InputR]] = {
+    PairwiseCompose( _ => _ => true , inputL => inputR => protopipes.data.Pair(inputL,inputR) )
+  }
+} */
+
+class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
+   (filter: InputL => InputR => Boolean, compose: InputL => InputR => Output) extends BinaryComputation[InputL,InputR,Output] {
 
   def withConfig(newConfigOption: ConfOpt): PairwiseComposer[InputL, InputR, Output] = {
     configOption = newConfigOption
@@ -27,7 +35,7 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
 
   def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
      val rconf = PipeConfig.resolveOptions(conf, configOption)
-     val builder = PlatformBuilder.load(rconf)
+     val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
      val platform: BinaryPlatform[InputL,InputR,Output] = builder.pairwiseComposerPlatform[InputL,InputR,Output]
      platform.init(rconf, inputLMap, inputRMap, outputMap, builder)
      // platform.setPairwiseComposer(this)
@@ -35,15 +43,15 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
      init(rconf, inputLMap, inputRMap, outputMap, platform)
   }
 
-  def filter(inputL: InputL, inputR: InputR): Boolean
+  // def filter(inputL: InputL, inputR: InputR): Boolean
 
-  def compose(inputL: InputL, inputR: InputR): Output
+  // def compose(inputL: InputL, inputR: InputR): Output
 
   def tryFilterAndCompose(pair: protopipes.data.Pair[InputL,InputR]): Option[Output] = {
     val platform = getBinaryPlatform()
     try {
-      val output = if(filter(pair.left, pair.right)) {
-        val output = platform.getVersionCurator().stampVersion( compose(pair.left, pair.right) )
+      val output = if(filter(pair.left)(pair.right)) {
+        val output = platform.getVersionCurator().stampVersion( compose(pair.left)(pair.right) )
         platform.getOutputMap().put(output)
         platform.getProvenanceCurator().reportProvenance(pair, output)
         Some(output)
@@ -76,11 +84,15 @@ abstract class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identi
 
 }
 
-class CartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]] extends PairwiseComposer[InputL,InputR,protopipes.data.Pair[InputL,InputR]] {
+class CartesianProduct[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]] extends
+  PairwiseComposer[InputL,InputR,protopipes.data.Pair[InputL,InputR]](
+    filter = _ => _ => true,
+    compose = inputL => inputR => protopipes.data.Pair(inputL,inputR)
+  )
 
-  override def filter(inputL: InputL, inputR: InputR): Boolean = true
-
-  override def compose(inputL: InputL, inputR: InputR): data.Pair[InputL, InputR] = protopipes.data.Pair(inputL,inputR)
-  
-}
+/*
+{
+  // override def filter(inputL: InputL, inputR: InputR): Boolean = true
+  // override def compose(inputL: InputL, inputR: InputR): data.Pair[InputL, InputR] = protopipes.data.Pair(inputL,inputR)
+} */
 

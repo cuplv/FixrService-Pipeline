@@ -2,7 +2,7 @@ package protopipes.examples
 
 import protopipes.configurations.{Compute, DataStoreBuilder, PipeConfig, PlatformBuilder}
 import protopipes.configurations.instances.ThinActorPlatformBuilder
-import protopipes.computations.Mapper
+import protopipes.computations.{Mapper}
 import protopipes.connectors.instances.{ActorConnector, IncrTrackerJobQueue}
 import protopipes.data.I
 import protopipes.data.Implicits._
@@ -16,28 +16,19 @@ import com.typesafe.config.ConfigFactory
   * Created by edmundlam on 8/8/17.
   */
 
-case class Plus(n: Int) extends Mapper[I[Int],I[Int]] {
-
+case class Plus(n: Int) extends Mapper[I[Int],I[Int]](input => List(I(input.i + n)) ) {
   override val versionOpt: Option[String] = Some("v0.5")
-
-  override def compute(input: I[Int]): List[I[Int]] = List( I(input.i + n) )
-
+  //  override def compute(input: I[Int]): List[I[Int]] = List( I(input.i + n) )
 }
 
-case class TimesPair() extends Mapper[protopipes.data.Pair[I[Int],I[Int]],I[Int]] {
-
+case class TimesPair() extends Mapper[protopipes.data.Pair[I[Int],I[Int]],I[Int]](pair => List( I(pair.left.i * pair.right.i) )) {
   override val versionOpt: Option[String] = Some("v0.6")
-
-  override def compute(input: protopipes.data.Pair[I[Int],I[Int]]): List[I[Int]] = List(I(input.left.i * input.right.i))
-
+  // override def compute(input: protopipes.data.Pair[I[Int],I[Int]]): List[I[Int]] = List(I(input.left.i * input.right.i))
 }
 
-case class Helloworld() extends Mapper[I[Int],I[String]] {
-
+case class Helloworld() extends Mapper[I[Int],I[String]](input => List(I(s"Hello! ${input.i}"))) {
   override val versionOpt: Option[String] = Some("v0.5")
-
-  override def compute(input: I[Int]): List[I[String]] = List(I(s"Hello! ${input.i()}"))
-
+  // override def compute(input: I[Int]): List[I[String]] = List(I(s"Hello! ${input.i()}"))
 }
 
 object sample {

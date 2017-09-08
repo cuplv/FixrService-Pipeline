@@ -2,7 +2,7 @@ package protopipes.computations
 
 import com.typesafe.config.Config
 import protopipes.checkers.{BinaryChecker, UnaryChecker}
-import protopipes.configurations.{ConfOpt, DefaultOpt, PipeConfig, PlatformBuilder}
+import protopipes.configurations._
 import protopipes.data.Identifiable
 import protopipes.exceptions.NotInitializedException
 import protopipes.platforms.{BinaryPlatform, Platform, UnaryPlatform}
@@ -14,7 +14,7 @@ import scala.util.Random
   * Created by edmundlam on 8/14/17.
   */
 
-abstract class Computation  {
+abstract class Computation extends ConfigBuildsPlatform {
 
   var platformOpt: Option[Platform] = None
   var configOption: ConfOpt = DefaultOpt
