@@ -1,6 +1,6 @@
 package protopipes.platforms.instances.bigactors
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 import BigActorPlatform._
 import protopipes.configurations.{ConfOpt, Constant, PipeConfig, PlatformBuilder}
@@ -26,7 +26,7 @@ object ConfigHelper{
       Some(config.getConfig(path))
     }
     catch{
-      case e: Exception => None
+      case _: Exception => None
     }
   }
 
@@ -35,7 +35,7 @@ object ConfigHelper{
       Some(config.getObject(path))
     }
     catch{
-      case e: Exception => None
+      case _: Exception => None
     }
   }
 
@@ -51,6 +51,8 @@ object BigActorPlatform{
   case class AddedWorker(acRef: ActorRef)
   case class Crashed(acRef: ActorRef, exception: Exception)
   case class AddedJobs(l: List[_])
+  case class DoNotAlertSupervisor()
+  case class Terminate()
 
 }
 
@@ -63,15 +65,15 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
       jobsLeft match{
         case job :: rest =>
           worker ! job
-          state(rest, worker :: workerList)
-        case Nil => become(state(jobsLeft, worker :: workerList, isWorking+(worker->true)))
+          become(state(rest, worker :: workerList, isWorking+(worker->true)))
+        case Nil => become(state(jobsLeft, worker :: workerList, isWorking+(worker->false)))
       }
     case AskForJob(worker: ActorRef) => jobsLeft match{
       case Nil =>
-        state(Nil, workerList, isWorking+(worker->false))
+        become(state(Nil, workerList, isWorking+(worker->false)))
       case newJob :: rest =>
         worker ! newJob
-        state(rest, workerList, isWorking+(worker->true))
+        become(state(rest, workerList, isWorking+(worker->true)))
     }
     case Wake() =>
       platform.run()
@@ -99,18 +101,35 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
     case (Crashed(acRef: ActorRef, exception: Exception), input: Input @ unchecked) =>
       platform.getErrorCurator().reportError(input, exception)
       self ! AskForJob(acRef)
-    case Crashed(acRef: ActorRef, exception: Exception) => ()
-    case AddedJobs(inputs: List[Input@unchecked]) => state(jobsLeft ::: inputs, workerList, isWorking)
-    case ("AddedJob", input: Input@unchecked) => state(jobsLeft ::: List(input), workerList, isWorking)
+    case Crashed(_: ActorRef, _: Exception) => ()
+    case Terminate() =>
+      workerList.foreach(_ ! DoNotAlertSupervisor())
+      workerList.foreach(_ ! PoisonPill)
+    case AddedJobs(inputs: List[Input@unchecked]) =>
+      val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: inputs, workerList, isWorking)
+      become(state(newJobs, workerList, newIsWorking))
+    case ("AddedJob", input: Input@unchecked) =>
+      val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: List(input), workerList, isWorking)
+      become(state(newJobs, workerList, newIsWorking))
     case other => println(s"$other was sent with nothing occurring.")
   }
 
   def receive(): Receive = {
     case _ => throw new Exception("The Big Actor Supervisor is never supposed to be at this state.")
   }
+
+  def giveJobsToWorkers(jobs: List[Input], workers: List[ActorRef], isWorking: Map[ActorRef, Boolean]): (List[Input], Map[ActorRef, Boolean]) = (jobs, workers) match{
+    case (Nil, _) | (_, Nil) => (jobs, isWorking)
+    case (job :: otherJobs, worker :: rest) if !isWorking(worker) =>
+      worker ! job
+      giveJobsToWorkers(otherJobs, rest, isWorking+(worker->true))
+    case (_, worker :: rest) =>
+      giveJobsToWorkers(jobs, rest, isWorking)
+  }
 }
 
 class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: Platform with BigActor[Input]) extends Actor{
+  var alertSupervisor: Boolean = true
   var currInput: Option[Input] = None
   val longestTimeWaiting: Duration = platform.infoConfig.getInt("maxHoursOnInput") match{
     case 0 => platform.infoConfig.getInt("maxMinutesOnInput") match{
@@ -127,11 +146,13 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
     super.postStop()
     currInput match{
       case Some(input) => context.parent ! (Crashed(self, new Exception(s"An actor has crashed trying to compute $input.")), input)
-      case _ => context.parent ! Crashed(self, new Exception(s"An actor has decided to stop!"))
+      case _ if alertSupervisor => context.parent ! Crashed(self, new Exception(s"An actor has decided to stop!"))
+      case _ => ()
     }
   }
 
   def receive: Receive = {
+    case DoNotAlertSupervisor() => alertSupervisor = false
     case job: Input @ unchecked =>
       currInput = Some(job)
       longestTimeWaiting match{
@@ -154,7 +175,7 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
 trait BigActor[Input]{
   var infoConfig: Config = ConfigFactory.parseMap(Map[String, Any]
     ("numberOfWorkers" -> 4, "maxSecondsOnInput"-> 0, "maxMinutesOnInput" -> 0,
-      "maxHoursOnInput" -> 0, "workerList" -> Seq()).asJava)
+      "maxHoursOnInput" -> 0).asJava)
   implicit var actorSystemOpt: Option[ActorSystem] = None//ActorSystem(name)
   def compute(input: Input): Unit = ()
   def getErrorCurator(): ErrorCurator[Input]
@@ -206,9 +227,9 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   }
 
   override def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
-    super.init(conf, inputMap, outputMap, builder)
     val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[Input, Output]], this, listOfActors), "super"))
+    super.init(conf, inputMap, outputMap, builder)
   }
 
   override def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
@@ -223,10 +244,9 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   override def wake(): Unit = supervisor ! Wake()
 
   override def terminate(): Unit = {
+    supervisor ! Terminate()
     actorSystem.terminate
   }
-
-  override def getErrorCurator(): ErrorCurator[Input] = getErrorCurator()
 }
 
 abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
