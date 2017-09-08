@@ -69,6 +69,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def getDocument(id: String): Option[JsObject] = {
     if (toCommit){
+      println(url+"update")
       Http(url+"update").postData("{ \"commit\": {} }".getBytes).header("Content-Type", "application/json").asString.body
       toCommit = false
     }
@@ -101,7 +102,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def addDocument(doc: JsObject, key: String): Unit = {
     val newDoc = if (hasSchema) doc else saveTheOmitted(doc)
-    val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)))).toString()
+    val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc, "commitWithin" -> JsNumber(1000))))).toString()
     toCommit = true
     //JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
     val result = Http(url+"update").postData(json.getBytes).header("Content-Type", "application/json").asString.body

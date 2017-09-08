@@ -160,6 +160,7 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures]{
                 map.get("status") match{
                   case Some(JsString("ok")) => map.get("output") match{
                     case Some(bytes: JsString) =>
+                      println(s"File $file had its features extracted!")
                       val decodedBytes = Base64.getDecoder.decode(bytes.value)
                       GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, decodedBytes.toString) :: list
                     case _ =>
@@ -167,8 +168,8 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures]{
                   }
                   case Some(e: JsString) if e.value.length() > 5 && e.value.substring(0,5).equals("error") =>
                     map.get("output") match {
-                      case Some(exception: JsString) => println(new Exception(exception.value)); list
-                      case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6))); list
+                      case Some(exception: JsString) => println(new Exception(exception.value).getMessage); list
+                      case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6)).getMessage); list
                       case _ => println(new Exception(s"An error has occured on file $file!")); list
                     }
                   case _ => throw new UnexpectedPipelineException(s"Invalid status code on feature extractor!", None)
@@ -202,8 +203,7 @@ object mockfixrexample {
     val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
     val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
     import protopipes.pipes.Implicits._
-    //val pipe = gitID :--Clone()-->clonedMap
-    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap:--FeatureExtraction()-->featureMap
+    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap
     pipe.check(config)
     pipe.init(config)
     textMap.all().foreach{
