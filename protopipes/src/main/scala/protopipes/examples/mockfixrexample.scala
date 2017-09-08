@@ -72,8 +72,8 @@ object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
   override def deserialize_(json: JsObject): GitFeatures = json.convertTo[GitFeatures]
 }
 
-case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends Mapper[GitID, GitRepo]{
-  override def compute(input: GitID): List[GitRepo] = {
+case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends Mapper[GitID, GitRepo](
+  input => {
     try {
       val repos = new File(repoFolderLocation)
       if (!repos.exists) repos.mkdir()
@@ -91,10 +91,10 @@ case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends M
       case e: Exception => throw new UserComputationException("File System is not formatted correctly?", Some(e))
     }
   }
-}
+)
 
-case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo]{
-  override def compute(input: GitRepo): List[GitCommitInfo] = {
+case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
+  input => {
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]) {
       case (commit, listOfCommits) =>
@@ -141,10 +141,10 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo]{
         gCI :: listOfCommits
     }
   }
-}
+)
 
-case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures]{
-  override def compute(input: GitCommitInfo): List[GitFeatures] = {
+case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
+  input => {
     input.files.foldRight(List[GitFeatures]()){
       case (file, list) =>
         val len = file.length
@@ -185,7 +185,7 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures]{
         else list
     }
   }
-}
+)
 
 
 object mockfixrexample {
