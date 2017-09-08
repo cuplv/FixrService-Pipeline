@@ -1,7 +1,10 @@
 package protopipes.configurations
 
-import com.typesafe.config.Config
+import java.lang.reflect.Constructor
+
+import com.typesafe.config.{Config, ConfigValueFactory, ConfigValueType}
 import protopipes.data.Identifiable
+import protopipes.exceptions.NotSupportedConfigFormatException
 import protopipes.platforms.BinaryPlatform
 import protopipes.store._
 
@@ -12,6 +15,7 @@ import scala.util.Random
   */
 
 abstract class DataStoreBuilder {
+  var confOpt: Option[Config] = None
 
   def map[Key,Data](name:String, template:String = Constant.MAP): DataMap[Key,Data]
 
@@ -22,6 +26,21 @@ abstract class DataStoreBuilder {
   def queue[Data](name:String, template:String = Constant.QUEUE): DataQueue[Data]
 
   def list[Data](name:String, template:String = Constant.LIST): DataStore[Data]
+
+  def loadAux(pconf: PipeConfig): DataStoreBuilder = {
+    val conf = pconf.typeSafeConfig
+    val protoConf = conf.getConfig(Constant.PROTOPIPES)
+    confOpt = Some(protoConf)
+    this
+  }
+
+  def mkAuxStore[Store](template: String): Option[Store] = confOpt match {
+    case Some(conf) => {
+      // println(s"Making datastore $template")
+      Some (Class.forName (conf.getConfig (Constant.DATASTORE).getString (template) ).getConstructors () (0).newInstance ().asInstanceOf[Store] )
+    }
+    case None => None
+  }
 
 }
 
@@ -45,6 +64,7 @@ object DataStoreBuilder {
         mmap
       }
       override def map[Key, Data](name: String, template: String = Constant.MAP): DataMap[Key, Data] = {
+        println("Cool! " + protoConf.getConfig(Constant.DATASTORE).getString(template))
         val constructor = Class.forName(protoConf.getConfig(Constant.DATASTORE).getString(template)).getConstructors()(0)
         val map =constructor.newInstance().asInstanceOf[DataMap[Key,Data]]
         map.setName(name)
@@ -62,8 +82,15 @@ object DataStoreBuilder {
         qu.setName(name)
         qu
       }
-    }
+    }.loadAux(pconf)
 
   }
 
+  def main(args: Array[String]): Unit = {
+    val config = PipeConfig.newConfig()
+
+    load(config)
+  }
+
 }
+

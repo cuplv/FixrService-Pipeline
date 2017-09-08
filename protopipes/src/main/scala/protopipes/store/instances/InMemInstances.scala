@@ -1,6 +1,7 @@
 package protopipes.store.instances
 
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
+import protopipes.exceptions.CallNotAllowException
 import protopipes.store._
 
 /**
@@ -53,7 +54,7 @@ class InMemLinearStore[Data] extends DataStore[Data] {
 
 class InMemDataQueue[Data] extends DataQueue[Data] {
 
-  var ls = List.empty[Data]
+  var ls = Vector.empty[Data]
 
   override def put_(data: Seq[Data]): Unit = ls = ls ++ data
 
@@ -71,7 +72,7 @@ class InMemDataQueue[Data] extends DataQueue[Data] {
 
   override def extract(): Seq[Data] = {
     val is = ls
-    ls = List.empty[Data]
+    ls = Vector.empty[Data]
     is
   }
 
@@ -86,7 +87,8 @@ class InMemDataMap[Key, Data] extends DataMap[Key, Data] {
 
   var map = Map.empty[Key, Data]
 
-  override def put_(data: Seq[Data]): Unit = { }
+  override def put_(data: Seq[Data]): Unit =
+     throw new CallNotAllowException("\'put\' in Data Map needs to specify input key.", None)
 
   override def all(): Seq[Data] = map.values.toSeq
 

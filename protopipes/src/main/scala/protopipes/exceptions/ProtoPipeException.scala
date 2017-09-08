@@ -89,10 +89,20 @@ class IncompatiblePipelineSegmentException(context: String, cause: Option[Throwa
     extends ProtoPipeException(message = Some(s"Pipeline components are incompatible: $context"), cause = cause)
 
 /**
-  * This is generally throw when a method was called on a receiver instance that does not handle that call
+  * This is generally thrown when a method was called on a receiver instance that does not handle that call
   *
   * @param msg description of receiver and method call.
   * @param cause an associated throwable
   */
 class CallNotAllowException(msg: String, cause: Option[Throwable])
     extends ProtoPipeException(message = Some(msg), cause = cause)
+
+/**
+  * This is generally thrown when a config loading routine encountered path patterns that are not supported by
+  * the current implementation
+  *
+  * @param context description of the location (in the config file) of the unsupported config path.
+  * @param cause an associated throwable
+  */
+class NotSupportedConfigFormatException(context: String, cause: Option[Throwable])
+    extends ProtoPipeException(message = Some(s"Configuration path formatting not supported: $context"), cause = cause)

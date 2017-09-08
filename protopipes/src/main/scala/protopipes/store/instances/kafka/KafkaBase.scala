@@ -1,10 +1,16 @@
 package protopipes.store.instances.kafka
 
+import java.util
 import java.util.Properties
 
-import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord, KafkaConsumer}
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.Serdes
+import org.apache.kafka.streams.StreamsConfig
 import protopipes.configurations.{Constant, PipeConfig, PropKey}
+import protopipes.data.Identifiable
+import protopipes.data.serializers.BasicSerializer
+import protopipes.store.DataStream
 
 /**
   * Created by edmundlam on 8/20/17.
@@ -14,6 +20,7 @@ object KafkaConfig {
   final val KAFKA: String = "kafka"
   final val CONSUMER: String = "consumer"
   final val PRODUCER: String = "producer"
+  final val STREAM: String = "stream"
 
   def defaultConsumerConfig(): Properties = {
     val consProps: Properties = new Properties()
@@ -40,6 +47,16 @@ object KafkaConfig {
     prodProps
   }
 
+  def defaultStreamConfig(): Properties = {
+    val streamProps = new Properties()
+    streamProps.put(StreamsConfig.APPLICATION_ID_CONFIG, "default-application")
+    streamProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
+    streamProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+    streamProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass)
+    streamProps.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass)
+    streamProps
+  }
+
   def resolveKafkaConfig(pipeLabel: String, config: PipeConfig): KafkaConfig = {
     var consProps = config.javaUtilsProps.get(PropKey(pipeLabel,CONSUMER)) match {
       case Some(props) => props
@@ -49,16 +66,44 @@ object KafkaConfig {
       case Some(props) => props
       case None => defaultProducerConfig()
     }
+    var streamProps = config.javaUtilsProps.get(PropKey(pipeLabel,STREAM)) match {
+      case Some(props) => props
+      case None => defaultStreamConfig()
+    }
     val protoConf = PipeConfig.liftTypeSafeConfigToLabel(config.typeSafeConfig, pipeLabel).getConfig(Constant.PROTOPIPES)
     if (protoConf.hasPath(Constant.KAFKA)) {
       val tsConf = protoConf.getConfig(Constant.KAFKA)
       if (tsConf.hasPath(CONSUMER)) consProps = PipeConfig.resolveConfig(consProps, tsConf.getConfig(CONSUMER))
       if (tsConf.hasPath(PRODUCER)) prodProps = PipeConfig.resolveConfig(prodProps, tsConf.getConfig(PRODUCER))
+      if (tsConf.hasPath(STREAM)) streamProps = PipeConfig.resolveConfig(streamProps, tsConf.getConfig(STREAM))
     }
-    KafkaConfig(consProps,prodProps)
+    KafkaConfig(consProps,prodProps,streamProps)
   }
 
 }
 
-case class KafkaConfig(consumerProps: Properties, producerProps: Properties) {
+case class KafkaConfig(consumerProps: Properties, producerProps: Properties, streamProps: Properties) {
+}
+
+class KafkaStream[Key,Data <: Identifiable[Data]]
+       (dataSerializer: BasicSerializer[Data], topic: String, props: Properties) extends DataStream[(Key,Data)] {
+
+  val consumer: KafkaConsumer[Key,String] = new KafkaConsumer[Key,String](props)
+  consumer.subscribe(util.Arrays.asList(topic))
+
+  override def pollForMore(tries: Int = 2, timeout: Int = 100): Boolean = {
+    (0 to tries) foreach {
+      _ =>  {
+        val records = consumer.poll(timeout).iterator()
+        while(records.hasNext) {
+          val record = records.next()
+          getBuffer().put( (record.key(), dataSerializer.deserialize(record.value())) )
+        }
+      }
+    }
+    getBuffer().size > 0
+  }
+
+  override def close(): Unit = consumer.close()
+
 }

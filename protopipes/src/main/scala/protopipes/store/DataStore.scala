@@ -2,7 +2,7 @@ package protopipes.store
 
 import com.typesafe.config.Config
 import protopipes.checkers.ConfigChecker
-import protopipes.configurations.PipeConfig
+import protopipes.configurations.{ConfigBuildsDataStore, PipeConfig}
 import protopipes.connectors.{Connector, Upstream}
 import protopipes.data.{BasicIdentity, Identifiable, Identity}
 
@@ -11,7 +11,7 @@ import protopipes.data.{BasicIdentity, Identifiable, Identity}
   */
 
 
-abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker  {
+abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with ConfigBuildsDataStore  {
 
   var name = "DataStore"
 

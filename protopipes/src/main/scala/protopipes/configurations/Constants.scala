@@ -24,4 +24,6 @@ final object Constant {
 
   val KAFKA = "kafka"
 
+  val DATASTREAMBUFFER = "datastream-buffer"
+
 }

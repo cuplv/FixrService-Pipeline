@@ -37,7 +37,7 @@ abstract class MapperPlatform[Input <: Identifiable[Input], Output <: Identifiab
 
   def tryComputeThenStore(mapper: Mapper[Input, Output], input: Input, outputMap: DataStore[Output]): List[Output] = {
     try {
-      val outputs = mapper.compute(input).map(
+      val outputs = mapper.getOp(input).map(
         output => {
           outputMap.put(output)
           output
