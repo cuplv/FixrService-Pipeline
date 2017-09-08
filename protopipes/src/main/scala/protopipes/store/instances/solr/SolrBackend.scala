@@ -158,6 +158,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
       })
   }
 
+
   private def saveTheOmitted(doc: JsObject): JsObject = {
     val newDocFields = doc.fields.foldRight((Map[String, JsValue](), List[JsString]())){
       case ((str, jsValue), (mp, missingFields)) =>
@@ -174,6 +175,30 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
       }
     }
     JsObject(newDocFields._1 + ("_EmptyFields" -> JsArray(newDocFields._2.toVector)))
+  }
+
+  private def mkJsObjectsSolrable(doc: JsObject): JsObject = {
+    val newDocFields = doc.fields.foldRight(Map[String, JsValue]()) {
+      case ((str, jsValue), newDoc) => jsValue match {
+        case j: JsObject => newDoc + (str -> JsString(j.toString))
+        case _ => newDoc + (str -> jsValue)
+      }
+    }
+    JsObject(newDocFields)
+  }
+
+  private def returnNestedJsObjects(doc: JsObject): JsObject = {
+    JsObject(doc.fields.foldRight(Map[String, JsValue]()){
+      case ((str, jsValue), newDoc) => jsValue match{
+        case j: JsString if j.value.length() > 1 && j.value.charAt(0) == '{' =>
+          try{
+            newDoc+(str->j.value.parseJson.asJsObject)
+          } catch{
+            case e: Exception => newDoc+(str->jsValue)
+          }
+        case _ => newDoc+(str->jsValue)
+      }
+    })
   }
 
   private def createCore(): Unit = {
