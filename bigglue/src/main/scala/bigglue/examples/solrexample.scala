@@ -29,6 +29,13 @@ object SerializeSolrTest extends JsonSerializer[SolrTest] {
   override def deserialize_(json: JsObject): SolrTest = json.convertTo[SolrTest]
 }
 
+object SerializeSolrTest2 extends JsonSerializer[SolrTest2]{
+  import SolrProtocol._
+  override def serializeToJson_(d: SolrTest2): JsObject = d.toJson.asJsObject
+
+  override def deserialize_(json: JsObject): SolrTest2 = json.convertTo[SolrTest2]
+}
+
 object solrexample {
   val serializer = SerializeSolrTest
   def testSolrMap(): Unit = {
@@ -79,8 +86,18 @@ object solrexample {
     extractFromIterator(solrIterator)
   }
 
+  def testSolrNestedMaps(): Unit = {
+    val serializer2 = SerializeSolrTest2
+    val sDataMap = new SolrDataMap[String, SolrTest2](serializer2, "test")
+    sDataMap.put("testTwo", SolrTest2(None))
+    sDataMap.put("testOne", SolrTest2(Some(SolrTest())))
+    println(sDataMap.get("testOne"))
+    println(sDataMap.get("testTwo"))
+  }
+
   def main(args: Array[String]): Unit = {
     //println(Http("http://localhost:8983/solr/notACore/select?q=\"*:*\"&wt=json").asString.body.parseJson)
-    testSolrMap()
+    //testSolrMap()
+    testSolrNestedMaps()
   }
 }

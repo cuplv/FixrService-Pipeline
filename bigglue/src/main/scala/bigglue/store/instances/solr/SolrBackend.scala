@@ -56,8 +56,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
       case Some(response: JsValue) => response.asJsObject.fields.get("docs") match {
         case Some(docs: JsArray) =>
           docs.elements.toList.map{
-            case doc if hasSchema => doc.asJsObject
-            case doc => mkDocDeserializable(doc.asJsObject)
+            case doc if hasSchema => returnNestedJsObjects(doc.asJsObject)
+            case doc => returnNestedJsObjects(mkDocDeserializable(doc.asJsObject))
           }
         case _ =>
           throw new ProtoPipeException(Some(s"SolrMap $nam response is malformed. Are you sure you're really using Solr?"), None)
@@ -76,7 +76,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     def getDocumentFromList(list: List[JsObject], id: String): Option[JsObject] = list match{
       case Nil => None
       case first :: rest => first.fields.get("id") match{
-        case Some(x: JsString) if x.value.equals(id) => Some(first)
+        case Some(x: JsString) if x.value.equals(id) => Some(first) //Change here?
         case _ => getDocumentFromList(rest, id)
       }
     }
@@ -101,7 +101,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   }
 
   def addDocument(doc: JsObject, key: String): Unit = {
-    val newDoc = if (hasSchema) doc else saveTheOmitted(doc)
+    val solrDoc = mkJsObjectsSolrable(doc)
+    val newDoc = if (hasSchema) solrDoc else saveTheOmitted(solrDoc)
     val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc, "commitWithin" -> JsNumber(1000))))).toString()
     toCommit = true
     //JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
