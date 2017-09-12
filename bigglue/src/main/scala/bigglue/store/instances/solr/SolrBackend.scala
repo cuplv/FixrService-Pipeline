@@ -202,6 +202,10 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     })
   }
 
+  /*private def mkTemplate(doc: JsObject, template: JsObject): JsObject = {
+
+  }*/
+
   private def createCore(): Unit = {
     def copyAFile(src: String, dest: String) = {
       val destFile = new File(dest)

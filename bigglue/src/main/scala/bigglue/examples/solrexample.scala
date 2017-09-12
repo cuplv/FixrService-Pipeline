@@ -89,15 +89,15 @@ object solrexample {
   def testSolrNestedMaps(): Unit = {
     val serializer2 = SerializeSolrTest2
     val sDataMap = new SolrDataMap[String, SolrTest2](serializer2, "test")
-    sDataMap.put("testTwo", SolrTest2(None))
     sDataMap.put("testOne", SolrTest2(Some(SolrTest())))
+    sDataMap.put("testTwo", SolrTest2(None))
     println(sDataMap.get("testOne"))
     println(sDataMap.get("testTwo"))
   }
 
   def main(args: Array[String]): Unit = {
     //println(Http("http://localhost:8983/solr/notACore/select?q=\"*:*\"&wt=json").asString.body.parseJson)
-    //testSolrMap()
-    testSolrNestedMaps()
+    testSolrMap()
+    //testSolrNestedMaps()
   }
 }

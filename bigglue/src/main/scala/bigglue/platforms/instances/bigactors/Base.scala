@@ -260,9 +260,9 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
   }
 
   override def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
-    super.init(conf, inputLMap, inputRMap, outputMap, builder)
     val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[bigglue.data.Pair[InputL, InputR], Output]], this, listOfActors), "super"))
+    super.init(conf, inputLMap, inputRMap, outputMap, builder)
   }
 
   override def compute(input: bigglue.data.Pair[InputL, InputR]): Unit = {

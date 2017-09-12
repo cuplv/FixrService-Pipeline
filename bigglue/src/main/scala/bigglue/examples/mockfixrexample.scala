@@ -98,6 +98,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]) {
       case (commit, listOfCommits) =>
+        println(s"Working on commit $commit!")
         val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit".!!.split("\n")
         //Stupid way of doing this. Fix later!
         val comm = commitInfo(0).substring("commit ".length)
@@ -164,13 +165,14 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                       val decodedBytes = Base64.getDecoder.decode(bytes.value)
                       GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, decodedBytes.toString) :: list
                     case _ =>
+                      println(f)
                       println(new Exception(s"An error has occurred on file $file!")); list
                   }
                   case Some(e: JsString) if e.value.length() > 5 && e.value.substring(0,5).equals("error") =>
                     map.get("output") match {
-                      case Some(exception: JsString) => println(new Exception(exception.value).getMessage); list
-                      case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6)).getMessage); list
-                      case _ => println(new Exception(s"An error has occured on file $file!")); list
+                      case Some(exception: JsString) => println(f); println(new Exception(exception.value).getMessage); list
+                      case _ if e.value.length() > 7 => println(f); println(new Exception(e.value.substring(6)).getMessage); list
+                      case _ => println(f); println(new Exception(s"An error has occured on file $file!")); list
                     }
                   case _ => throw new UnexpectedPipelineException(s"Invalid status code on feature extractor!", None)
                 }
@@ -196,7 +198,7 @@ object mockfixrexample {
 
   def main(args: Array[String]): Unit = {
     val config = PipeConfig.newConfig()
-    val textMap = new TextFileDataMap("src/main/mockfixrexample/first50.txt")
+    val textMap = new TextFileDataMap("src/main/mockfixrexample/firstOne.txt")
     val storeBuilder = DataStoreBuilder.load(config)
     val gitID = new SolrDataMap[GitID, GitID](GitIDSerializer, "GitIDs")
     val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
