@@ -69,7 +69,6 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def getDocument(id: String): Option[JsObject] = {
     if (toCommit){
-      println(url+"update")
       Http(url+"update").postData("{ \"commit\": {} }".getBytes).header("Content-Type", "application/json").asString.body
       toCommit = false
     }

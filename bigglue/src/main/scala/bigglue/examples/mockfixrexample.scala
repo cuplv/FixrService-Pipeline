@@ -85,7 +85,8 @@ case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends M
         s"git clone https://github.com/$repoLocation $repoFolderLocation/$repoLocation".!
         List(GitRepo(input.user, input.repo, s"$repoFolderLocation/$repoLocation"))
       } else
-        throw new UserComputationException("Repo that should be cloned has stuff in it.", None)
+        List(GitRepo(input.user, input.repo, s"$repoFolderLocation/$repoLocation"))
+        //throw new UserComputationException("Repo that should be cloned has stuff in it.", None)
     } catch{
       case u: UserComputationException => throw u
       case e: Exception => throw new UserComputationException("File System is not formatted correctly?", Some(e))
@@ -98,7 +99,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]) {
       case (commit, listOfCommits) =>
-        println(s"Working on commit $commit!")
+        //println(s"Working on commit $commit!")
         val commitInfo = s"git -C ${input.repoPath} show --pretty=fuller --name-only $commit".!!.split("\n")
         //Stupid way of doing this. Fix later!
         val comm = commitInfo(0).substring("commit ".length)
@@ -163,16 +164,17 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                     case Some(bytes: JsString) =>
                       println(s"File $file had its features extracted!")
                       val decodedBytes = Base64.getDecoder.decode(bytes.value)
-                      GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, decodedBytes.toString) :: list
+                      GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, new String(decodedBytes)) :: list
                     case _ =>
                       println(f)
                       println(new Exception(s"An error has occurred on file $file!")); list
                   }
                   case Some(e: JsString) if e.value.length() > 5 && e.value.substring(0,5).equals("error") =>
                     map.get("output") match {
-                      case Some(exception: JsString) => println(f); println(new Exception(exception.value).getMessage); list
-                      case _ if e.value.length() > 7 => println(f); println(new Exception(e.value.substring(6)).getMessage); list
-                      case _ => println(f); println(new Exception(s"An error has occured on file $file!")); list
+                      case Some(exception: JsString) => println(s"$file\n...$f...")
+                        println(new Exception(exception.value).getMessage); list
+                      case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6)).getMessage); list
+                      case _ => println(new Exception(s"An error has occured on file $file!")); list
                     }
                   case _ => throw new UnexpectedPipelineException(s"Invalid status code on feature extractor!", None)
                 }
@@ -205,7 +207,7 @@ object mockfixrexample {
     val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
     val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
     import bigglue.pipes.Implicits._
-    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap
+    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap :--FeatureExtraction()-->featureMap
     pipe.check(config)
     pipe.init(config)
     textMap.all().foreach{

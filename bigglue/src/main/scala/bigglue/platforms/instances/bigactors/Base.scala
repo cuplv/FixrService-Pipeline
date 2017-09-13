@@ -60,7 +60,7 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
                                                                     actorNames: List[String] = List()) extends Actor{
   import context._
   become(state(Nil, Nil))
-  def state(jobsLeft: List[Input], workerList: List[ActorRef], isWorking: Map[ActorRef, Boolean] = Map()): Receive = {
+  def state(jobsLeft: List[Input], workerList: List[ActorRef], isWorking: Map[ActorRef, Boolean] = Map(), gettingUp: Boolean = false): Receive = {
     case AddedWorker(worker: ActorRef) =>
       jobsLeft match{
         case job :: rest =>
@@ -79,8 +79,8 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
       platform.run()
       self ! PostWake()
     case PostWake() =>
-      workerList match{
-        case Nil =>
+      (workerList, gettingUp) match{
+        case (Nil, false) =>
           def addActors(numLeft: Int, actorNames: List[String] = List()): Unit = (numLeft, actorNames) match{
             case (x, _) if x <= 0 => ()
             case (_, name :: rest) =>
@@ -93,6 +93,8 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
               addActors(numLeft-1)
           }
           addActors(platform.infoConfig.getInt("numberOfWorkers"), actorNames)
+          become(state(jobsLeft, workerList, isWorking, gettingUp = true))
+        case (Nil, true) => ()
         case _ => workerList foreach(worker => isWorking.get(worker) match{
           case Some(true) => ()
           case _ => self ! AskForJob(worker)
@@ -107,10 +109,10 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
       workerList.foreach(_ ! PoisonPill)
     case AddedJobs(inputs: List[Input@unchecked]) =>
       val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: inputs, workerList, isWorking)
-      become(state(newJobs, workerList, newIsWorking))
+      become(state(newJobs, workerList, newIsWorking, gettingUp))
     case ("AddedJob", input: Input@unchecked) =>
       val (newJobs, newIsWorking) = giveJobsToWorkers(jobsLeft ::: List(input), workerList, isWorking)
-      become(state(newJobs, workerList, newIsWorking))
+      become(state(newJobs, workerList, newIsWorking, gettingUp))
     case other => println(s"$other was sent with nothing occurring.")
   }
 

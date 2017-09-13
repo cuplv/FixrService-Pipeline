@@ -1,0 +1,82 @@
+syntax = "proto2";
+
+package feature;
+
+message BatchRequest {
+   repeated SingleRequest requests = 1;
+}
+
+message SingleRequest {
+   required string fileName = 1;
+   required string sourceCode = 2;
+}
+
+message BatchResponse {
+   repeated SingleResponse responses = 1;
+}
+
+message SingleResponse {
+   enum Result {SUCC=1; FAIL=2; };
+
+   required Result result = 1;
+   required string fileName = 2;
+
+   optional Features allFeatures = 3;
+   optional ExtractError extractError = 4;
+}
+
+message ExtractError {
+  required string error = 1;
+  optional string err_class = 2;
+}
+
+message Features {
+  repeated Feature features = 1;
+}
+
+message Feature
+{
+  enum Type {CALLSITE=1; IMPORT=2; COMMENT=3; };
+  // identifies which field is filled
+  required Type featType = 1;
+
+  optional Callsite callsite = 2;
+  optional Import importFeature = 3;
+  optional Comment comment = 4;
+}
+
+message Callsite {
+  required string name = 1; // Name of the called method (e.g. method if t.method(...))
+
+  required Expression expression = 2; // (Expression, type) used to call the method (e.g. t if t.method(...))
+  repeated Expression args = 3; // List of (expr, type) arguments used to call the methods
+
+  message Expression {
+    optional string expressionName = 1; // an expression
+    optional string expressionType = 2; // the type of the expression (can be null)
+  }
+
+  // List of contexes (ordered from the outer to the inner context)
+  repeated Context contexts = 4;
+}
+
+message Import
+{
+  required string importName = 1; // List of imports of the program
+}
+
+message Comment
+{
+  enum Type {LINE=1; BLOCK=2; JAVADOC=3; };
+  required Type commentType = 1; // identifies which field is filled
+
+  required string text = 2; // text of the comment
+}
+
+// Represent a context
+message Context
+{
+  enum Type {Class=1; Interface=2; AnonClass=3; Method=4; };
+  optional Type contextType = 1;
+  optional string name = 2;
+}
