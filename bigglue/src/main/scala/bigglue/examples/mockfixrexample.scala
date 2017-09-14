@@ -9,7 +9,7 @@ import bigglue.configurations.{DataStoreBuilder, PipeConfig}
 import bigglue.data.serializers.JsonSerializer
 import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
 import bigglue.exceptions.{UnexpectedPipelineException, UserComputationException}
-import bigglue.store.instances.file.TextFileDataMap
+import bigglue.store.instances.file.{FileSystemDataMap, TextFileDataMap}
 import bigglue.store.instances.solr.SolrDataMap
 import spray.json._
 
@@ -20,7 +20,7 @@ import scalaj.http.Http
   */
 object MockProtocol extends DefaultJsonProtocol {
   implicit val gitID: JsonFormat[GitID] = jsonFormat2(GitID)
-  implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat3(GitRepo)
+  implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
   implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat12(GitCommitInfo)
   implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat6(GitFeatures)
 }
@@ -36,15 +36,33 @@ object GitIDSerializer extends JsonSerializer[GitID] {
   override def deserialize_(json: JsObject): GitID = json.convertTo[GitID]
 }
 
-case class GitRepo(user: String, repo: String, repoPath: String) extends Identifiable[GitRepo]{
-  override def mkIdentity(): Identity[GitRepo] = BasicIdentity(s"$user/$repo:$repoPath")
+case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable[GitRepo]{
+  override def mkIdentity(): Identity[GitRepo] = BasicIdentity(s"${gitID.identity().getId()}:$repoPath")
 }
 
 object GitRepoSerializer extends JsonSerializer[GitRepo]{
   import MockProtocol._
-  override def serializeToJson_(d: GitRepo): JsObject = d.toJson.asJsObject
+  override def serializeToJson_(d: GitRepo): JsObject = {
+    JsObject(d.toJson.asJsObject.fields.toList.foldRight(Map[String, JsValue]()){
+      case ((key, value), newFields) => value match{
+        case JsObject(fields) => newFields ++ fields
+        case _ => newFields + (key->value)
+      }
+    })
+  }
 
-  override def deserialize_(json: JsObject): GitRepo = json.convertTo[GitRepo]
+  override def deserialize_(json: JsObject): GitRepo = {
+    val newJson = JsObject({
+      val (a, b) = json.fields.toList.foldRight((Map[String, JsValue](), Map[String, JsValue]())){
+        case ((key, jsValue), (newFields, gID)) => key match{
+          case "user" | "repo" => (newFields, gID + (key -> jsValue))
+          case _ => (newFields + (key -> jsValue), gID)
+        }
+      }
+      a + ("gitID" -> JsObject(b))
+    })
+    json.convertTo[GitRepo]
+  }
 }
 
 case class GitCommitInfo(user: String, repo: String, hash: String, repoPath: String,
@@ -83,9 +101,9 @@ case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends M
       val trueRepo = new File(s"$repoFolderLocation/$repoLocation")
       if (!(trueRepo.isDirectory && trueRepo.length() > 0)) {
         s"git clone https://github.com/$repoLocation $repoFolderLocation/$repoLocation".!
-        List(GitRepo(input.user, input.repo, s"$repoFolderLocation/$repoLocation"))
+        List(GitRepo(input, s"$repoFolderLocation/$repoLocation"))
       } else
-        List(GitRepo(input.user, input.repo, s"$repoFolderLocation/$repoLocation"))
+        List(GitRepo(input, s"$repoFolderLocation/$repoLocation"))
         //throw new UserComputationException("Repo that should be cloned has stuff in it.", None)
     } catch{
       case u: UserComputationException => throw u
@@ -138,7 +156,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
 
         val (title, nextLine) = findCommitMessage(commitInfo, 6 + checkForMerges)
         val (message, lineAfter) = findCommitMessage(commitInfo, nextLine + 1)
-        val gCI = GitCommitInfo(input.user, input.repo, comm, input.repoPath, author, authorEmail, authorDate, blame, blameEmail,
+        val gCI = GitCommitInfo(input.gitID.user, input.gitID.repo, comm, input.repoPath, author, authorEmail, authorDate, blame, blameEmail,
           title, message, findFiles(commitInfo, lineAfter))
         gCI :: listOfCommits
     }
@@ -147,6 +165,10 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
 
 case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
   input => {
+    /*var numberOfFailures = 0
+    var numberOfSuccesses = 0*/
+    val failedMap = new FileSystemDataMap[I[String], I[String]](s"${input.repoPath}/failed")
+    val successMap = new FileSystemDataMap[I[String], I[String]](s"${input.repoPath}/success")
     input.files.foldRight(List[GitFeatures]()){
       case (file, list) =>
         val len = file.length
@@ -163,6 +185,8 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                   case Some(JsString("ok")) => map.get("output") match{
                     case Some(bytes: JsString) =>
                       println(s"File $file had its features extracted!")
+                      /*successMap.put(I(s"${input.hash}-success$numberOfSuccesses.java"), I(f))
+                      numberOfSuccesses += 1*/
                       val decodedBytes = Base64.getDecoder.decode(bytes.value)
                       GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, new String(decodedBytes)) :: list
                     case _ =>
@@ -171,8 +195,11 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                   }
                   case Some(e: JsString) if e.value.length() > 5 && e.value.substring(0,5).equals("error") =>
                     map.get("output") match {
-                      case Some(exception: JsString) => println(s"$file\n...$f...")
-                        println(new Exception(exception.value).getMessage); list
+                      case Some(exception: JsString) =>
+                        println(new Exception(exception.value).getMessage)
+                        /*failedMap.put(I(s"${input.hash}-failure$numberOfFailures.java"), I(s"$f\n\n/*\n${new Exception(exception.value).getMessage}\n*/"))
+                        numberOfFailures += 1*/
+                        list
                       case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6)).getMessage); list
                       case _ => println(new Exception(s"An error has occured on file $file!")); list
                     }

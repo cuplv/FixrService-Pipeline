@@ -8,6 +8,7 @@ import bigglue.connectors.{Connector, Status}
 import bigglue.connectors.instances.ActorConnector
 import bigglue.curators.ErrorCurator
 import bigglue.data.Identifiable
+import bigglue.exceptions.NotInitializedException
 import bigglue.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import bigglue.store.DataStore
 
@@ -179,7 +180,13 @@ trait BigActor[Input]{
     ("numberOfWorkers" -> 4, "maxSecondsOnInput"-> 0, "maxMinutesOnInput" -> 0,
       "maxHoursOnInput" -> 0).asJava)
   implicit var actorSystemOpt: Option[ActorSystem] = None//ActorSystem(name)
-  def compute(input: Input): Unit = ()
+  var computerOpt: Option[ActorRef] = None
+  def computer: ActorRef = computerOpt match{
+    case Some(actorRef) => actorRef
+    case None => throw new NotInitializedException("computer", "Computing", None)
+  }
+  def compute(job: Input): Unit = computer ! job
+  def compute_(input: Input): Unit = ()
   def getErrorCurator(): ErrorCurator[Input]
   implicit def actorSystem: ActorSystem = actorSystemOpt match{
     case Some(sys: ActorSystem) => sys
@@ -216,6 +223,14 @@ trait BigActor[Input]{
   }
 }
 
+class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output]]
+(platform: Platform with BigActor[Input]) extends Actor{
+
+  def receive: Receive = {
+    case job: Input @ unchecked => platform.compute_(job)
+  }
+}
+
 abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME+s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] with BigActor[Input] {
   var superActorOpt: Option[ActorRef] = None
@@ -231,6 +246,7 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
   override def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[Input, Output]], this, listOfActors), "super"))
+    computerOpt = Some(actorSystem.actorOf(Props(classOf[BigActorWorker[Input, Output]], this), "computer"))
     super.init(conf, inputMap, outputMap, builder)
   }
 
@@ -264,10 +280,11 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
   override def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[bigglue.data.Pair[InputL, InputR], Output]], this, listOfActors), "super"))
+    computerOpt = Some(actorSystem.actorOf(Props(classOf[BigActorWorker[bigglue.data.Pair[InputL, InputR], Output]], this), "computer"))
     super.init(conf, inputLMap, inputRMap, outputMap, builder)
   }
 
-  override def compute(input: bigglue.data.Pair[InputL, InputR]): Unit = {
+  override def compute_(input: bigglue.data.Pair[InputL, InputR]): Unit = {
     inputLOccurrences.get(input.left) match{
       case Some(x) if x > 1 => inputLOccurrences += (input.left -> (x-1))
       case Some(_) =>
@@ -326,6 +343,7 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
   override def wake(): Unit = supervisor ! Wake()
 
   override def terminate(): Unit = {
+    supervisor ! Terminate()
     actorSystem.terminate
   }
 
