@@ -21,8 +21,8 @@ import scalaj.http.Http
 object MockProtocol extends DefaultJsonProtocol {
   implicit val gitID: JsonFormat[GitID] = jsonFormat2(GitID)
   implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
-  implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat12(GitCommitInfo)
-  implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat6(GitFeatures)
+  implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat10(GitCommitInfo)
+  implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat4(GitFeatures)
 }
 
 case class GitID(user: String, repo: String) extends Identifiable[GitID]{
@@ -43,51 +43,94 @@ case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable[GitRepo]
 object GitRepoSerializer extends JsonSerializer[GitRepo]{
   import MockProtocol._
   override def serializeToJson_(d: GitRepo): JsObject = {
-    JsObject(d.toJson.asJsObject.fields.toList.foldRight(Map[String, JsValue]()){
+    JsObject(flatten(d.toJson.asJsObject.fields))
+  }
+
+  def flatten(fields: Map[String, JsValue]): Map[String, JsValue] = {
+    fields.toList.foldRight(Map[String, JsValue]()){
       case ((key, value), newFields) => value match{
-        case JsObject(fields) => newFields ++ fields
+        case JsObject(moreFields) => newFields ++ moreFields
         case _ => newFields + (key->value)
       }
-    })
+    }
   }
 
   override def deserialize_(json: JsObject): GitRepo = {
-    val newJson = JsObject({
-      val (a, b) = json.fields.toList.foldRight((Map[String, JsValue](), Map[String, JsValue]())){
-        case ((key, jsValue), (newFields, gID)) => key match{
-          case "user" | "repo" => (newFields, gID + (key -> jsValue))
-          case _ => (newFields + (key -> jsValue), gID)
-        }
-      }
-      a + ("gitID" -> JsObject(b))
-    })
-    json.convertTo[GitRepo]
+    val newJson = deflatten(json.fields)
+    newJson.convertTo[GitRepo]
   }
+
+  def deflatten(fields: Map[String, JsValue]): JsObject = JsObject({
+    val (a, b) = fields.toList.foldRight((Map[String, JsValue](), Map[String, JsValue]())){
+      case ((key, jsValue), (newFields, gID)) => key match{
+        case "user" | "repo" => (newFields, gID + (key -> jsValue))
+        case _ => (newFields + (key -> jsValue), gID)
+      }
+    }
+    a + ("gitID" -> JsObject(b))
+  })
 }
 
-case class GitCommitInfo(user: String, repo: String, hash: String, repoPath: String,
+case class GitCommitInfo(gitRepo: GitRepo, hash: String,
                         author: String, authorEmail: String, authorDate: String,
                         committer: String, committerEmail: String, title: String, message: String,
                         files: List[String]) extends Identifiable[GitCommitInfo]{ //I need to find a much better way of doing this. :|
-  override def mkIdentity(): Identity[GitCommitInfo] = BasicIdentity(s"$user/$repo/$hash:$repoPath")
+  override def mkIdentity(): Identity[GitCommitInfo] =
+    BasicIdentity(s"${gitRepo.gitID.user}/${gitRepo.gitID.repo}/$hash:${gitRepo.repoPath}")
 }
 
 object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
   import MockProtocol._
-  override def serializeToJson_(d: GitCommitInfo): JsObject = d.toJson.asJsObject
+  override def serializeToJson_(d: GitCommitInfo): JsObject =
+    JsObject(d.toJson.asJsObject.fields.toList.foldRight(Map[String, JsValue]()){
+      case ((key, value), newFields) => value match{
+        case JsObject(fields) if key.equals("gitRepo") => newFields ++ GitRepoSerializer.flatten(fields)
+        case JsObject(fields) => newFields ++ fields
+        case _ => newFields + (key->value)
+      }
+    })
 
-  override def deserialize_(json: JsObject): GitCommitInfo = json.convertTo[GitCommitInfo]
+  override def deserialize_(json: JsObject): GitCommitInfo = {
+    val newJson = JsObject({
+      val (a, b) = json.fields.toList.foldRight((Map[String, JsValue](), Map[String, JsValue]())){
+        case ((key, jsValue), (newFields, gRepo)) => key match{
+          case "user" | "repo" | "repoPath" => (newFields, gRepo + (key -> jsValue))
+          case _ => (newFields + (key -> jsValue), gRepo)
+        }
+      }
+      a ++ GitRepoSerializer.deflatten(b).fields
+      })
+    newJson.convertTo[GitCommitInfo]
+  }
 }
 
-case class GitFeatures(user: String, repo: String, hash: String, repoPath: String, file: String, protobuf: String)
+case class GitFeatures(gitRepo: GitRepo, hash: String, file: String, protobuf: String)
   extends Identifiable[GitFeatures]{
-  override def mkIdentity(): Identity[GitFeatures] = BasicIdentity(s"$user/$repo/$hash:$repoPath:$file")
+  override def mkIdentity(): Identity[GitFeatures] = BasicIdentity(s"${gitRepo.gitID.user}/${gitRepo.gitID.repo}/$hash:${gitRepo.repoPath}:$file")
 }
 
 object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
   import MockProtocol._
-  override def serializeToJson_(d: GitFeatures): JsObject = d.toJson.asJsObject
-  override def deserialize_(json: JsObject): GitFeatures = json.convertTo[GitFeatures]
+  override def serializeToJson_(d: GitFeatures): JsObject =
+    JsObject(d.toJson.asJsObject.fields.toList.foldRight(Map[String, JsValue]()){
+      case ((key, value), newFields) => value match{
+        case JsObject(fields) if key.equals("gitRepo") => newFields ++ GitRepoSerializer.flatten(fields)
+        case _ => newFields + (key->value)
+      }
+    })
+
+  override def deserialize_(json: JsObject): GitFeatures = {
+    val newJson = JsObject({
+      val (a, b) = json.fields.toList.foldRight((Map[String, JsValue](), Map[String, JsValue]())){
+        case ((key, jsValue), (newFields, gRepo)) => key match{
+          case "user" | "repo" | "repoPath" => (newFields, gRepo + (key -> jsValue))
+          case _ => (newFields + (key -> jsValue), gRepo)
+        }
+      }
+      a ++ GitRepoSerializer.deflatten(b).fields
+    })
+    newJson.convertTo[GitFeatures]
+  }
 }
 
 case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends Mapper[GitID, GitRepo](
@@ -156,7 +199,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
 
         val (title, nextLine) = findCommitMessage(commitInfo, 6 + checkForMerges)
         val (message, lineAfter) = findCommitMessage(commitInfo, nextLine + 1)
-        val gCI = GitCommitInfo(input.gitID.user, input.gitID.repo, comm, input.repoPath, author, authorEmail, authorDate, blame, blameEmail,
+        val gCI = GitCommitInfo(input, comm, author, authorEmail, authorDate, blame, blameEmail,
           title, message, findFiles(commitInfo, lineAfter))
         gCI :: listOfCommits
     }
@@ -165,19 +208,20 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
 
 case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
   input => {
-    /*var numberOfFailures = 0
-    var numberOfSuccesses = 0*/
-    val failedMap = new FileSystemDataMap[I[String], I[String]](s"${input.repoPath}/failed")
-    val successMap = new FileSystemDataMap[I[String], I[String]](s"${input.repoPath}/success")
+    var numberOfFailures = 0
+    var numberOfSuccesses = 0
+    val failedMap = new FileSystemDataMap[I[String], I[String]](s"${input.gitRepo.repoPath}/failed")
+    val successMap = new FileSystemDataMap[I[String], I[String]](s"${input.gitRepo.repoPath}/success")
     input.files.foldRight(List[GitFeatures]()){
       case (file, list) =>
         val len = file.length
         if (len > 5){
           file.substring(len-5, len) match{
             case ".java" =>
-              val f = s"git -C ${input.repoPath} show ${input.hash}:$file".!!
+              val f = s"git -C ${input.gitRepo.repoPath} show ${input.hash}:$file".!!
               val fEncoded = Base64.getEncoder.encodeToString(f.getBytes())
               val data = JsObject(Map("name" -> JsString(file), "src" -> JsString(fEncoded)))
+              println(data)
               val json = Http("http://52.15.135.195:9002/features/single/json").postData(data.toString).asString.body
               try{
                 val map = json.parseJson.asJsObject.fields
@@ -185,10 +229,10 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                   case Some(JsString("ok")) => map.get("output") match{
                     case Some(bytes: JsString) =>
                       println(s"File $file had its features extracted!")
-                      /*successMap.put(I(s"${input.hash}-success$numberOfSuccesses.java"), I(f))
-                      numberOfSuccesses += 1*/
+                      successMap.put(I(s"${input.hash}-success$numberOfSuccesses.java"), I(f))
+                      numberOfSuccesses += 1
                       val decodedBytes = Base64.getDecoder.decode(bytes.value)
-                      GitFeatures(input.user, input.repo, input.hash, input.repoPath, file, new String(decodedBytes)) :: list
+                      GitFeatures(input.gitRepo, input.hash, file, new String(decodedBytes)) :: list
                     case _ =>
                       println(f)
                       println(new Exception(s"An error has occurred on file $file!")); list
@@ -196,9 +240,10 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
                   case Some(e: JsString) if e.value.length() > 5 && e.value.substring(0,5).equals("error") =>
                     map.get("output") match {
                       case Some(exception: JsString) =>
+                        println(map)
                         println(new Exception(exception.value).getMessage)
-                        /*failedMap.put(I(s"${input.hash}-failure$numberOfFailures.java"), I(s"$f\n\n/*\n${new Exception(exception.value).getMessage}\n*/"))
-                        numberOfFailures += 1*/
+                        failedMap.put(I(s"${input.hash}-failure$numberOfFailures.java"), I(s"${new String(Base64.getDecoder.decode(fEncoded))}\n\n/*\n$data\n${new Exception(exception.value).getMessage}\n*/"))
+                        numberOfFailures += 1
                         list
                       case _ if e.value.length() > 7 => println(new Exception(e.value.substring(6)).getMessage); list
                       case _ => println(new Exception(s"An error has occured on file $file!")); list
