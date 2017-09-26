@@ -1,0 +1,43 @@
+From Ken's Pipeline, it seems he may need
+	From git.ex:
+		List all commit hashes
+		Commits matching a pattern (For stuff like finding files that end with .java, for example)
+		List all files in a commit (Uses git show)
+			Matching a pattern (Similar use for commits matching a pattern)
+		Show a file's contents from a commit
+		patch_for_file_at_commit (See context)
+		parents_for_file_at_commit (See context)
+		Show the commit information for the commit. (Name of commiter, Email address, date)
+	List all commit hashes from a certain time period/Hashes that haven't been given yet/Next set of hashes
+	Filter out files that are just warnings. (Enum.filter(files, &(!String.starts_with?(&1, "warning: ")))
+	Get whether or not a file has been removed, damaged, or empty in a commit.
+	Create directories(/check a directory to see if it exists) to be able to clone into. (Could be same step as clone?)
+	Clone a Repo/Mark that a repo is in the web service
+		Note if a repository is deleted, needs authentication, or more.
+	Pull Repos every once in a while. (Check if repository is deleted, needs authentication, is misconfigured, or is damaged.)
+	Commit Info found in CommitInfo:
+		ID, Repo Name, Hash, Date, Name and Email of Committer, Subject and Body of Commit, Files of Commit, (And then some processing and status and when the commit info was updated that seems outside of the service.)
+		Will maybe need to recreate the date if we can't parse the date?
+	File Info found in FileInfo:
+		Repo Name, Hash, Name of File, Contents of File, Patches and Parents, and then some extra stuff like ID, Features, Error Messages from the Feature Extractor, Status, Processing, and when it was updated that seems to be outside the service.
+	Repo Info found in RepoInfo:
+		Repo Name, URL, Commits, and then status, processing, id, and updates information that seems to be outside of the service.
+	More for Solr?
+		Last things done with the commits (Fixr.Solr.info_of("commits", "init", count))
+		If we decide to add ID to it, make it Solr friendly. (underscores instead of spaces)
+-----------------------------------------------------------------
+Features that the Web Service must do:
+	Be able to Clone repos into the web service 
+		Keep track of those repos that you have cloned.
+	Be able to pull whenever necessary/
+	Extract the commit information. 
+	List all commits in a repo (More specifically with .java files changed)
+		Alternatively, list all commits from a repo that have not been given since the last use (up to a certain amount?), or since a given date.
+	List all the files in a commit that have been changed (More specifically with .java files changed)
+		If the date fails at any one of these three things, just make that the current date.
+		Filter out files that are just merge conflicts, of course.
+	Show a file's contents from a commit
+		Figure out if a file has been damaged, is empty, or has been removed.
+	Works with patches and find parents for files in commits (Repo Name, Hash, Date, Name and Email of Committer, Subject and Body of Commit, Files of Commit)
+	
+	 
