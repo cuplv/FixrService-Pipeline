@@ -27,17 +27,18 @@ From Ken's Pipeline, it seems he may need
 		If we decide to add ID to it, make it Solr friendly. (underscores instead of spaces)
 -----------------------------------------------------------------
 Features that the Web Service must do:
-	Be able to Clone repos into the web service 
+	Be able to Clone repos into the web service  (Prototyped)
 		Keep track of those repos that you have cloned.
-	Be able to pull whenever necessary/
-	Extract the commit information. 
-	List all commits in a repo (More specifically with .java files changed)
-		Alternatively, list all commits from a repo that have not been given since the last use (up to a certain amount?), or since a given date.
-	List all the files in a commit that have been changed (More specifically with .java files changed)
+	Be able to pull whenever necessary (Prototyped) TODO: Automate the process for this? Or would that be too weird for a web service to do?
+	List all commits in a repo (More specifically with .java files changed) (Prototyped, but with the patterning just in case we need to use it for something else than Java files)
+    		Alternatively, list all commits from a repo that have not been given since the last use (up to a certain amount?), or since a given date.
+	Extract the commit information. (Prototyped)
+	List all the files in a commit that have been changed (More specifically with .java files changed) (Prototyped)
 		If the date fails at any one of these three things, just make that the current date.
 		Filter out files that are just merge conflicts, of course.
-	Show a file's contents from a commit
+	Show a file's contents from a commit (Prototyped)
 		Figure out if a file has been damaged, is empty, or has been removed.
+	(Prototyped?)
 	Works with patches and find parents for files in commits (Repo Name, Hash, Date, Name and Email of Committer, Subject and Body of Commit, Files of Commit)
 	
 	 
