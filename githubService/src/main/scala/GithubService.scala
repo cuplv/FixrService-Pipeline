@@ -18,9 +18,9 @@ object GithubService {
 
   def getRequest(config: Config): server.Route = {
     post{
-      path("clone") {
-        entity(as[String]) {
-          queryStr =>
+      entity(as[String]){
+        queryStr =>
+          path("clone") {
             try{
               val json = queryStr.parseJson.asJsObject
               json.fields.get("repo") match{
@@ -31,11 +31,8 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("pull"){
-        entity(as[String]){
-          queryStr =>
+          } ~
+          path("pull"){
             try {
               val json = queryStr.parseJson.asJsObject
               json.fields.get("repo") match {
@@ -46,16 +43,13 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("getCommits"){
-        entity(as[String]) {
-          queryStr =>
+          } ~
+          path("getCommits") {
             try{
               val json = queryStr.parseJson.asJsObject
               json.fields.get("repo") match {
                 case Some(j: JsString) =>
-                  val lastGet = json.fields.get("sinceLastGet") match{
+                  val lastGet = json.fields.get("sinceLast") match{
                     case Some(JsTrue) => true
                     case _ => false
                   }
@@ -70,11 +64,8 @@ object GithubService {
             } catch {
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("commitInformation") {
-        entity(as[String]){
-          queryStr =>
+          } ~
+          path("commitInformation") {
             try{
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit")) match{
@@ -86,11 +77,8 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("getFiles"){
-        entity(as[String]){
-          queryStr =>
+          } ~
+          path("getFiles"){
             try {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit")) match {
@@ -106,11 +94,8 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("fileContents"){
-        entity(as[String]) {
-          queryStr =>
+          } ~
+          path("fileContents") {
             try {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match {
@@ -122,11 +107,8 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("patch"){
-        entity(as[String]){
-          queryStr =>
+          } ~
+          path("patch") {
             try {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match {
@@ -138,11 +120,8 @@ object GithubService {
             } catch{
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
-      } ~
-      path("parent"){
-        entity(as[String]){
-          queryStr =>
+          } ~
+          path("parent") {
             try {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match{
@@ -154,7 +133,7 @@ object GithubService {
             } catch {
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
-        }
+          }
       }
     }
   }

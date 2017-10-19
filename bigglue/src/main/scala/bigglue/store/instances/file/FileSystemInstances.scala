@@ -31,24 +31,36 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
     }.toSeq
   }
 
-  override def put_(data: Seq[Output]): Unit = data.foreach(put_(???, _))
+  private def mkDirs(path: String, currPath: String = ""): Unit = {
+    path.indexOf("/") match {
+      case -1 => ()
+      case 1 if path.charAt(0) == '/' => ()
+      case 2 if path.substring(0, 2).equals("..") => ()
+      case x =>
+        val file = new File(s"$currPath${path.substring(0, x)}")
+        file.mkdir()
+        mkDirs(path.substring(x+1), s"$currPath${path.substring(0, x+1)}")
+    }
+  }
+
+  override def put_(data: Seq[Output]): Unit = data.foreach{
+    output => if (output.a.endsWith("/")){
+      mkDirs(output.a)
+    } else {
+      put_(???, output)
+    }
+  }
 
   override def put_(key: Input, data: Output): Unit = {
-    def mkDirs(path: String, currPath: String = ""): Unit = {
-      path.indexOf("/") match {
-        case -1 => ()
-        case 1 if path.charAt(0) == '/' => ()
-        case 2 if path.substring(0, 2).equals("..") => ()
-        case x =>
-          val file = new File(s"$currPath${path.substring(0, x)}")
-          file.mkdir()
-          mkDirs(path.substring(x+1), s"$currPath${path.substring(0, x+1)}")
-      }
-    }
     mkDirs(s"$subdirectory/${key.getId()}")
-    val writer = new BufferedWriter(new FileWriter(s"$subdirectory/${key.getId()}", false))
-    writer.write(data.a)
-    writer.close()
+    if (key.getId().endsWith("/")) {
+      val file = new File(s"$subdirectory/${key.getId()}/${data.a}")
+      file.createNewFile()
+    } else {
+      val writer = new BufferedWriter(new FileWriter(s"$subdirectory/${key.getId()}", false))
+      writer.write(data.a)
+      writer.close()
+    }
   }
 
   override def remove(key: Input): Unit = new File(s"$subdirectory/${key.getId()}").delete()
@@ -60,8 +72,13 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
 
   override def get(key: Input): Option[Output] = {
     try {
-      if (new File(key.getId()).exists()) {
-        val str = Source.fromFile(s"$subdirectory/${key.getId()}").getLines().foldRight("") {
+      val file = new File(s"$subdirectory/${key.getId()}")
+      if (file.exists()){
+        val str = (if (file.isDirectory){
+          file.listFiles.toList
+        } else {
+          Source.fromFile(s"$subdirectory/${key.getId()}").getLines()
+        }).foldRight("") {
           case (line, fileContent) => s"$line\n$fileContent"
         }
         Some(I(str).asInstanceOf[Output])

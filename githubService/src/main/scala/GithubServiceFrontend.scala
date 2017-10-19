@@ -33,7 +33,7 @@ object GithubServiceFrontend {
           path("clone"){
             nodes.foldRight(""){
               case ((str, i), response) =>
-                val httpStr = scalaj.http.Http(s"http://$str/clone").postData(queryStr).header("Content-Type", "application/json").asString.body
+                val httpStr = scalaj.http.Http(s"http://$str/clone").timeout(1000, 3600000).postData(queryStr).header("Content-Type", "application/json").asString.body
                 val json = httpStr.parseJson
                 json.asJsObject.fields.get("status") match {
                   case Some(JsString("error")) | None => httpStr
@@ -47,7 +47,7 @@ object GithubServiceFrontend {
           path("pull"){
             nodes.foldRight(""){
               case ((str, i), response) =>
-                val httpStr = scalaj.http.Http(s"http://$str/pull").postData(queryStr).header("Content-Type", "application/json").asString.body
+                val httpStr = scalaj.http.Http(s"http://$str/pull").timeout(1000, 3600000).postData(queryStr).header("Content-Type", "application/json").asString.body
                 val json = httpStr.parseJson
                 json.asJsObject.fields.get("status") match {
                   case Some(JsString("error")) | None => httpStr
@@ -61,38 +61,37 @@ object GithubServiceFrontend {
           path("getCommits"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
-            println(Uri(s"http://$nodeToPick/getCommits"))
-            redirect(Uri(s"http://$nodeToPick/getCommits"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/getCommits"), StatusCodes.TemporaryRedirect)
           } ~
           path("commitInformation"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
             println(Uri(s"http://$nodeToPick/commitInformation"))
-            redirect(Uri(s"http://$nodeToPick/commitInformation"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/commitInformation"), StatusCodes.TemporaryRedirect)
           } ~
           path("getFiles"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
             println(Uri(s"http://$nodeToPick/getFiles"))
-            redirect(Uri(s"http://$nodeToPick/getFiles"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/getFiles"), StatusCodes.TemporaryRedirect)
           } ~
           path("fileContents"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
             println(Uri(s"http://$nodeToPick/fileContents"))
-            redirect(Uri(s"http://$nodeToPick/fileContents"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/fileContents"), StatusCodes.TemporaryRedirect)
           } ~
           path("patch"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
             println(Uri(s"http://$nodeToPick/patch"))
-            redirect(Uri(s"http://$nodeToPick/patch"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/patch"), StatusCodes.TemporaryRedirect)
           } ~
           path("parent"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
             println(Uri(s"http://$nodeToPick/parent"))
-            redirect(Uri(s"http://$nodeToPick/parent"), StatusCodes.NotModified)
+            redirect(Uri(s"http://$nodeToPick/parent"), StatusCodes.TemporaryRedirect)
           } ~
           path("doneWithResults"){
             val json = queryStr.parseJson.asJsObject
