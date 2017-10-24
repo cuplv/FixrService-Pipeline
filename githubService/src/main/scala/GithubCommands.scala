@@ -51,19 +51,19 @@ object GithubCommands {
       case (y, 0) => throw new Exception("Malformed Repo: The Repo does not exist. (Nothing found after /)")
       case (1, 1) => s"${repo.charAt(0)}/${repo.charAt(2)}"
       case (1, _) => s"${repo.charAt(0)}/${repo.substring(2, 4)}"
-      case (y, 1) => s"${repo.substring(0,y)}/${repo.charAt(y+1)}"
-      case (y, _) => s"${repo.substring(0,y)}/${repo.substring(y+1,y+3)}"
+      case (y, 1) => s"${repo.substring(0,2)}/${repo.charAt(y+1)}"
+      case (y, _) => s"${repo.substring(0,2)}/${repo.substring(y+1,y+3)}"
     }
   }
 
   def clone(repo: String, config: Config): JsObject = {
     val path = repoToPath(repo)
-    fileSystemMap.get(I(path)) match{
+    fileSystemMap.get(I(s"$path/")) match{
       case None =>
-        fileSystemMap.put(I(path)) // This shouldn't really work, since it puts in keys instead of data. Yay mutability! :|
-        s"git clone https://github.com/$path $startingDirectory/$path".!
+        fileSystemMap.put(I(s"$path/")) // This shouldn't really work, since it puts in keys instead of data. Yay mutability! :|
+        s"git clone https://github.com/$repo $startingDirectory/$path".!
       case Some(I("")) =>
-        s"git clone https://github.com/$path $startingDirectory/$path".!
+        s"git clone https://github.com/$repo $startingDirectory/$path".!
       case Some(I(_)) => //Assume it's already cloned
         try {
           s"git -C $startingDirectory/$path pull".!
@@ -101,7 +101,7 @@ object GithubCommands {
       val sinceLog = if (sinceLastTime){
         val gitRepo = solrMap.get(path).get
         gitRepo.lastCommit match{
-          case Some(s) => s"$startingLog $s"
+          case Some(s) => s"$startingLog --since=$s"
           case _ => startingLog
         }
       } else startingLog
@@ -109,10 +109,10 @@ object GithubCommands {
         case None => s"$sinceLog --pretty=format:%H".!!
         case Some(pat) => s"$sinceLog --pretty=format:%H -- $pat".!!
       }
-      // TODO: Store last commit in repo information
       val commitArray = commitHashes.split("\n")
+      val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
       if (commitArray.nonEmpty)
-        solrMap.put(path, GitRepo(path, Some(commitArray(0))))
+        solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt+1).toString)))
       JsObject("status" -> JsString("ok"),
         "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
     } else{
@@ -127,14 +127,15 @@ object GithubCommands {
       case head :: rest =>
         val splitVal = message.indexOf('\0')
         (splitVal, head) match{
-          case (-1, _) | (_, "diff") => map + (head -> JsString(message.substring(2))) //"\n\n"
+          case (-1, _) => map + (head -> JsString(message)) // | (_, "diff") => map + (head -> JsString(message.substring(2))) //"\n\n"
           case _ => addNextToMap(message.substring(splitVal+1), rest, map + (head -> JsString(message.substring(0, splitVal))))
         }
     }
     val startingDirectory = config.getString("repoLocation")
-    if (hasBeenCloned(repo)){
-      val commitExtract =  s"git -C $startingDirectory/${repoToPath(repo)} show --date=unix --format=%an%x00%ae%x00%cn%x00%ce%x00%s%x00%b%x00%ad%x00 $hash".!!
-      val extractionList = List("name", "email", "commitName", "commitEmail", "subject", "body", "date", "diff")
+    val path = repoToPath(repo)
+    if (hasBeenCloned(path)){
+      val commitExtract =  s"git -C $startingDirectory/$path show --date=unix --format=%an%x00%ae%x00%cn%x00%ce%x00%s%x00%b%x00%ad%x00 -s $hash".!!
+      val extractionList = List("name", "email", "commitName", "commitEmail", "subject", "body", "date")
       JsObject("status" -> JsString("ok"), "results" -> JsObject(addNextToMap(commitExtract, extractionList)))
     } else {
       JsObject("status" -> JsString("error"),
@@ -144,13 +145,17 @@ object GithubCommands {
 
   def getFiles(repo: String, hash: String, pattern: Option[String], config: Config): JsObject = {
     val startingDirectory = config.getString("repoLocation")
-    if (hasBeenCloned(repo)){
-      val startingShow = s"git -C $startingDirectory/${repoToPath(repo)} show --oneline --name-only $hash"
+    val path = repoToPath(repo)
+    if (hasBeenCloned(path)){
+      val startingShow = s"git -C $startingDirectory/$path show --oneline --name-only $hash"
       val listOfFiles = pattern match{
         case None => s"$startingShow".!!
         case Some(pat) => s"$startingShow -- $pat".!!
       }
-      JsObject("status" -> JsString("ok"), "results" -> JsArray(listOfFiles.split("\n").toVector.map(JsString(_))))
+      JsObject("status" -> JsString("ok"), "results" -> JsArray(listOfFiles.split("\n").foldRight(List[JsString]()){
+        case ("", list) => list
+        case (str, list) => JsString(str) :: list
+      }.tail.toVector))
     } else {
       JsObject("status" -> JsString("error"),
         "exception" -> new JsStringGitException(CommitGetFileException(repo, hash, "Repo does not exist.")))
@@ -159,8 +164,9 @@ object GithubCommands {
 
   def getFileContents(repo: String, hash: String, fileName: String, config: Config): JsObject = {
     val startingDirectory = config.getString("repoLocation")
-    if (hasBeenCloned(repo)) {
-      val fileContents = s"git -C $startingDirectory/${repoToPath(repo)} show $hash:$fileName".!!
+    val path = repoToPath(repo)
+    if (hasBeenCloned(path)) {
+      val fileContents = s"git -C $startingDirectory/$path show $hash:$fileName".!!
       fileContents.length() match{
         case 0 => JsObject("status" -> JsString("ok"), "results" -> JsString(""), "empty" -> JsTrue)
         case _ => JsObject("status" -> JsString("ok"), "results" -> JsString(fileContents), "empty" -> JsFalse)
@@ -173,9 +179,15 @@ object GithubCommands {
 
   def getFilePatches(repo: String, hash: String, fileName: String, config: Config): JsObject = {
     val startingDirectory = config.getString("repoLocation")
-    if (hasBeenCloned(repo)){
-      //As for right now, I'm leaving it as a JsString. I'm still slightly unsure on how patches work in git... :|
-      JsObject("status" -> JsString("ok"), "results" -> JsString(s"git -C $startingDirectory/${repoToPath(repo)} show $hash -- $fileName".!!))
+    val path = repoToPath(repo)
+    if (hasBeenCloned(path)){
+      val res = JsArray(s"git -C $startingDirectory/$path show $hash -- $fileName".!!.split("\n").foldRight(List[JsString]()){
+        case ("", jsArr) => jsArr
+        case (line, jsArr) if line.substring(0,2).equals("@@") => jsArr
+        case (line, jsArr) => JsString(line) :: jsArr
+      }.tail.toVector)
+      //As for right now, I'm leaving it as a JsArray. I'm still slightly unsure on how patches work in git... :|
+      JsObject("status" -> JsString("ok"), "results" -> res)
     } else {
       JsObject("status" -> JsString("error"),
         "exception" -> new JsStringGitException(FilePatchException(repo, hash, fileName, "Repo does not exist.")))
@@ -183,11 +195,20 @@ object GithubCommands {
   }
 
   def getFileParents(repo: String, hash: String, fileName: String, config: Config): JsObject = {
+    def getParents(lis: List[String]): JsArray = lis match {
+      case Nil => JsArray(Vector())
+      case "" :: rest => getParents(rest)
+      case stuff :: _ => JsArray(stuff.split(" ").toList.tail.tail.map(JsString(_)).toVector)
+    }
     val startingDirectory = config.getString("repoLocation")
-    if (hasBeenCloned(repo)) {
-      //As for right now, I'm leaving it as a JsString. I'm unsure how Ken actually uses this... :|
-      JsObject("status" -> JsString("ok"),
-        "results" -> JsString(s"git -C $startingDirectory/${repoToPath(repo)} log --full-history --parents $hash -- $fileName".!!))
+    val path = repoToPath(repo)
+    if (hasBeenCloned(path)) {
+      //As for right now, I'm leaving it as a JsArray. I'm unsure how Ken actually uses this... :|
+      val res = getParents(s"git -C $startingDirectory/$path log --full-history --parents $hash -- $fileName".!!.split("\n").foldRight(List[String]()){
+        case ("", jsArr) => jsArr
+        case (line, jsArr) => line :: jsArr
+      })
+      JsObject("status" -> JsString("ok"), "results" -> res)
     } else {
       JsObject("status" -> JsString("error"),
         "exception" -> new JsStringGitException(FileParentException(repo, hash, fileName, "Repo does not exist.")))
