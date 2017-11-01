@@ -33,7 +33,11 @@ object GitRepoSerializer extends JsonSerializer[GitRepo] {
 }
 
 object GithubCommands {
-  val solrMap = new SolrDataMap[String, GitRepo](GitRepoSerializer, "GitRepos")
+  val solrMapOpt: Option[SolrDataMap[String, GitRepo]] = try{
+    Some(new SolrDataMap[String, GitRepo](GitRepoSerializer, "GitRepos"))
+  } catch {
+    case e: Exception => None
+  }
   val startingDirectory: String = ConfigFactory.load().getString("repoLocation")
   val fileSystemMap = new FileSystemDataMap[I[String], I[String]](startingDirectory)
 
@@ -99,9 +103,13 @@ object GithubCommands {
     if (hasBeenCloned(path)){
       val startingLog = s"git -C $startingDirectory/$path log"
       val sinceLog = if (sinceLastTime){
-        val gitRepo = solrMap.get(path).get
-        gitRepo.lastCommit match{
-          case Some(s) => s"$startingLog --since=$s"
+        solrMapOpt match {
+          case Some(solrMap) =>
+            val gitRepo = solrMap.get(path).get
+            gitRepo.lastCommit match {
+              case Some(s) => s"$startingLog --since=$s"
+              case _ => startingLog
+            }
           case _ => startingLog
         }
       } else startingLog
@@ -112,7 +120,10 @@ object GithubCommands {
       val commitArray = commitHashes.split("\n")
       val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
       if (commitArray.nonEmpty)
-        solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt+1).toString)))
+        solrMapOpt match {
+          case Some(solrMap) => solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt+1).toString)))
+          case None => ()
+        }
       JsObject("status" -> JsString("ok"),
         "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
     } else{
@@ -183,7 +194,7 @@ object GithubCommands {
     if (hasBeenCloned(path)){
       val res = JsArray(s"git -C $startingDirectory/$path show $hash -- $fileName".!!.split("\n").foldRight(List[JsString]()){
         case ("", jsArr) => jsArr
-        case (line, jsArr) if line.substring(0,2).equals("@@") => jsArr
+        case (line, jsArr) if line.length >= 2 && line.substring(0,2).equals("@@") => jsArr
         case (line, jsArr) => JsString(line) :: jsArr
       }.tail.toVector)
       //As for right now, I'm leaving it as a JsArray. I'm still slightly unsure on how patches work in git... :|
@@ -212,6 +223,20 @@ object GithubCommands {
     } else {
       JsObject("status" -> JsString("error"),
         "exception" -> new JsStringGitException(FileParentException(repo, hash, fileName, "Repo does not exist.")))
+    }
+  }
+
+  def resetSolrMap(repo: String, all: Boolean = false): JsObject = {
+    solrMapOpt match{
+      case Some(solrMap) =>
+        if (all){
+          solrMap.extract()
+          JsObject("status" -> JsString("ok"), "results" -> JsString("The SolrMap has been entirely wiped!"))
+        } else{
+          solrMap.remove(repoToPath(repo))
+          JsObject("status" -> JsString("ok"), "results" -> JsString(s"Repo $repo has been removed from the SolrMap!"))
+        }
+      case None => JsObject("status" -> JsString("ok"), "results" -> JsString("WARNING: SolrMap not in use!"))
     }
   }
 }

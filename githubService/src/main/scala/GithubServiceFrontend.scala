@@ -93,6 +93,12 @@ object GithubServiceFrontend {
             println(Uri(s"http://$nodeToPick/parent"))
             redirect(Uri(s"http://$nodeToPick/parent"), StatusCodes.TemporaryRedirect)
           } ~
+          path("resetSolr"){
+            val nodeToPick = getNextNode
+            nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
+            println(Uri(s"http://$nodeToPick/resetSolr"))
+            redirect(Uri(s"http://$nodeToPick/resetSolr"), StatusCodes.TemporaryRedirect)
+          } ~
           path("doneWithResults"){
             val json = queryStr.parseJson.asJsObject
             json.fields.get("node") match{

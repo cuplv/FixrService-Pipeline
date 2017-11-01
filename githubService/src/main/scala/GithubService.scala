@@ -133,6 +133,19 @@ object GithubService {
             } catch {
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
             }
+          } ~
+          path("resetSolr") {
+            try {
+              val json = queryStr.parseJson.asJsObject()
+              json.fields.get("repo") match{
+                case Some(JsString("all")) => complete(GithubCommands.resetSolrMap("", all=true).prettyPrint)
+                case Some(JsString(repo)) => complete(GithubCommands.resetSolrMap(repo).prettyPrint)
+                case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
+                  JsString(GitServiceException("resetSolr", "{ \"repo\" : (\"user/repo\" or \"all\")").getMessage))).prettyPrint)
+              }
+            } catch {
+              case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
+            }
           }
       }
     }

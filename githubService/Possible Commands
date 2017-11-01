@@ -1,0 +1,47 @@
+POST Requests
+    If any POST Request fails, the output is { "status": "error", "exception": "..." }
+http::/sampleURL/clone
+    Input: { "repo": "user/repo" }
+    Output: { "status": "ok" }
+
+http::/sampleURL/pull
+    Input: { "repo": "user/repo" }
+    Output: { "status": "ok" }
+
+http::/sampleURL/getCommits
+    Input: { "repo": "user/repo" }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    or
+    Input: { "repo": "user/repo", "pattern": "*.java" }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    where the results only show commits that have been there before.
+    or
+    Input: { "repo": "user/repo", "sinceLast": true }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    where the results only show commits that it has not given out before.
+        NOTE: sinceLast only works if the Github Service is set up with Solr.
+
+http::/sampleURL/commitInformation
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678" }
+    Output: { "status": "ok", "name": "...", "email": "...", "commitName": "...",
+                "commitEmail": "...", "subject": "...", "body": "...", "date": "..." }
+
+http::/sampleURL/getFiles
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678" }
+    Output: { "status": "ok", "results": [ "file1.txt", "file2.pdf", "file3.java", ... ] }
+    or
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678", "pattern": "*.java" }
+    Output: { "status": "ok", "results": [ "file3.java", ... ] }
+
+http::/sampleURL/fileContents
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678", file: "file3.java" }
+    Output: { "status": "ok", "results": [ "// These are the contents of the java file!", ... ] }
+
+http::/sampleURL/patch
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678", file: "file3.java" }
+    Output: { "status": "ok", "results": ["Author: ...", ...,  "diff -...", ...] }
+
+http::/sampleURL/parent
+    Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678", file: "file3.java" }
+    Output: { "status": "ok", "results": ["34ab12674ab2345a1352abc45adb51afb623456b", "..."] }
+    where 34ab12674ab2345a1352abc45adb51afb623456b and the other commits are older commits with the same file.
