@@ -23,18 +23,22 @@ object GitRepoSerializer extends JsonSerializer[GitRepo] {
   import GitRepoSer._
   override def serializeToJson_(d: GitRepo): JsObject = d.toJson.asJsObject
 
-  override def deserialize_(json: JsObject): GitRepo = JsObject(json.fields.foldRight(Map[String, JsValue]()) {
-    case ((str, value), newFields) => value match { // Yay, schemaless stuff! :\
-      case JsArray(Vector(j: JsValue)) => newFields + (str -> j)
-      case _ => newFields + (str -> value)
-    }
-  }).convertTo[GitRepo]
+  override def deserialize_(json: JsObject): GitRepo = {
+    JsObject(json.fields.foldRight(Map[String, JsValue]()) {
+      case ((str, value), newFields) => value match { // Yay, schemaless stuff! :\
+        case JsArray(Vector(JsNumber(n))) => newFields + (str -> JsString(n.toString))
+        case JsArray(Vector(j: JsValue)) => newFields + (str -> j)
+        case JsNumber(n) => newFields + (str -> JsString(n.toString))
+        case _ => newFields + (str -> value)
+      }
+    }).convertTo[GitRepo]
+  }
 
 }
 
 object GithubCommands {
   val solrMapOpt: Option[SolrDataMap[String, GitRepo]] = try{
-    Some(new SolrDataMap[String, GitRepo](GitRepoSerializer, "GitRepos"))
+    Some(new SolrDataMap[String, GitRepo](GitRepoSerializer, "gitservice_GitRepos"))
   } catch {
     case e: Exception => None
   }
@@ -121,16 +125,19 @@ object GithubCommands {
           case Some(pat) => s"$sinceLog --pretty=format:%H -- $pat".!!
         }
         val commitArray = commitHashes.split("\n")
-        val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
-        if (commitArray.nonEmpty)
+        if (commitArray.nonEmpty){
           solrMapOpt match {
-            case Some(solrMap) => solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt + 1).toString)))
+            case Some(solrMap) =>
+              val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
+              solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt + 1).toString)))
             case None => ()
           }
+        }
         JsObject("status" -> JsString("ok"),
           "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
       } catch{
-        case e: Exception => JsObject("status" -> JsString("error"), "exception" -> JsString(e.getMessage))
+        case e: Exception => JsObject("status" -> JsString("error"),
+          "exception" -> new JsStringGitException(CommitsException(repo, e.toString)))
       }
     } else{
       JsObject("status" -> JsString("error"),
