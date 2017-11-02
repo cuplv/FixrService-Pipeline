@@ -50,7 +50,7 @@ object GithubCommands {
 
   private def repoToPath(repo: String): String = repo.indexOf("/") match{
     case -1 => throw new Exception("Malformed Repo: The Repo does not exist. (No / found anywhere)")
-    case 0 => throw new Exception("Malformed Repo: The User does not exist. (Found as \"/repo\"")
+    case 0 => throw new Exception("Malformed Repo: The User does not exist. (Found as \"/repo\")")
     case x => (x, repo.length()-(x+1)) match{
       case (y, 0) => throw new Exception("Malformed Repo: The Repo does not exist. (Nothing found after /)")
       case (1, 1) => s"${repo.charAt(0)}/${repo.charAt(2)}"
@@ -101,31 +101,37 @@ object GithubCommands {
     val startingDirectory = config.getString("repoLocation")
     val path = repoToPath(repo)
     if (hasBeenCloned(path)){
-      val startingLog = s"git -C $startingDirectory/$path log"
-      val sinceLog = if (sinceLastTime){
-        solrMapOpt match {
-          case Some(solrMap) =>
-            val gitRepo = solrMap.get(path).get
-            gitRepo.lastCommit match {
-              case Some(s) => s"$startingLog --since=$s"
-              case _ => startingLog
-            }
-          case _ => startingLog
+      try {
+        val startingLog = s"git -C $startingDirectory/$path log"
+        val sinceLog = if (sinceLastTime) {
+          solrMapOpt match {
+            case Some(solrMap) =>
+              solrMap.get(path) match {
+                case Some(gitRepo) => gitRepo.lastCommit match {
+                  case Some(s) => s"$startingLog --since=$s"
+                  case _ => startingLog
+                }
+                case None => startingLog
+              }
+            case _ => startingLog
+          }
+        } else startingLog
+        val commitHashes = pattern match {
+          case None => s"$sinceLog --pretty=format:%H".!!
+          case Some(pat) => s"$sinceLog --pretty=format:%H -- $pat".!!
         }
-      } else startingLog
-      val commitHashes = pattern match{
-        case None => s"$sinceLog --pretty=format:%H".!!
-        case Some(pat) => s"$sinceLog --pretty=format:%H -- $pat".!!
+        val commitArray = commitHashes.split("\n")
+        val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
+        if (commitArray.nonEmpty)
+          solrMapOpt match {
+            case Some(solrMap) => solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt + 1).toString)))
+            case None => ()
+          }
+        JsObject("status" -> JsString("ok"),
+          "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
+      } catch{
+        case e: Exception => JsObject("status" -> JsString("error"), "exception" -> JsString(e.getMessage))
       }
-      val commitArray = commitHashes.split("\n")
-      val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
-      if (commitArray.nonEmpty)
-        solrMapOpt match {
-          case Some(solrMap) => solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt+1).toString)))
-          case None => ()
-        }
-      JsObject("status" -> JsString("ok"),
-        "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
     } else{
       JsObject("status" -> JsString("error"),
         "exception" -> new JsStringGitException(CommitsException(repo, "Repo does not exist.")))

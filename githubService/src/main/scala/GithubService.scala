@@ -24,7 +24,9 @@ object GithubService {
             try{
               val json = queryStr.parseJson.asJsObject
               json.fields.get("repo") match{
-                case Some(j: JsString) => complete(GithubCommands.clone(j.value, config).prettyPrint)
+                case Some(j: JsString) =>
+                  val cloneStuff = GithubCommands.clone(j.value, config).prettyPrint
+                  complete(cloneStuff)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("clone", "{\"repo\": \"user/repo\"}").getMessage))).prettyPrint)
               }
@@ -36,7 +38,9 @@ object GithubService {
             try {
               val json = queryStr.parseJson.asJsObject
               json.fields.get("repo") match {
-                case Some(j: JsString) => complete(GithubCommands.pull(j.value, config).prettyPrint) // TODO: Add stuff here.
+                case Some(j: JsString) =>
+                  val pullStuff = GithubCommands.pull(j.value, config).prettyPrint
+                  complete(pullStuff) // TODO: Add stuff here.
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("pull", "{\"repo\": \"user/repo\"}").getMessage))).prettyPrint)
               }
@@ -57,7 +61,8 @@ object GithubService {
                     case Some(JsString(s)) => Some(s)
                     case _ => None
                   }
-                  complete(GithubCommands.getCommits(j.value, config, lastGet, pattern).prettyPrint)
+                  val getCommits = GithubCommands.getCommits(j.value, config, lastGet, pattern).prettyPrint
+                  complete(getCommits)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("getCommits", "{\"repo\": \"user/repo\" (, \"pattern\": \"regex\", \"sinceLastGet\": true)}").getMessage))).prettyPrint)
               }
@@ -70,7 +75,8 @@ object GithubService {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit")) match{
                 case (Some(repo: JsString), Some(commit: JsString)) =>
-                  complete(GithubCommands.extractCommit(repo.value, commit.value, config).prettyPrint)
+                  val extractCommits = GithubCommands.extractCommit(repo.value, commit.value, config).prettyPrint
+                  complete(extractCommits)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("commitInformation", "{\"repo\": \"user/repo\", \"commit\": \"commitHash\"}").getMessage))).prettyPrint)
               }
@@ -87,7 +93,8 @@ object GithubService {
                     case Some(JsString(s)) => Some(s)
                     case _ => None
                   }
-                  complete(GithubCommands.getFiles(repo.value, commit.value, pattern, config).prettyPrint)
+                  val getFiles = GithubCommands.getFiles(repo.value, commit.value, pattern, config).prettyPrint
+                  complete(getFiles)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("getFiles", "{\"repo\": \"user/repo\", \"commit\": \"commitHash\"}").getMessage))).prettyPrint)
               }
@@ -100,7 +107,8 @@ object GithubService {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match {
                 case (Some(repo: JsString), Some(commit: JsString), Some(file: JsString)) =>
-                  complete(GithubCommands.getFileContents(repo.value, commit.value, file.value, config).prettyPrint)
+                  val getFileContents = GithubCommands.getFileContents(repo.value, commit.value, file.value, config).prettyPrint
+                  complete(getFileContents)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("fileContents", "{\"repo\": \"user/repo\", \"commit\": \"commitHash\", \"file\": \"fileName\"}").getMessage))).prettyPrint)
               }
@@ -113,7 +121,8 @@ object GithubService {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match {
                 case (Some(repo: JsString), Some(commit: JsString), Some(file: JsString)) =>
-                  complete(GithubCommands.getFilePatches(repo.value, commit.value, file.value, config).prettyPrint)
+                  val getPatch = GithubCommands.getFilePatches(repo.value, commit.value, file.value, config).prettyPrint
+                  complete(getPatch)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("patch", "{\"repo\": \"user/repo\", \"commit\": \"commitHash\", \"file\": \"fileName\"}").getMessage))).prettyPrint)
               }
@@ -126,7 +135,8 @@ object GithubService {
               val json = queryStr.parseJson.asJsObject()
               (json.fields.get("repo"), json.fields.get("commit"), json.fields.get("file")) match{
                 case (Some(repo: JsString), Some(commit: JsString), Some(file: JsString)) =>
-                  complete(GithubCommands.getFileParents(repo.value, commit.value, file.value, config).prettyPrint)
+                  val getParent = GithubCommands.getFileParents(repo.value, commit.value, file.value, config).prettyPrint
+                  complete(getParent)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("parent", "{\"repo\": \"user/repo\", \"commit\": \"commitHash\", \"file\": \"fileName\"}").getMessage))).prettyPrint)
               }
@@ -138,8 +148,12 @@ object GithubService {
             try {
               val json = queryStr.parseJson.asJsObject()
               json.fields.get("repo") match{
-                case Some(JsString("all")) => complete(GithubCommands.resetSolrMap("", all=true).prettyPrint)
-                case Some(JsString(repo)) => complete(GithubCommands.resetSolrMap(repo).prettyPrint)
+                case Some(JsString("all")) =>
+                  val resetSolr = GithubCommands.resetSolrMap("", all=true).prettyPrint
+                  complete(resetSolr)
+                case Some(JsString(repo)) =>
+                  val resetSolr = GithubCommands.resetSolrMap(repo).prettyPrint
+                  complete(resetSolr)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
                   JsString(GitServiceException("resetSolr", "{ \"repo\" : (\"user/repo\" or \"all\")").getMessage))).prettyPrint)
               }
