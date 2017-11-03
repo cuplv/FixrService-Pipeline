@@ -61,6 +61,7 @@ object GithubServiceFrontend {
           path("getCommits"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
+            println(Uri(s"http://$nodeToPick/getCommits"))
             redirect(Uri(s"http://$nodeToPick/getCommits"), StatusCodes.TemporaryRedirect)
           } ~
           path("commitInformation"){
