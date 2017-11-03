@@ -23,6 +23,7 @@ object GitRepoSerializer extends JsonSerializer[GitRepo] {
   import GitRepoSer._
   override def serializeToJson_(d: GitRepo): JsObject = d.toJson.asJsObject
 
+  // One of the last times I ever work with schemaless Solr. (:
   override def deserialize_(json: JsObject): GitRepo = {
     JsObject(json.fields.foldRight(Map[String, JsValue]()) {
       case ((str, value), newFields) => value match { // Yay, schemaless stuff! :\
@@ -37,13 +38,17 @@ object GitRepoSerializer extends JsonSerializer[GitRepo] {
 }
 
 object GithubCommands {
-  val solrMapOpt: Option[SolrDataMap[String, GitRepo]] = try{
-    Some(new SolrDataMap[String, GitRepo](GitRepoSerializer, "gitservice_GitRepos"))
-  } catch {
-    case e: Exception => None
-  }
+  var solrMapOpt: Option[SolrDataMap[String, GitRepo]] = None
   val startingDirectory: String = ConfigFactory.load().getString("repoLocation")
   val fileSystemMap = new FileSystemDataMap[I[String], I[String]](startingDirectory)
+
+  def createSolrMap(): Unit = {
+    solrMapOpt = try{
+      Some(new SolrDataMap[String, GitRepo](GitRepoSerializer, "gitservice_GitRepos"))
+    } catch {
+      case e: Exception => None
+    }
+  }
 
   private def hasBeenCloned(path: String): Boolean = {
     fileSystemMap.get(I(path)) match{

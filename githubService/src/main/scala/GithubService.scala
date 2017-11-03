@@ -176,6 +176,9 @@ object GithubService {
     val port = if (args.length > 0){
        args(0).toInt
     } else conf.getInt("port")
+    if (conf.getBoolean("useSolr")){
+      GithubCommands.createSolrMap()
+    }
     val bindingFuture = Http().bindAndHandle(route, "localhost", port)
     println(s"Github Service started on Port $port!")
     StdIn.readLine() // let it run until user presses return
