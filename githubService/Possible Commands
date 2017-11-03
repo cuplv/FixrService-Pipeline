@@ -20,6 +20,7 @@ http::/sampleURL/getCommits
     Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
     where the results only show commits that it has not given out before.
         NOTE: sinceLast only works if the Github Service is set up with Solr.
+            Solr functionality has been turned off; if you want it, change useSolr to true in the config file.
     Input: { "repo": "user/repo", "since": 1234567890 }
         or { "repo": "user/repo", "since": "1234567890" }
     Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
