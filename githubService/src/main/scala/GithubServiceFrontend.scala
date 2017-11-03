@@ -117,7 +117,7 @@ object GithubServiceFrontend {
   def main(args: Array[String]): Unit = {
     val config = ConfigFactory.load()
     val listNodes: List[String] = args.length match{
-      case 0 | 1 => config.getStringList("ports").asScala.toList
+      case 0 | 1 => config.getStringList("nodes").asScala.toList
       case _ => args.toList.tail
     }
     nodes = listNodes.foldRight(Map[String, Int]()){

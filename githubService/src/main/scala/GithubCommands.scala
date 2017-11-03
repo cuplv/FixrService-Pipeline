@@ -101,7 +101,11 @@ object GithubCommands {
     }
   }
 
-  def getCommits(repo: String, config: Config, sinceLastTime: Boolean = false, pattern: Option[String] = None): JsObject = {
+  def getCommits(repo: String, config: Config, sinceLastTime: Boolean = false, since: String = "", pattern: Option[String] = None): JsObject = {
+    def sinceLogger(startingLog: String): String = since match{
+      case "" => startingLog
+      case _ => s"$startingLog --since=$since"
+    }
     val startingDirectory = config.getString("repoLocation")
     val path = repoToPath(repo)
     if (hasBeenCloned(path)){
@@ -113,28 +117,33 @@ object GithubCommands {
               solrMap.get(path) match {
                 case Some(gitRepo) => gitRepo.lastCommit match {
                   case Some(s) => s"$startingLog --since=$s"
-                  case _ => startingLog
+                  case _ => sinceLogger(startingLog)
                 }
-                case None => startingLog
+                case None => sinceLogger(startingLog)
               }
-            case _ => startingLog
+            case _ => sinceLogger(startingLog)
           }
-        } else startingLog
+        } else sinceLogger(startingLog)
         val commitHashes = pattern match {
           case None => s"$sinceLog --pretty=format:%H".!!
           case Some(pat) => s"$sinceLog --pretty=format:%H -- $pat".!!
         }
         val commitArray = commitHashes.split("\n")
-        if (commitArray.nonEmpty){
-          solrMapOpt match {
-            case Some(solrMap) =>
-              val lastCommit = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
-              solrMap.put(path, GitRepo(path, Some((lastCommit.split("\n")(0).toInt + 1).toString)))
-            case None => ()
-          }
+        (if (commitArray.nonEmpty){
+            val lCom = s"git -C $startingDirectory/$path show --date=unix --format=%ad -s ${commitArray(0)}".!!
+            solrMapOpt match {
+              case Some(solrMap) =>
+                solrMap.put(path, GitRepo(path, Some((lCom.split("\n")(0).toInt + 1).toString)))
+              case None => ()
+            }
+            lCom
+          } else "") match {
+          case "" => JsObject("status" -> JsString("ok"),
+            "results" -> JsArray(commitHashes.split("\n").toVector.map (JsString(_))))
+          case lastCommit => JsObject("status" -> JsString("ok"),
+            "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))),
+            "date" -> JsString(lastCommit.split("\n")(0)))
         }
-        JsObject("status" -> JsString("ok"),
-          "results" -> JsArray(commitHashes.split("\n").toVector.map(JsString(_))))
       } catch{
         case e: Exception => JsObject("status" -> JsString("error"),
           "exception" -> new JsStringGitException(CommitsException(repo, e.toString)))

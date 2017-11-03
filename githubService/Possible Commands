@@ -10,16 +10,21 @@ http::/sampleURL/pull
 
 http::/sampleURL/getCommits
     Input: { "repo": "user/repo" }
-    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
     or
     Input: { "repo": "user/repo", "pattern": "*.java" }
-    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
     where the results only show commits that have been there before.
     or
     Input: { "repo": "user/repo", "sinceLast": true }
-    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ] }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
     where the results only show commits that it has not given out before.
         NOTE: sinceLast only works if the Github Service is set up with Solr.
+    Input: { "repo": "user/repo", "since": 1234567890 }
+        or { "repo": "user/repo", "since": "1234567890" }
+    Output: { "status": "ok", "results": [ "1234567890abcdef1234567890abcdef12345678", ... ], "date": "2345678901" }
+    where the results only show commits that had been created after the Unix Date 1234567890
+    The "date" field for all examples is the date of the most recent commit.
 
 http::/sampleURL/commitInformation
     Input: { "repo": "user/repo", "commit": "1234567890abcdef1234567890abcdef12345678" }

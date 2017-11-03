@@ -57,14 +57,19 @@ object GithubService {
                     case Some(JsTrue) => true
                     case _ => false
                   }
+                  val sinceDate = json.fields.get("since") match{
+                    case Some(jn: JsNumber) => jn.toString()
+                    case Some(JsString(js)) => js
+                    case _ => ""
+                  }
                   val pattern: Option[String] = json.fields.get("pattern") match{
                     case Some(JsString(s)) => Some(s)
                     case _ => None
                   }
-                  val getCommits = GithubCommands.getCommits(j.value, config, lastGet, pattern).prettyPrint
+                  val getCommits = GithubCommands.getCommits(j.value, config, lastGet, sinceDate, pattern).prettyPrint
                   complete(getCommits)
                 case _ => complete(JsObject(Map("status" -> JsString("error"), "exception" ->
-                  JsString(GitServiceException("getCommits", "{\"repo\": \"user/repo\" (, \"pattern\": \"regex\", \"sinceLastGet\": true)}").getMessage))).prettyPrint)
+                  JsString(GitServiceException("getCommits", "{\"repo\": \"user/repo\" (, \"pattern\": \"regex\", \"sinceLast\": true, \"since\": unixDate/\"date\")}").getMessage))).prettyPrint)
               }
             } catch {
               case e: Exception => complete(JsObject(Map("status" -> JsString("error"), "exception" -> JsString(e.getMessage))).prettyPrint)
