@@ -48,6 +48,7 @@ object sample {
     val d0 = storeBuilder.idmap[I[Int]]("D0") // InMemDataStore.createIdDataMap[I[Int]]("m0")
     val d1 = storeBuilder.idmap[I[Int]]("D1") // InMemDataStore.createIdDataMap[I[Int]]("m1")
     val d2 = storeBuilder.idmap[I[Int]]("D2") // InMemDataStore.createIdDataMap[I[Int]]("m2")
+    val d22 = storeBuilder.idmap[I[Int]]("D2!")
     val d3 = storeBuilder.idmap[I[Int]]("D3") // InMemDataStore.createIdDataMap[I[Int]]("m3")
     val d4 = storeBuilder.idmap[bigglue.data.Pair[I[Int],I[Int]]]("D4") // InMemDataStore.createIdDataMap[protopipes.data.Pair[I[Int],I[Int]]]("m4")
     val d5 = storeBuilder.idmap[I[Int]]("D5") // InMemDataStore.createIdDataMap[I[Int]]("m5")

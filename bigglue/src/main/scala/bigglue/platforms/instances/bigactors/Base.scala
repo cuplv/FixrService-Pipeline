@@ -159,7 +159,12 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
     case job: Input @ unchecked =>
       currInput = Some(job)
       longestTimeWaiting match{
-        case Duration.Inf => platform.compute(job)
+        case Duration.Inf =>
+          try {
+            platform.compute(job)
+          } catch {
+            case e: Exception => platform.getErrorCurator().reportError(job, e)
+          }
         case _ =>
           val futureJob = Future {
             platform.compute(job)
