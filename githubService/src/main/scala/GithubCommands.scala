@@ -61,11 +61,10 @@ object GithubCommands {
     case -1 => throw new Exception("Malformed Repo: The Repo does not exist. (No / found anywhere)")
     case 0 => throw new Exception("Malformed Repo: The User does not exist. (Found as \"/repo\")")
     case x => (x, repo.length()-(x+1)) match{
-      case (y, 0) => throw new Exception("Malformed Repo: The Repo does not exist. (Nothing found after /)")
-      case (1, 1) => s"${repo.charAt(0)}/${repo.charAt(2)}"
-      case (1, _) => s"${repo.charAt(0)}/${repo.substring(2, 4)}"
-      case (y, 1) => s"${repo.substring(0,2)}/${repo.charAt(y+1)}"
-      case (y, _) => s"${repo.substring(0,2)}/${repo.substring(y+1,y+3)}"
+      case (_, 0) => throw new Exception("Malformed Repo: The Repo does not exist. (Nothing found after /)")
+      case (_, _) => repo
+      // case (1, _) => s"${repo.charAt(0)}/${repo.substring(2)}"
+      // case (y, _) => s"${repo.substring(0,2)}/${repo.substring(y+1)}"
     }
   }
 
