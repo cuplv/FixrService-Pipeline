@@ -29,7 +29,7 @@ object Poster{
   def post(url: String, postData: JsObject): Map[String, JsValue] = {
     Http(url).timeout(1000, 3600000).postData(postData.prettyPrint)
       .header("Content-Type", "application/json").option(HttpOptions.followRedirects(true))
-      .asString.body.toJson.asJsObject.fields
+      .asString.body.parseJson.asJsObject.fields
   }
 
   def postMap(url: String, postData: JsObject): Map[String, JsValue] = {
@@ -62,8 +62,8 @@ case class GitFiles(gitRepo: String, hash: String, file: String) extends Identif
   override def mkIdentity(): Identity[GitFiles] = BasicIdentity(s"$gitRepo:$hash/$file")
 }
 
-case class GitFeatureExtracted(gitFiles: GitFiles, features: String) extends Identifiable[GitFiles]{
-  override def mkIdentity(): Identity[GitFiles] = gitFiles.identity()
+case class GitFeatureExtracted(gitFiles: GitFiles, features: String) extends Identifiable[GitFeatureExtracted]{
+  override def mkIdentity(): Identity[GitFeatureExtracted] = BasicIdentity(gitFiles.identity().getId())
 }
 
 object GitCommitSerializer extends JsonSerializer[GitCommit]{
@@ -79,7 +79,7 @@ object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
       case JsString(s) => s
       case JsArray(Vector(JsString(s))) => s
     }
-    val (gitRepo, hash, info) = json.fields.foldRight(("", "", Map()[String, String])){
+    val (gitRepo, hash, info) = json.fields.foldRight(("", "", Map[String, String]())){
       case (("gitRepo", jsval), (_, hsh, inf)) => (extractStrFromJsValue(jsval), hsh, inf)
       case (("hash", jsval), (gRepo, _, inf)) => (gRepo, extractStrFromJsValue(jsval), inf)
       case ((str, jsval), (gRepo, hsh, inf)) => (gRepo, hsh, inf+(str->extractStrFromJsValue(jsval)))
@@ -120,8 +120,9 @@ object GitFeatureExtractedSerializer extends JsonSerializer[GitFeatureExtracted]
 
 case class GitCloneAndGetCommits() extends Mapper[I[String], GitCommit] (
   input => {
-    Poster.postList("http://18.220.127.2:8080/clone", JsObject(Map("repo" -> JsString(input.i))))
-    Poster.postList("http://18.220.127.2:8080/getCommits", JsObject(Map("repo" -> JsString(input.i)))).foldRight(List[GitCommit]()){
+    println("!")
+    println(Poster.postList("http://localhost:8080/clone", JsObject(Map("repo" -> JsString(input.i)))))
+    Poster.postList("http://localhost:8080/getCommits", JsObject(Map("repo" -> JsString(input.i)))).foldRight(List[GitCommit]()){
       case (JsString(hash), listOfCommits) => GitCommit(input.i, hash) :: listOfCommits
       case (_, listOfCommits) => listOfCommits
     }
@@ -130,7 +131,8 @@ case class GitCloneAndGetCommits() extends Mapper[I[String], GitCommit] (
 
 case class GitCommitInformation() extends Mapper[GitCommit, GitCommitInfo] (
   input => {
-    val thisMap = Poster.post("http://18.220.127.2:8080/commitInformation",
+    //18.220.127.2
+    val thisMap = Poster.post("http://localhost:8080/commitInformation",
       JsObject(Map("repo" -> JsString(input.gitRepo), "commit" -> JsString(input.hash))))
     val newMap = thisMap.foldRight(Map[String, String]()){
       case (("status", _), same) => same
@@ -143,7 +145,7 @@ case class GitCommitInformation() extends Mapper[GitCommit, GitCommitInfo] (
 
 case class GitFilesFromCommits() extends Mapper[GitCommit, GitFiles](
   input => {
-    Poster.postList("http://18.220.127.2:8000/getFiles",
+    Poster.postList("http://localhost:8080/getFiles",
       JsObject(Map("repo" -> JsString(input.gitRepo), "commit" -> JsString(input.hash), "pattern" -> JsString("*.java"))))
       .map{case JsString(file) => GitFiles(input.gitRepo, input.hash, file)}
   }
@@ -151,7 +153,8 @@ case class GitFilesFromCommits() extends Mapper[GitCommit, GitFiles](
 
 case class GitFeatures(failureMap: TextFileDataMap) extends Mapper[GitFiles, GitFeatureExtracted](
   input => {
-    val fileContents = Poster.postList("http://18.220.127.2:8000/fileContents",
+    println(s"Working on: ${input.gitRepo}:${input.hash}/${input.file}")
+    val fileContents = Poster.postList("http://localhost:8080/fileContents",
       JsObject(Map("repo" -> JsString(input.gitRepo), "commit" -> JsString(input.hash), "file" -> JsString(input.file)))).foldRight("") {
       case (JsString(j), str) => s"$j\n$str"
       case (_, str) => str
@@ -183,7 +186,7 @@ object FixrPipeline{
   def main(args: Array[String]): Unit = {
     val config = PipeConfig.newConfig()
     val fEErrorLog = new TextFileDataMap("src/main/fixr-pipeline/feature-extraction-error.log")
-    val textMap = new TextFileDataMap("src/main/fixr-pipeline/first50.txt")
+    val textMap = new TextFileDataMap("src/main/fixr-pipeline/firstOne.txt")
     val gitToClone = new InMemDataMap[I[Int], I[String]]
     val gitCommit = new SolrDataMap[GitCommit, GitCommit](GitCommitSerializer, "fP-commits")
     val gitCommitInfo = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "fP-commitInfo")
@@ -191,9 +194,14 @@ object FixrPipeline{
     val featureMap = new SolrDataMap[GitFeatureExtracted, GitFeatureExtracted](GitFeatureExtractedSerializer, "fP-featureExtr")
     import bigglue.pipes.Implicits._
     val fixrPipe = gitToClone:--GitCloneAndGetCommits()-->gitCommit:--GitFilesFromCommits()-->
-      gitFiles :--GitFeatures(fEErrorLog)--> DataNode(featureMap)
+      gitFiles:--GitFeatures(fEErrorLog)-->featureMap
     fixrPipe.check(config)
     fixrPipe.init(config)
+    textMap.all().foldLeft(0){
+      case (num, input) =>
+        gitToClone.put(I(num), input)
+        num + 1
+    }
   }
 
 }

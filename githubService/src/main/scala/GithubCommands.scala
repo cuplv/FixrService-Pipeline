@@ -70,9 +70,9 @@ object GithubCommands {
 
   def clone(repo: String, config: Config): JsObject = {
     val path = repoToPath(repo)
-    fileSystemMap.get(I(s"$path/")) match{
+    fileSystemMap.get(I(s"$startingDirectory/$path/")) match{
       case None =>
-        fileSystemMap.put(I(s"$path/")) // This shouldn't really work, since it puts in keys instead of data. Yay mutability! :|
+        fileSystemMap.put(I(s"$startingDirectory/$path/")) // This shouldn't really work, since it puts in keys instead of data. Yay mutability! :|
         s"git clone https://github.com/$repo $startingDirectory/$path".!
       case Some(I("")) =>
         s"git clone https://github.com/$repo $startingDirectory/$path".!
