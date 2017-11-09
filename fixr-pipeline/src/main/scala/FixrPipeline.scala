@@ -186,7 +186,7 @@ object FixrPipeline{
   def main(args: Array[String]): Unit = {
     val config = PipeConfig.newConfig()
     val fEErrorLog = new TextFileDataMap("src/main/fixr-pipeline/feature-extraction-error.log")
-    val textMap = new TextFileDataMap("src/main/fixr-pipeline/firstOne.txt")
+    val textMap = new TextFileDataMap("src/main/fixr-pipeline/first1000.txt")
     val gitToClone = new InMemDataMap[I[Int], I[String]]
     val gitCommit = new SolrDataMap[GitCommit, GitCommit](GitCommitSerializer, "fP-commits")
     val gitCommitInfo = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "fP-commitInfo")
