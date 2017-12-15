@@ -22,7 +22,7 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
         val fileName = file.getName
         val seq = if (file.isDirectory) getOutputOutOfDirectory(s"$subdirectory/$fileName")
         else {
-          List(I(Source.fromFile(file).getLines().foldRight(""){
+          List(I(Source.fromFile(file).getLines().foldRight("") {
             case (line, fileContent) => s"$line\n$fileContent"
           }).asInstanceOf[Output])
         }
@@ -70,12 +70,21 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
 
   override def iterator(): Iterator[Output] = new FileSystemIterator[Output](subdirectory)
 
+  private def getFiles(direct: File, subdir: String = "", firstTime: Boolean = true): List[String] = {
+    val name: String = if (firstTime) s"$subdir" else s"$subdir${direct.getName}/"
+    if (direct.isDirectory){
+      direct.listFiles.toList.flatMap(file => getFiles(file,name,firstTime = false))
+    } else {
+      List(name.substring(0, name.length-1))
+    }
+  }
+
   override def get(key: Input): Option[Output] = {
     try {
       val file = new File(s"$subdirectory/${key.getId()}")
       if (file.exists()){
         val str = (if (file.isDirectory){
-          file.listFiles.toList
+          getFiles(file, key.getId())
         } else {
           Source.fromFile(s"$subdirectory/${key.getId()}").getLines()
         }).foldRight("") {

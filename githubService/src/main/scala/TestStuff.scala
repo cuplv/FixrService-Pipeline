@@ -7,7 +7,7 @@ import scalaj.http.{Http, HttpOptions}
 
 object TestStuff {
   def main(args: Array[String]): Unit = {
-    println(Http("http://localhost:8080/clone").timeout(1000, 3600000).postData(JsObject(Map("repo" -> JsString("42cc/p2psafety"),
+    println(Http("http://localhost:8081/clone").timeout(1000, 3600000).postData(JsObject(Map("repo" -> JsString("0legg/BezierClock"),
     "sinceLast" -> JsTrue)).prettyPrint)
       .header("Content-Type", "application/json").option(HttpOptions.followRedirects(true)).asString.body)
   }

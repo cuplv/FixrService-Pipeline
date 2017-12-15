@@ -5,7 +5,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 import BigActorPlatform._
 import bigglue.configurations.{ConfOpt, Constant, PipeConfig, PlatformBuilder}
 import bigglue.connectors.{Connector, Status}
-import bigglue.connectors.instances.ActorConnector
+import bigglue.connectors.instances.{ActorConnector, WaitingConnector}
 import bigglue.curators.ErrorCurator
 import bigglue.data.Identifiable
 import bigglue.exceptions.NotInitializedException
