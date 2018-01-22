@@ -2,8 +2,7 @@ package bigglue.examples
 
 import bigglue.computations.Mapper
 import bigglue.configurations.{DataStoreBuilder, PipeConfig}
-import bigglue.data.{BasicIdentity, Identifiable, Identity}
-import bigglue.store.instances.InMemDataStore
+import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
 
 /**
   * Created by chanceroberts on 12/15/17.
@@ -21,24 +20,16 @@ case class Cc(i: Int, j: String) extends Identifiable[Cc]{
   override def mkIdentity(): Identity[Cc] = BasicIdentity(s"$j://$i")
 }
 
-case class Dd(a: Aa, b: Bb, c: Cc) extends Identifiable[Dd]{
-  override def mkIdentity(): Identity[Dd] = BasicIdentity(s"A: ${a.getId()}, B: ${b.getId()}, C: ${c.getId()}")
-}
-
-case class SplitStep() extends Mapper[Aa, Amalgamation](input => {
+case class Simple() extends Mapper[Aa, I[(Bb, Cc)]](input => {
   val s = input.s
-  List(Amalgamation(Bb(s"$s."), Cc(s.length, s"$s."), Dd(input, Bb(s"$s."), Cc(s.length, s"$s."))))
+  List(I((Bb(s"%s."), Cc(s.length, s"$s."))))
 })
 
-case class Amalgamation(b: Bb, c: Cc, d: Dd) extends Identifiable[Amalgamation]{
-  override def mkIdentity(): Identity[Amalgamation] = BasicIdentity(s"(${b.getId()}, ${c.getId()}, ${d.getId()}")
-}
-
-case class SplitToB() extends Mapper[Amalgamation, Bb](input => List(input.b))
-
-case class SplitToC() extends Mapper[Amalgamation, Cc](input => List(input.c))
-
-case class SplitToD() extends Mapper[Amalgamation, Dd](input => List(input.d))
+case class BHeavyComputation() extends Mapper[Bb, Bb](input => {
+  println(s"Heavy Computation in B for ${input.s}.")
+  Thread.sleep(3000)
+  List(input)
+})
 
 object branch {
   def main(args: Array[String]): Unit = {
@@ -47,17 +38,19 @@ object branch {
     val storeBuilder = DataStoreBuilder.load(conf)
     val aStore = storeBuilder.idmap[Aa]("a")
     val bStore = storeBuilder.idmap[Bb]("b")
+    val bCompute = storeBuilder.idmap[Bb]("b2")
     val cStore = storeBuilder.idmap[Cc]("c")
-    val dStore = storeBuilder.idmap[Dd]("d")
-    val mergeStore = storeBuilder.idmap[Amalgamation]("am")
-    val pipe = aStore:--SplitStep()--> mergeStore :< {(SplitToB()-->bStore) ~ (SplitToC()-->cStore) ~ (SplitToD() --> dStore)}
+    val pipe = aStore:--Simple()--> (bStore:--BHeavyComputation()-->bCompute, DataNode(cStore))
     pipe.check(conf)
     pipe.init(conf)
     aStore.put(List(Aa("test"), Aa("test2"), Aa("test3")))
     Thread.sleep(4000)
+    aStore.put(List(Aa("1234")))
+    Thread.sleep(3000)
+    aStore.put(List(Aa("test4")))
+    Thread.sleep(1000)
     println(aStore)
     println(bStore)
     println(cStore)
-    println(dStore)
   }
 }

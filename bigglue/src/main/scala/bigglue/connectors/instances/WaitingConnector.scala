@@ -7,7 +7,7 @@ import bigglue.connectors.Status.Status
 import bigglue.exceptions.NotInitializedException
 import bigglue.platforms.Platform
 import bigglue.store.DataStore
-import bigglue.store.instances.InMemLinearStore
+import bigglue.store.instances.{InMemDataQueue, InMemLinearStore}
 
 import scala.concurrent.duration._
 
@@ -15,12 +15,12 @@ import scala.concurrent.duration._
   * Created by chanceroberts on 11/16/17.
   */
 
-case class OpenTheFloodGates()
+case class OpenTheFloodGates(send: Int = 0)
 
 class WaitingActor[Data](connector: WaitingConnector[Data]) extends Actor {
   override def receive: Receive = {
-    case OpenTheFloodGates =>
-      connector.reallySendDown()
+    case OpenTheFloodGates(send) =>
+      connector.reallySendDown(send)
     case _ => ()
   }
 }
@@ -37,7 +37,8 @@ class WaitingConnector[Data]() extends Connector[Data]{
     case Some(x) => x
   }
 
-  val floodList: InMemLinearStore[(Boolean, Data)] = new InMemLinearStore[(Boolean, Data)]
+  //val floodList: InMemLinearStore[(Boolean, Data)] = new InMemLinearStore[(Boolean, Data)]
+  val floodList: InMemDataQueue[(Boolean, Data)] = new InMemDataQueue[(Boolean, Data)]
   // Do we really want a separate ActorSystem for this? :(
   val actorSystem: ActorSystem = ActorSystem.create()
   implicit val dispatcher = actorSystem.dispatcher
@@ -51,9 +52,10 @@ class WaitingConnector[Data]() extends Connector[Data]{
     connectorOpt = Some(Class.forName(connConf.getString("innerConnector"))
       .getConstructors()(0).newInstance().asInstanceOf[Connector[Data]])
     val delay = connConf.getDouble("delayInSeconds").seconds // 2.seconds
+    val send = connConf.getInt("amountPerInterval") // 10
     val interval = connConf.getDouble("intervalsInSeconds").seconds // 2.seconds
     uniqueOpt = Some(connConf.getBoolean("onlyUnique"))
-    actorSystem.scheduler.schedule(delay, interval, floodGates, OpenTheFloodGates)
+    actorSystem.scheduler.schedule(delay, interval, floodGates, OpenTheFloodGates(send))
   }
 
   override def retrieveUp(): Seq[Data] = connector.retrieveUp()
@@ -63,8 +65,19 @@ class WaitingConnector[Data]() extends Connector[Data]{
     connector.registerPlatform(platform)
   }
 
-  def reallySendDown(): Unit = {
-    val (notModified, modified, _) = floodList.extract().foldRight(List[Data](), List[Data](), Map[Data, Boolean]()){
+  def reallySendDown(send: Int): Unit = {
+    val (notModified, modified, _) = (send match{
+      case 0 => floodList.extract()
+      case x =>
+        def createList(left: Int, list: List[(Boolean, Data)] = List()): List[(Boolean, Data)] = {
+          if (left == 0) list
+          else floodList.dequeue() match{
+            case Some(x: (Boolean, Data)) => x :: list
+            case _ => list
+          }
+        }
+        createList(send).reverse
+    }).foldRight(List[Data](), List[Data](), Map[Data, Boolean]()){
       case ((false, nMData), (nModified, iModified, newData)) =>
         if (unique) newData.get(nMData) match{
           case None => (nMData :: nModified, iModified, newData+(nMData->true))
