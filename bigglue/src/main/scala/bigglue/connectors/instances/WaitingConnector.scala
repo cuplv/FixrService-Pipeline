@@ -19,8 +19,11 @@ case class OpenTheFloodGates(send: Int = 0)
 
 class WaitingActor[Data](connector: WaitingConnector[Data]) extends Actor {
   override def receive: Receive = {
-    case OpenTheFloodGates(send) =>
+    case OpenTheFloodGates(send) => try{
       connector.reallySendDown(send)
+    } catch{
+      case e: Exception => throw new Exception(s"Problem with ${connector.name}: ${connector.floodList.all()}")
+    }
     case _ => ()
   }
 }
@@ -37,13 +40,13 @@ class WaitingConnector[Data]() extends Connector[Data]{
     case Some(x) => x
   }
 
-  //val floodList: InMemLinearStore[(Boolean, Data)] = new InMemLinearStore[(Boolean, Data)]
   val floodList: InMemDataQueue[(Boolean, Data)] = new InMemDataQueue[(Boolean, Data)]
   // Do we really want a separate ActorSystem for this? :(
   val actorSystem: ActorSystem = ActorSystem.create()
   implicit val dispatcher = actorSystem.dispatcher
   val floodGates: ActorRef = actorSystem.actorOf(Props(classOf[WaitingActor[Data]], this))
   var uniqueOpt: Option[Boolean] = None
+  var name: String = ""
 
   override def init(conf: PipeConfig): Unit = {
     val trueConfig = conf.typeSafeConfig
@@ -52,7 +55,7 @@ class WaitingConnector[Data]() extends Connector[Data]{
     connectorOpt = Some(Class.forName(connConf.getString("innerConnector"))
       .getConstructors()(0).newInstance().asInstanceOf[Connector[Data]])
     val delay = connConf.getDouble("delayInSeconds").seconds // 2.seconds
-    val send = connConf.getInt("amountPerInterval") // 10
+    val send = connConf.getInt("amountPerInterval") // 0
     val interval = connConf.getDouble("intervalsInSeconds").seconds // 2.seconds
     uniqueOpt = Some(connConf.getBoolean("onlyUnique"))
     actorSystem.scheduler.schedule(delay, interval, floodGates, OpenTheFloodGates(send))
@@ -63,6 +66,18 @@ class WaitingConnector[Data]() extends Connector[Data]{
   override def registerPlatform(platform: Platform): Unit = {
     super.registerPlatform(platform)
     connector.registerPlatform(platform)
+    name = s"Platform $platform: Connector ${connector.getDownstream()}"
+    println(name)
+  }
+
+  override def registerDownstreamConnector(connector: Connector[Data]): Unit = {
+    super.registerDownstreamConnector(connector)
+    connector.registerDownstreamConnector(connector)
+  }
+
+  override def registerUpstreamConnector(connector: Connector[Data]): Unit = {
+    super.registerUpstreamConnector(connector)
+    connector.registerUpstreamConnector(connector)
   }
 
   def reallySendDown(send: Int): Unit = {

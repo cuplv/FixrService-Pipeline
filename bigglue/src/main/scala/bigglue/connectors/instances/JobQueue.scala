@@ -4,7 +4,10 @@ import bigglue.configurations.{PipeConfig, PlatformBuilder}
 import bigglue.connectors.{Connector, Status}
 import bigglue.connectors.Connector.Id
 import bigglue.connectors.Status.Status
-import bigglue.data.{BasicIdentity, Identifiable}
+import bigglue.data.{BasicIdentity, I, Identifiable}
+import bigglue.exceptions.{NotInitializedException, ProtoPipeException}
+import bigglue.platforms.Platform
+import bigglue.store.instances.file.TextFileDataMap
 import bigglue.store.{DataMap, DataMultiMap, DataQueue, IdDataMap}
 import bigglue.store.instances.{InMemDataMap, InMemDataMultiMap, InMemDataQueue}
 import com.typesafe.config.Config
@@ -44,6 +47,14 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   // var currId: Id = 0L
   // val history: DataMap[Id, Identity[Data]] = new InMemDataMap[Id, Identity[Data]]
   val statusMap: DataMultiMap[Status, Data] = new InMemDataMultiMap[Status, Data]
+  var name: String = ""
+
+  /*
+  def storedMap: DataMap[I[Int], I[String]] = storedMapOpt match{
+    case Some(x) => x
+    case None => throw new ProtoPipeException(Some("Stored Map call not allowed: Platform has not been registered."))
+  }
+  */
 
   /*
   def getMap(): DataMap[Identity[Data],Data] = datastoreOpt match {
@@ -67,6 +78,10 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     super.sendDown(data)
   }
 
+  override def registerPlatform(platform: Platform): Unit = {
+    super.registerPlatform(platform)
+  }
+
   override def retrieveUp(): Seq[Data] = {
     // val unique = queue.extract().distinct
     queue.extract() ++ (statusMap.get(Status.Error) ++ statusMap.get(Status.Modified))
@@ -84,6 +99,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   override def reportUp(status: Status, data: Seq[Data]): Unit = {
     statusMap.remove( data.toSet )
     statusMap.put(status, data.toSet )
+    println(statusMap)
     // history.remove(ids)
   }
 

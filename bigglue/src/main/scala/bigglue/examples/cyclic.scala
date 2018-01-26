@@ -29,14 +29,15 @@ case class CycleableSerializer() extends JsonSerializer[Cycleable]{
 
 case class M1() extends Mapper[Cycleable, Cycleable](input => {
   println(s"Cycle ${input.time}!")
-  List(input)
+  List(Cycleable(input.time+1))
 })
 
 case class M2() extends Mapper[Cycleable, I[(Cycleable, I[Int])]](input => {
   Thread.sleep(1000)
-  List(I((Cycleable(input.time), I(input.time))))
+  List(I((input, I(input.time))))
 })
 
+case class Test(one: Int)
 
 object cyclic {
   def main(args: Array[String]): Unit = {

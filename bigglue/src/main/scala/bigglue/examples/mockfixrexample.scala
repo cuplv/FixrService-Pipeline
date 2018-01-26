@@ -18,7 +18,7 @@ import scalaj.http.Http
 /**
   * Created by chanceroberts on 8/31/17.
   */
-object MockProtocol extends DefaultJsonProtocol {
+object MockProtocol2 extends DefaultJsonProtocol {
   implicit val gitID: JsonFormat[GitID] = jsonFormat2(GitID)
   implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
   implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat10(GitCommitInfo)
@@ -30,7 +30,7 @@ case class GitID(user: String, repo: String) extends Identifiable[GitID]{
 }
 
 object GitIDSerializer extends JsonSerializer[GitID] {
-  import MockProtocol._
+  import MockProtocol2._
   override def serializeToJson_(d: GitID): JsObject = d.toJson.asJsObject
 
   override def deserialize_(json: JsObject): GitID = json.convertTo[GitID]
@@ -41,7 +41,7 @@ case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable[GitRepo]
 }
 
 object GitRepoSerializer extends JsonSerializer[GitRepo]{
-  import MockProtocol._
+  import MockProtocol2._
   override def serializeToJson_(d: GitRepo): JsObject = {
     JsObject(flatten(d.toJson.asJsObject.fields))
   }
@@ -102,7 +102,7 @@ case class GitCommitInfo(gitRepo: GitRepo, hash: String,
 }
 
 object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
-  import MockProtocol._
+  import MockProtocol2._
   override def serializeToJson_(d: GitCommitInfo): JsObject = NestedWithGitRepo.flatten(d.toJson.asJsObject)
 
   override def deserialize_(json: JsObject): GitCommitInfo = {
@@ -117,7 +117,7 @@ case class GitFeatures(gitRepo: GitRepo, hash: String, file: String, protobuf: S
 }
 
 object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
-  import MockProtocol._
+  import MockProtocol2._
   override def serializeToJson_(d: GitFeatures): JsObject = NestedWithGitRepo.flatten(d.toJson.asJsObject)
 
   override def deserialize_(json: JsObject): GitFeatures = {

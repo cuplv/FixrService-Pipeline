@@ -18,7 +18,7 @@ class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
       writer.close()
     }
     catch{
-      case e: Exception => ???
+      case e: Exception => throw new Exception("File is not open.")
     }
   }
 

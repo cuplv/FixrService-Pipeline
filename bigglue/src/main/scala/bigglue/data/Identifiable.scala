@@ -7,7 +7,7 @@ import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, Js
   * Created by edmundlam on 8/8/17.
   */
 
-abstract class Identifiable[A] {
+abstract class Identifiable[A]() {
   var identityOpt: Option[Identity[A]] = None
 
   protected[this] def mkIdentity(): Identity[A]
