@@ -88,14 +88,18 @@ object Implicits {
 
   implicit class TuplePipe[DataL <: Identifiable[DataL], DataR <: Identifiable[DataR], EndL <: Identifiable[EndL], EndR <: Identifiable[EndR]]
   (pipes: (Pipe[DataL, EndL], Pipe[DataR, EndR])) extends Pipe[I[(DataL, DataR)], I[(EndL, EndR)]]{
+    override def toString(): String = s"TuplePipe($pipes)"
+
     private val headStore = (pipes._1.head(), pipes._2.head()) match{
       case (x1: DataMap[_, DataL], x2: DataMap[_, DataR]) => new TupleDataMap(x1, x2)
       case (x1, x2) => new TupleDataStore(x1, x2)
     }
+
     private val endStore = (pipes._1.end(), pipes._2.end()) match {
       case (x1: DataMap[_, EndL], x2: DataMap[_, EndR]) => new TupleDataMap(x1, x2)
       case (x1, x2) => new TupleDataStore(x1, x2)
     }
+
     override def head(): DataStore[I[(DataL, DataR)]] = headStore
     override def end(): DataStore[I[(EndL, EndR)]] = endStore
     override def init(conf: PipeConfig): Unit = {

@@ -7,8 +7,10 @@ import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, Js
   * Created by edmundlam on 8/8/17.
   */
 
-abstract class Identifiable[A]() {
+abstract class Identifiable[A] {
   var identityOpt: Option[Identity[A]] = None
+  // TODO: Fix so this isn't a var?
+  var embedded: Map[String, String] = Map[String, String]()
 
   protected[this] def mkIdentity(): Identity[A]
 
@@ -23,6 +25,8 @@ abstract class Identifiable[A]() {
   def getId(): String = identity().getId()
   def getVersion(): Option[String] = identity().getVersion()
   def setVersion(version: String): Unit = identityOpt = Some(identity().withVersion(version))
+  def addEmbedded(key: String, value: String): Unit = embedded = embedded + (key->value)
+  def getEmbedded(key: String): Option[String] = embedded.get(key)
 }
 
 abstract class Either[L <: Identifiable[L], R <: Identifiable[R]] extends Identifiable[Either[L,R]]

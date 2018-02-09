@@ -33,7 +33,8 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
   }
 
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
-    val rconf = PipeConfig.resolveOptions(conf, configOption)
+    val stepNm = s"${inputMap.displayName()}+->${outputMap.displayName()}"
+    val rconf = toStep(PipeConfig.resolveOptions(conf, configOption), stepNm)
     val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input, Output] = builder.reducerPlatform[Input,Output]()
     platform.init(rconf, inputMap, outputMap, builder)

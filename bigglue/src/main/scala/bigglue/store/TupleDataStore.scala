@@ -9,6 +9,7 @@ import bigglue.exceptions.CallNotAllowException
 
 class TupleDataStore[DataL, DataR](dataStoreL: DataStore[DataL], dataStoreR: DataStore[DataR])
   extends DataStore[I[(DataL, DataR)]]{
+  name = s"(${dataStoreL.displayName()}, ${dataStoreR.displayName()})"
   override def put_(data: Seq[I[(DataL, DataR)]]): Unit = {
     val (dataL, dataR) = data.foldRight(List[DataL](), List[DataR]()){
       case (I((dL, dR)), (lL, lR)) => (dL :: lL, dR :: lR)

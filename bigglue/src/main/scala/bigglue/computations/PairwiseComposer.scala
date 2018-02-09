@@ -34,7 +34,9 @@ class PairwiseComposer[InputL <: Identifiable[InputL], InputR <: Identifiable[In
   }
 
   def init(conf: PipeConfig, inputLMap: DataStore[InputL], inputRMap: DataStore[InputR], outputMap: DataStore[Output]): Unit = {
-     val rconf = PipeConfig.resolveOptions(conf, configOption)
+     val nconf = PipeConfig.resolveOptions(conf, configOption)
+     val stepName = s"${inputLMap.displayName()}<*>${inputRMap.displayName()}"
+     val rconf = toStep(nconf, stepName)
      val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
      val platform: BinaryPlatform[InputL,InputR,Output] = builder.pairwiseComposerPlatform[InputL,InputR,Output]
      platform.init(rconf, inputLMap, inputRMap, outputMap, builder)

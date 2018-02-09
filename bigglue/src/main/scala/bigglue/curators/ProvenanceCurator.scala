@@ -31,7 +31,10 @@ class StandardProvenanceCurator[Input <: Identifiable[Input],Output <: Identifia
 
   override def reportProvenance(src: Input, targets: List[Output]): Unit = {
     targets foreach {
-      target => provMap.put(target.identity(), provenance(src, target))
+      target =>
+        target.addEmbedded("provInfo", src.identity().getId())
+        target.addEmbedded("provTime", Calendar.getInstance().getTime.toString)
+        provMap.put(target.identity(), provenance(src, target))
     }
   }
 

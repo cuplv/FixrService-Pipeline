@@ -21,6 +21,15 @@ abstract class Computation extends ConfigBuildsPlatform {
 
   val versionOpt: Option[String] = None
 
+  def toStep(conf: PipeConfig, step: String): PipeConfig = {
+    try {
+      val stepConf = conf.typeSafeConfig.getConfig(Constant.BIGGLUE).getConfig(step)
+      PipeConfig.resolveOptions(conf, ConfOpt.typesafeConfig(stepConf))
+    } catch{
+      case e: Exception => conf
+    }
+  }
+
   def init(config: PipeConfig, platform: Platform): Unit = platformOpt match {
     case None => {
       platformOpt = Some(platform)

@@ -67,7 +67,6 @@ class WaitingConnector[Data]() extends Connector[Data]{
     super.registerPlatform(platform)
     connector.registerPlatform(platform)
     name = s"Platform $platform: Connector ${connector.getDownstream()}"
-    println(name)
   }
 
   override def registerDownstreamConnector(connector: Connector[Data]): Unit = {

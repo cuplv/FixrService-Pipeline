@@ -43,7 +43,7 @@ object branch {
     val pipe = aStore:--Simple()--> (bStore:--BHeavyComputation()-->bCompute, DataNode(cStore))
     pipe.check(conf)
     pipe.init(conf)
-    aStore.put(List(Aa("test"), Aa("test2"), Aa("test3")))
+    aStore.put(List(Aa("test"), Aa("test2"), Aa("test3"), Aa("test4"), Aa("test5")))
     Thread.sleep(4000)
     aStore.put(List(Aa("1234")))
     Thread.sleep(3000)

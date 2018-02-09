@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import com.typesafe.config.{Config, ConfigFactory}
 import bigglue.configurations.{ConfOpt, Constant, PipeConfig}
 import bigglue.data.Identifiable
-import bigglue.exceptions.{NotInitializedException, ProtoPipeException}
+import bigglue.exceptions.{NotInitializedException, NotSupportedPipelineConfigException, ProtoPipeException}
 import spray.json._
 
 import scala.collection.JavaConverters._
@@ -29,7 +29,6 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   val solrLocation: String = solrConfig.getString("solrLocation")
   val solrServerLocation: String = solrConfig.getString("solrServerLocation")
   val url = s"http://$solrLocation/solr/$nam/"
-  var fieldsAdded: Map[String, Unit] = Map()
   var templateOpt: Option[JsObject] = None
   var toCommit: Boolean = false
   val hasSchema: Boolean = solrConfig.getBoolean("hasSchema")
@@ -40,6 +39,21 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     case e: Exception =>
       createCore()
       //throw new NotInitializedException(s"Core $nam", s"Creating a Data Store on core $nam.", None)
+  }
+  var fields: Map[String, String] = {
+    val schema = Http(s"${url}schema?wt=json").asString.body.parseJson.asJsObject
+    schema.fields.get("schema") match{
+      case Some(j: JsObject) => j.fields.get("fields") match{
+        case Some(f: JsArray) => f.elements.foldLeft(Map[String, String]()){
+          case (m: Map[String, String], j: JsObject) => (j.fields.get("name"), j.fields.get("type")) match{
+            case (Some(JsString(name)), Some(JsString(typ))) => m+(name->typ)
+            case _ => m
+          }
+        }
+        case _ => Map[String, String]()
+      }
+      case _ => Map[String, String]()
+    }
   }
 
   def keyToString(key: Any): String = {
@@ -101,7 +115,8 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def addDocument(doc: JsObject, key: String): Unit = {
     val solrDoc = mkJsObjectsSolrable(doc)
-    val newDoc = if (hasSchema) solrDoc else saveTheOmitted(solrDoc)
+
+    val newDoc = if (hasSchema) solrDoc else addToSchema(doc) //saveTheOmitted(solrDoc)
     val json = JsObject(Map("add" -> JsObject(Map("doc" -> newDoc, "commitWithin" -> JsNumber(1000))))).toString()
     toCommit = true
     //JsObject(Map("add" -> JsObject(Map("doc" -> newDoc)), "commit" -> JsObject())).toString()
@@ -128,7 +143,13 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def getAllDocuments: List[JsObject] = getDocumentsFromQuery("select?wt=json&rows=100000000&q=*:*")
 
-  private def mkDocDeserializable(doc: JsObject): JsObject = templateOpt match {
+  private def mkDocDeserializable(doc: JsObject): JsObject = JsObject(doc.fields.foldRight(Map[String, JsValue]()){
+    case ((key, jsValue), fieldMap) => key match{
+      case "_version_" => fieldMap
+      case _ => fieldMap+(key->jsValue)
+    }
+  })
+  /*templateOpt match {
     case None => doc
     case Some(template) =>
       JsObject(doc.fields.foldRight(Map[String, JsValue]()){
@@ -156,7 +177,7 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
           }
         }
       })
-  }
+  }*/
 
 
   private def saveTheOmitted(doc: JsObject): JsObject = {
@@ -175,6 +196,35 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
       }
     }
     JsObject(newDocFields._1 + ("_EmptyFields" -> JsArray(newDocFields._2.toVector)))
+  }
+
+  private def addToSchema(doc: JsObject): JsObject = {
+    doc.fields.foreach{keyAndVal =>
+      val (key, value) = keyAndVal
+      fields.get(key) match{
+        case Some(_) => ()
+        case None =>
+          val typ: String = value match {
+            case arr: JsArray =>
+              if (arr.elements.isEmpty) ???
+              else arr.elements.head match{
+                case j: JsNumber => if (j.value.isValidInt || j.value.isValidLong) "longs" else "floats"
+                case j: JsString => "strings"
+                case j: JsBoolean => "bools"
+                case _ => ???
+              }
+            case j: JsNumber => if (j.value.isValidInt || j.value.isValidLong) "long" else "float"
+            case j: JsString => "string"
+            case j: JsBoolean => "bool"
+            case _ => throw new  NotSupportedPipelineConfigException(s"$value not supported in Solr", None)
+          }
+          fields += (key -> typ)
+          val addField = JsObject(fields = Map[String, JsValue]("name" -> JsString(key), "type" -> JsString(typ), "stored" -> JsTrue))
+          val jsObject = JsObject(fields = Map[String, JsValue]("add-field" -> addField))
+          Http(url+"schema").postData(jsObject.prettyPrint.getBytes()).header("Content-Type", "application/json").asString.body
+      }
+    }
+    doc
   }
 
   private def mkJsObjectsSolrable(doc: JsObject): JsObject = {

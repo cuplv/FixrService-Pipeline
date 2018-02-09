@@ -29,11 +29,13 @@ case class CycleableSerializer() extends JsonSerializer[Cycleable]{
 
 case class M1() extends Mapper[Cycleable, Cycleable](input => {
   println(s"Cycle ${input.time}!")
+  Thread.sleep(3000)
   List(Cycleable(input.time+1))
 })
 
 case class M2() extends Mapper[Cycleable, I[(Cycleable, I[Int])]](input => {
-  Thread.sleep(1000)
+  println(s"Expensive Cycle ${input.time}!")
+  Thread.sleep(3000)
   List(I((input, I(input.time))))
 })
 
@@ -48,6 +50,7 @@ object cyclic {
     val s2 = new SolrDataMap[Cycleable, Cycleable](CycleableSerializer(), "s2")
     val s3 = storeBuilder.idmap[I[Int]]("s3")
     val pipe = s1 :--M1() --> s2 :--M2()--> (DataNode(s1), DataNode(s3))
+    println(pipe)
     pipe.check(conf)
     pipe.init(conf)
     s1.put(Cycleable(0))

@@ -1,6 +1,6 @@
 package bigglue.platforms
 
-import bigglue.configurations.{PipeConfig, PlatformBuilder}
+import bigglue.configurations.{ConfOpt, Constant, PipeConfig, PlatformBuilder}
 import bigglue.connectors.Connector
 import bigglue.data.Identifiable
 import bigglue.store.DataStore
