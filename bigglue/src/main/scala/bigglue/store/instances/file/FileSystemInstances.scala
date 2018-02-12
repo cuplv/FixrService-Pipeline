@@ -2,8 +2,8 @@ package bigglue.store.instances.file
 
 import java.io.{BufferedWriter, File, FileWriter}
 
-import bigglue.data.{I, Identifiable}
-import bigglue.store.{DataMap, DataMultiMap}
+import bigglue.data.{I, Identifiable, Identity}
+import bigglue.store.{DataMap, DataMultiMap, IdDataMap}
 
 import scala.io.Source
 
@@ -11,7 +11,6 @@ import scala.io.Source
   * Created by chanceroberts on 8/29/17.
   */
 object FileSystemInstances {
-  ???
 }
 
 class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdirectory: String) extends DataMap[Input, Output] {
@@ -122,32 +121,29 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
   }
 }
 
-class FileSystemDataMultiMap[Input <: Identifiable[Input], Output <: I[String]](subdirectory: String) extends DataMultiMap[Input, Output]{
-  override def put_(data: Seq[Set[Output]]): Unit = ???
+class FileSystemIdDataMap extends IdDataMap[I[String]]{
+  val fileMap: FileSystemDataMap[Identity[I[String]], I[String]] =
+    new FileSystemDataMap[Identity[I[String]], I[String]](name)
 
-  override def put_(key: Input, data: Set[Output]): Unit = ???
+  override def put_(data: Seq[I[String]]): Unit = data.foreach(dat => put_(dat.identity(), dat))
 
-  override def remove(keys: Seq[Input]): Unit = ???
+  override def put_(key: Identity[I[String]], data: I[String]): Unit = fileMap.put_(key, data)
 
-  override def remove(data: Set[Output]): Unit = ???
+  override def remove(key: Identity[I[String]]): Unit = fileMap.remove(key)
 
-  override def remove(key: Input): Unit = ???
+  override def remove(keys: Seq[Identity[I[String]]]): Unit = fileMap.remove(keys)
 
-  override def remove(key: Input, data: Set[Output]): Unit = ???
+  override def iterator(): Iterator[I[String]] = fileMap.iterator()
 
-  override def iterator(): Iterator[Set[Output]] = ???
+  override def get(key: Identity[I[String]]): Option[I[String]] = fileMap.get(key)
 
-  override def iterator(key: Input): Iterator[Output] = ???
+  override def all(): Seq[I[String]] = fileMap.all()
 
-  override def get(key: Input): Set[Output] = ???
+  override def contains(key: Identity[I[String]]): Boolean = fileMap.contains(key)
 
-  override def all(): Seq[Set[Output]] = ???
+  override def extract(): Seq[I[String]] = fileMap.extract()
 
-  override def contains(key: Input, data: Set[Output]): Boolean = ???
-
-  override def extract(): Seq[Set[Output]] = ???
-
-  override def size(): Int = ???
+  override def size(): Int = fileMap.size()
 }
 
 class FileSystemIterator[Output <: I[String]](subdirectory: String) extends Iterator[Output]{
