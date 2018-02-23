@@ -122,24 +122,24 @@ class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdi
 }
 
 class FileSystemIdDataMap extends IdDataMap[I[String]]{
-  val fileMap: FileSystemDataMap[Identity[I[String]], I[String]] =
-    new FileSystemDataMap[Identity[I[String]], I[String]](name)
+  val fileMap: FileSystemDataMap[I[String], I[String]] =
+    new FileSystemDataMap[I[String], I[String]](name)
 
   override def put_(data: Seq[I[String]]): Unit = data.foreach(dat => put_(dat.identity(), dat))
 
-  override def put_(key: Identity[I[String]], data: I[String]): Unit = fileMap.put_(key, data)
+  override def put_(key: Identity[I[String]], data: I[String]): Unit = fileMap.put_(I(key.getId()), data)
 
-  override def remove(key: Identity[I[String]]): Unit = fileMap.remove(key)
+  override def remove(key: Identity[I[String]]): Unit = fileMap.remove(I(key.getId()))
 
-  override def remove(keys: Seq[Identity[I[String]]]): Unit = fileMap.remove(keys)
+  override def remove(keys: Seq[Identity[I[String]]]): Unit = keys.foreach(key => fileMap.remove(I(key.getId())))
 
   override def iterator(): Iterator[I[String]] = fileMap.iterator()
 
-  override def get(key: Identity[I[String]]): Option[I[String]] = fileMap.get(key)
+  override def get(key: Identity[I[String]]): Option[I[String]] = fileMap.get(I(key.getId()))
 
   override def all(): Seq[I[String]] = fileMap.all()
 
-  override def contains(key: Identity[I[String]]): Boolean = fileMap.contains(key)
+  override def contains(key: Identity[I[String]]): Boolean = fileMap.contains(I(key.getId()))
 
   override def extract(): Seq[I[String]] = fileMap.extract()
 

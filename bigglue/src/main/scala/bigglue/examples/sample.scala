@@ -57,16 +57,16 @@ object sample {
     val d8 = storeBuilder.idmap[I[Int]]("D8") // InMemDataStore.createIdDataMap[I[Int]]("m8")
     val d9 = storeBuilder.idmap[I[Int]]("D9") // InMemDataStore.createIdDataMap[I[Int]]("m9")
     val d10 = storeBuilder.idmap[I[Int]]("D10") // InMemDataStore.createIdDataMap[I[Int]]("m10")
-    val d11 = storeBuilder.idmap[bigglue.data.Pair[I[Int],I[Int]]]("D3") // InMemDataStore.createIdDataMap[protopipes.data.Pair[I[Int],I[Int]]]("m11")
+    val d11 = storeBuilder.idmap[bigglue.data.Pair[I[Int],I[Int]]]("D11") // InMemDataStore.createIdDataMap[protopipes.data.Pair[I[Int],I[Int]]]("m11")
 
-    val pipe = (d0 :--Plus(5)--> d2 || d1 :--Plus(10)--> d3) :-*Compute.cartesianProduct[I[Int],I[Int]]*-> d4 :--TimesPair()--> d5 :< {
+    val pipe = (d0 :--Plus(5)--> d2 :--Plus(10)-->d10 || d1 :--Plus(10)--> d3) :-*Compute.cartesianProduct[I[Int],I[Int]]*-> d4 :--TimesPair()--> d5 :< {
       (Plus(40)--> d6 :--Plus(-20)--> d8) ~ (Helloworld()--> d7)
     }
 
-    val pipe2 = (d8 || d9 :--Plus(15)--> d10) :-*Compute.cartesianProduct[I[Int],I[Int]]*-> d11
+    //val pipe2 = (d8 || d9 :--Plus(15)--> d10) :-*Compute.cartesianProduct[I[Int],I[Int]]*-> d11
 
     pipe.init(config)
-    pipe2.init(config)
+    //pipe2.init(config)
 
     Thread.sleep(2000)
 
@@ -96,7 +96,7 @@ object sample {
     // println("Status: " + map.toString)
 
     pipe.terminate()
-    pipe2.terminate()
+    //pipe2.terminate()
 
   }
 

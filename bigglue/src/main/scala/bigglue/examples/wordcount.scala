@@ -77,7 +77,7 @@ object wordcount {
     val words  = storeBuilder.list[I[String]]("words") // InMemDataStore.createLinearStore[I[String]]("words")
     val counts = storeBuilder.idmap[Count]("counts") // InMemDataStore.createIdDataMap[Count]("counts")
 
-    val wordcountpipe = test :--AddI()--> words :-+CountOccurrence()+-> counts
+    val wordcountpipe = words :-+CountOccurrence()+-> counts
 
     wordcountpipe.check(config)
 
@@ -86,10 +86,10 @@ object wordcount {
     Thread.sleep(1000)
 
     val strs = Seq("rat","cat","cat","hat","crap","hello","rat","gun","hat")
-    test.put(strs.toIds())
+    words.put(strs.toIds())
 
     Thread.sleep(1000)
-    test.put(Seq("rat", "cat", "hello", "gun").toIds())
+    words.put(Seq("rat", "cat", "hello", "gun").toIds())
 
     Thread.sleep(10000)
 
