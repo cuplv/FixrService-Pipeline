@@ -69,7 +69,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     data.foreach{dat =>
       dat.addEmbedded("status", status.toString)
     }
-    //iMap.put_(data)
+    iMap.put_(data) //This breaks the memory data store. :(
   }
 
   override def sendDown(data: Seq[Data]): Unit = {
@@ -87,7 +87,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   override def registerPlatform(platform: Platform): Unit = {
     super.registerPlatform(platform)
-   /* platform match{
+    platform match{
       case u: UnaryPlatform[Data, _] =>
         iMapOpt = Some(u.getInputMap())
       case b: BinaryPlatform[_, _, _] =>
@@ -99,6 +99,11 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
           }
         }
     }
+  }
+
+  override def persist(dataStore: DataStore[Data]): Unit = {
+    super.persist(dataStore)
+    iMapOpt = Some(dataStore)
     (try{
       val iterator = iMap.iterator()
       iterator
@@ -111,7 +116,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
         case _ => ()
       }}
     sendDown(statusMap.get(Status.NotDone).toSeq)
-    signalDown()*/
+    signalDown()
   }
 
   override def retrieveUp(): Seq[Data] = {

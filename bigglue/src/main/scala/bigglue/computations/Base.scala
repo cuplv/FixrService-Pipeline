@@ -39,6 +39,11 @@ abstract class Computation extends ConfigBuildsPlatform {
     }
   }
 
+  def persist(): Unit = platformOpt match{
+    case Some(platform) => platform.persist()
+    case None => throw new NotInitializedException("Computation", "persist()", None)
+  }
+
   def run(): Unit = platformOpt match {
     case Some(platform) => platform.run()
     case None => {

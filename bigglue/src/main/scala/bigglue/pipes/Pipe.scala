@@ -25,6 +25,8 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
   def init(conf: PipeConfig): Unit
 
+  def run(): Unit = ()
+
   def head(): DataStore[Head]
 
   def end(): DataStore[End]
@@ -106,6 +108,10 @@ object Implicits {
       pipes._1.init(conf)
       pipes._2.init(conf)
     }
+    override def run(): Unit = {
+      pipes._1.run()
+      pipes._2.run()
+    }
     override def check(conf: PipeConfig): Unit = {
       pipes._1.check(conf)
       pipes._2.check(conf)
@@ -144,6 +150,12 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
     p2.init(conf)
   }
 
+  override def run(): Unit = {
+    p1.run()
+    mapper.persist()
+    p2.run()
+  }
+
   override def head(): DataStore[Head] = p1.head()
 
   override def end(): DataStore[End] = p2.end()
@@ -169,6 +181,12 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
     p1.init(conf)
     reducer.init(conf, p1.end(), p2.head())
     p2.init(conf)
+  }
+
+  override def run(): Unit = {
+    p1.run()
+    reducer.persist()
+    p2.run()
   }
 
   override def head(): DataStore[Head] = p1.head()
@@ -199,6 +217,13 @@ case class CompositionPipe[HeadL <: Identifiable[HeadL], HeadR <: Identifiable[H
     p2.init(conf)
     composer.init(conf, p1.end(), p2.end(), o.head())
     o.init(conf)
+  }
+
+  override def run(): Unit = {
+    p1.run()
+    p2.run()
+    composer.persist()
+    o.run()
   }
 
   override def head(): DataStore[bigglue.data.Either[HeadL,HeadR]] = BothDataStore(p1.head(),p2.head())
@@ -233,6 +258,11 @@ case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], En
     p2.init(conf, p1.end())
   }
 
+  override def run(): Unit = {
+    p1.run()
+    p2.run()
+  }
+
   override def head(): DataStore[Head] = p1.head()
 
   override def end(): DataStore[End] = p2.end()
@@ -249,6 +279,8 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
   def check(conf: PipeConfig, input: DataStore[Input]): Unit
 
   def init(conf: PipeConfig, input: DataStore[Input]): Unit
+
+  def run(): Unit = ()
 
   def end(): DataStore[End]
 
@@ -293,6 +325,11 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
     p.init(conf)
   }
 
+  override def run(): Unit = {
+    mapper.persist()
+    p.run()
+  }
+
   override def end(): DataStore[End] = p.end()
 
   override def terminate(): Unit = {
@@ -313,6 +350,11 @@ case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiab
   override def init(conf: PipeConfig, input: DataStore[Input]): Unit = {
     reducer.init(conf, input, p.head())
     p.init(conf)
+  }
+
+  override def run(): Unit = {
+    reducer.run()
+    p.run()
   }
 
   override def end(): DataStore[End] = p.end()
@@ -337,6 +379,11 @@ case class SequencedPartialPipes[Input <: Identifiable[Input], Mid <: Identifiab
     po.init(conf, pi.end())
   }
 
+  override def run(): Unit = {
+    pi.run()
+    po.run()
+  }
+
   override def end(): DataStore[Output] = po.end()
 
   override def terminate(): Unit = {
@@ -357,6 +404,11 @@ case class ParallelPartialPipes[Input <: Identifiable[Input], LEnd <: Identifiab
   override def init(conf: PipeConfig, input: DataStore[Input]): Unit = {
     p1.init(conf, input)
     p2.init(conf, input)
+  }
+
+  override def run(): Unit = {
+    p1.run()
+    p2.run()
   }
 
   override def end(): DataStore[bigglue.data.Either[LEnd,REnd]] = {

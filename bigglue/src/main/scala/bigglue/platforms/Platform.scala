@@ -33,6 +33,8 @@ abstract class Platform {
     }
   }
 
+  def persist(): Unit
+
   def wake(): Unit
 
 }
@@ -109,6 +111,8 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   }
 
   def getInputs(): Seq[Input] = getUpstreamConnector().retrieveUp()
+
+  override def persist(): Unit = getUpstreamConnector().persist(getInputMap())
 
 }
 
@@ -257,6 +261,11 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
      val newInputPairs = getPairConnector().retrieveUp()
 
     (inputLs,inputRs,newInputPairs)
+  }
+
+  override def persist(): Unit = {
+    getUpstreamLConnector().persist(getInputLMap())
+    getUpstreamRConnector().persist(getInputRMap())
   }
 
 }
