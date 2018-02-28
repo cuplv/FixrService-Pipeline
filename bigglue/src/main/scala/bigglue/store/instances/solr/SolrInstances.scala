@@ -25,6 +25,7 @@ object SolrInstances{
 class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, config: Config = ConfigFactory.load()) extends DataMap[Key, Data] {
   val solrBack: SolrBackend[Data] = new SolrBackend[Data](coreName, config)
   val url: String = solrBack.url
+  override val serializerOpt = Some(serializer)
   name = coreName
 
   override def put_(key: Key, data: Data): Unit = {

@@ -29,6 +29,8 @@ abstract class KafkaDataMap[Key, Data <: Identifiable[Data]] extends DataMap[Key
 
   val serializer: BasicSerializer[Data]
 
+  override val serializerOpt: Option[BasicSerializer[Data]] = Some(serializer)
+
   def getStream: KafkaStream[Key, Data] = streamOpt match {
     case Some(stream) => stream
     case None => throw new NotInitializedException("KafkaDataMap", "getStream", None)

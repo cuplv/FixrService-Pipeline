@@ -34,6 +34,8 @@ abstract class KafkaQueue[Data <: Identifiable[Data]] extends DataQueue[Data] {
 
   val serializer: BasicSerializer[Data]
 
+  override val serializerOpt: Option[BasicSerializer[Data]] = Some(serializer)
+
   def getStream: KafkaStream[String, Data] = streamOpt match {
     case Some(stream) => stream
     case None => throw new NotInitializedException("KafkaQueue", "getStream", None)

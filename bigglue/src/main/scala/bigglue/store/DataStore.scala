@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import bigglue.checkers.ConfigChecker
 import bigglue.configurations.{ConfigBuildsDataStore, PipeConfig}
 import bigglue.connectors.{Connector, Upstream}
+import bigglue.data.serializers.BasicSerializer
 import bigglue.data.{BasicIdentity, Identifiable, Identity}
 
 /**
@@ -12,6 +13,8 @@ import bigglue.data.{BasicIdentity, Identifiable, Identity}
 
 
 abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with ConfigBuildsDataStore  {
+
+  val serializerOpt: Option[BasicSerializer[Data]] = None
 
   var name = "DataStore"
 

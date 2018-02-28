@@ -4,12 +4,14 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import scala.io.Source
 import bigglue.data.I
+import bigglue.data.serializers.{BasicSerializer, IStringBasicSerializer}
 import bigglue.store.DataMap
 
 /**
   * Created by chanceroberts on 9/5/17.
   */
 class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
+  override val serializerOpt: Option[BasicSerializer[I[String]]] = Some(IStringBasicSerializer)
   val file = new File(name)
   override def put_(data: Seq[I[String]]): Unit = {
     try {

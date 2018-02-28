@@ -2,6 +2,7 @@ package bigglue.store.instances.file
 
 import java.io.{BufferedWriter, File, FileWriter}
 
+import bigglue.data.serializers.{BasicSerializer, IStringBasicSerializer}
 import bigglue.data.{I, Identifiable, Identity}
 import bigglue.store.{DataMap, DataMultiMap, IdDataMap}
 
@@ -14,6 +15,7 @@ object FileSystemInstances {
 }
 
 class FileSystemDataMap[Input <: Identifiable[Input], Output <: I[String]](subdirectory: String) extends DataMap[Input, Output] {
+  //override val serializerOpt: Option[BasicSerializer[Output]] = Some(IStringBasicSerializer)
   private def getOutputOutOfDirectory(subdirectory: String, willDelete: Boolean = false): Seq[Output] = {
     val subdir = new File(subdirectory)
     subdir.listFiles().flatMap{

@@ -47,7 +47,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   // var currId: Id = 0L
   // val history: DataMap[Id, Identity[Data]] = new InMemDataMap[Id, Identity[Data]]
   val statusMap: DataMultiMap[Status, Data] = new InMemDataMultiMap[Status, Data]
-  var iMapOpt: Option[DataStore[Data]] = None
+  var iMapOpt: Option[DataStore[Data]] = Some(new InMemDataMap[Data, Data])
 
   def iMap: DataStore[Data] = iMapOpt match{
     case Some(x) => x
@@ -99,6 +99,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
           }
         }
     }
+    println(iMapOpt.get.displayName())
   }
 
   override def persist(dataStore: DataStore[Data]): Unit = {
