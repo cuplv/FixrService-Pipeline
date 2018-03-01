@@ -14,7 +14,7 @@ import bigglue.data.{BasicIdentity, Identifiable, Identity}
 
 abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with ConfigBuildsDataStore  {
 
-  val serializerOpt: Option[BasicSerializer[Data]] = None
+  //val serializerOpt: Option[BasicSerializer[Data]] = None
 
   var name = "DataStore"
 

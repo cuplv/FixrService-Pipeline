@@ -2,7 +2,7 @@ package bigglue.platforms
 
 import bigglue.configurations.{ConfOpt, Constant, PipeConfig, PlatformBuilder}
 import bigglue.connectors.Connector
-import bigglue.data.Identifiable
+import bigglue.data.{Identifiable, Identity}
 import bigglue.store.DataStore
 import com.typesafe.config.Config
 import bigglue.checkers.{BinaryChecker, UnaryChecker}
@@ -112,7 +112,31 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
 
   def getInputs(): Seq[Input] = getUpstreamConnector().retrieveUp()
 
-  override def persist(): Unit = getUpstreamConnector().persist(getInputMap())
+  override def persist(): Unit = {
+    getUpstreamConnector().persist(getInputMap())
+    val inputMap = getInputMap().all().map(input => input.identity()->input).toMap
+    getOutputMap().all().foldRight((List[Input](), Map[Input, String]())){
+      case (output, (doNotSendDown, sendDownModified)) => output.getEmbedded("provInfo") match{
+        case None => (doNotSendDown, sendDownModified)
+        case Some(value: String) =>
+          inputMap.get(Identity.deserialize[Input](value)) match{
+            case None => (doNotSendDown, sendDownModified)
+            case Some(i: Input) =>
+              val currentIdentity = output.identity()
+              val currVersionIdentity = getVersionCurator().stampVersion(currentIdentity)
+              (currentIdentity.getVersion(), currVersionIdentity.getVersion()) match {
+                case (None, None) => (i :: doNotSendDown, sendDownModified-i)
+                case (Some(x), Some(y)) if x.equals(y) => (i :: doNotSendDown, sendDownModified-i)
+                case (Some(x), None) if !doNotSendDown.contains(i) =>
+                  (doNotSendDown, sendDownModified+(i->""))
+                case (None, Some(x)) if !doNotSendDown.contains(i) =>
+                  (doNotSendDown, sendDownModified+(i->""))
+                case _ => (doNotSendDown, sendDownModified)
+              }
+          }
+      }
+    }
+  }
 
 }
 

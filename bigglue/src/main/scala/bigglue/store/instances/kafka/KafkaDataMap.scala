@@ -29,7 +29,7 @@ abstract class KafkaDataMap[Key, Data <: Identifiable[Data]] extends DataMap[Key
 
   val serializer: BasicSerializer[Data]
 
-  override val serializerOpt: Option[BasicSerializer[Data]] = Some(serializer)
+  //override val serializerOpt: Option[BasicSerializer[Data]] = Some(serializer)
 
   def getStream: KafkaStream[Key, Data] = streamOpt match {
     case Some(stream) => stream
