@@ -4,6 +4,7 @@ import bigglue.configurations.{PipeConfig, PlatformBuilder}
 import bigglue.connectors.{Connector, Status}
 import bigglue.connectors.Connector.Id
 import bigglue.connectors.Status.Status
+import bigglue.curators.{StandardVersionCurator, VersionCurator}
 import bigglue.data.{BasicIdentity, I, Identifiable}
 import bigglue.exceptions.{NotInitializedException, ProtoPipeException}
 import bigglue.platforms.{BinaryPlatform, Platform, UnaryPlatform}
@@ -48,6 +49,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   // val history: DataMap[Id, Identity[Data]] = new InMemDataMap[Id, Identity[Data]]
   val statusMap: DataMultiMap[Status, Data] = new InMemDataMultiMap[Status, Data]
   var iMapOpt: Option[DataStore[Data]] = Some(new InMemDataMap[Data, Data])
+  var ver: Option[String] = None
 
   def iMap: DataStore[Data] = iMapOpt match{
     case Some(x) => x
@@ -67,7 +69,11 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   private def appendStatus(data: Seq[Data], status: Status): Unit = {
     data.foreach{dat =>
-      dat.addEmbedded("status", status.toString)
+      val string = ver match{
+        case None => status.toString
+        case Some(x) => s"${status.toString}-#-$x"
+      }
+      dat.addEmbedded("status", string)
     }
     iMap.put_(data) //This breaks the memory data store. :(
   }
@@ -90,6 +96,13 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     platform match{
       case u: UnaryPlatform[Data, _] =>
         iMapOpt = Some(u.getInputMap())
+        ver = (u.versionCuratorOpt match {
+          case None => None
+          case Some(version) => Some(version.thisVersion)
+        }) match {
+          case Some("<None>") => None
+          case x => x
+        }
       case b: BinaryPlatform[_, _, _] =>
         iMapOpt = b.upstreamLConnectorOpt match {
           case None => b.inputLMapOpt.asInstanceOf[Option[DataStore[Data]]]
@@ -98,8 +111,14 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
             case _ => throw new ProtoPipeException(Some("Connector registered to full platform!"))
           }
         }
+        ver = (b.versionCuratorOpt match{
+          case None => None
+          case Some(version) => Some(version.thisVersion)
+        }) match {
+          case Some("<None>") => None
+          case x => x
+        }
     }
-    println(iMapOpt.get.displayName())
   }
 
   override def persist(dataStore: DataStore[Data]): Unit = {
@@ -113,10 +132,23 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     }).foreach{i =>
       i.getEmbedded("status") match{
         case Some(x) =>
-          statusMap.put(Status.withName(x), List(i).toSet)
+          val (realStatus: String, thisVersion: Option[String]) = if (x.split("-#-").length == 1) {
+            (x, None)
+          } else {
+            val a: Array[String] = x.split("-#-")
+            (a(0), Some(a(1)))
+          }
+          val myStatus: String = (thisVersion, ver) match{
+            case (None, None) => realStatus
+            case (Some(z), Some(y)) if z.equals(y) => realStatus
+            case _ => "NotDone"
+          }
+          statusMap.put(Status.withName(myStatus), List(i).toSet)
         case _ => ()
       }}
     sendDown(statusMap.get(Status.NotDone).toSeq)
+    sendDownModified(statusMap.get(Status.Error).toSeq)
+    sendDownModified(statusMap.get(Status.Modified).toSeq)
     signalDown()
   }
 

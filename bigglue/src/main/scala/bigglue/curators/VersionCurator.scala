@@ -6,6 +6,7 @@ import bigglue.data.{Identifiable, Identity}
   * Created by edmundlam on 8/17/17.
   */
 abstract class VersionCurator[Output <: Identifiable[Output]](version: String) {
+  val thisVersion: String = version
 
   def stampVersion(outputs: List[Output]): List[Output]
 

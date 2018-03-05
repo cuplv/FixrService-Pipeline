@@ -114,7 +114,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
 
   override def persist(): Unit = {
     getUpstreamConnector().persist(getInputMap())
-    val inputMap = getInputMap().all().map(input => input.identity()->input).toMap
+    /*val inputMap = getInputMap().all().map(input => input.identity()->input).toMap
     getOutputMap().all().foldRight((List[Input](), Map[Input, String]())){
       case (output, (doNotSendDown, sendDownModified)) => output.getEmbedded("provInfo") match{
         case None => (doNotSendDown, sendDownModified)
@@ -135,6 +135,24 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
               }
           }
       }
+    }*/
+  }
+
+  def updatedVersion(ver: Option[String]): Boolean = {
+    //NOTE: AS OF THIS VERSION, THIS ONLY WORKS WITH STATIC VERSIONS.
+    outputMapOpt match{
+      case None => true
+      case Some(outputMap) =>
+        val a = outputMap.all()
+        if (a.isEmpty) true else{
+          a.head match{
+            case out => (out.identity().getVersion(), ver) match{
+              case (None, None) => true
+              case (Some(x), Some(y)) if x.equals(y) => true
+              case _ => false
+            }
+          }
+        }
     }
   }
 
