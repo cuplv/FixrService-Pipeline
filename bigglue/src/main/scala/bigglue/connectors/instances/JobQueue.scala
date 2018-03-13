@@ -75,7 +75,13 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
       }
       dat.addEmbedded("status", string)
     }
-    iMap.put_(data) //This breaks the memory data store. :(
+    if (iMap.isInstanceOf[DataMap[_, _]]){
+      try {
+        iMap.put_(data)
+      } catch{
+        case e: Exception => ()
+      }
+    }
   }
 
   override def sendDown(data: Seq[Data]): Unit = {

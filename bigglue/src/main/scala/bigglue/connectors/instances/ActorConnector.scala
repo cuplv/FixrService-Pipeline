@@ -12,6 +12,7 @@ import bigglue.configurations.PipeConfig
 import bigglue.data.{BasicIdentity, Identifiable}
 import bigglue.exceptions.NotInitializedException
 import bigglue.platforms.Platform
+import bigglue.store.DataStore
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -34,6 +35,8 @@ object ActorConnectorActor {
 
   case class Size()
 
+  case class Persist[_](dataStore: DataStore[_])
+
 }
 
 class ActorConnectorActor[Data](connector: Connector[Data]) extends Actor {
@@ -49,6 +52,8 @@ class ActorConnectorActor[Data](connector: Connector[Data]) extends Actor {
     case ReportUp(status: Status, ids: Seq[Data]) => connector.reportUp(status, ids)
 
     case Size() => sender() ! connector.size()
+
+    case Persist(datStore: DataStore[Data]) => connector.persist(datStore)
   }
 }
 
@@ -105,6 +110,8 @@ abstract class ActorConnector[Data](name: String = ActorConnectorActor.NAME)(imp
     val future = getActor ? Size()
     Await.result(future, timeout.duration).asInstanceOf[Int]
   }
+
+  override def persist(dataStore: DataStore[Data]): Unit = getActor() ! Persist(dataStore)
 
 }
 

@@ -9,6 +9,7 @@ import bigglue.checkers.{BinaryChecker, UnaryChecker}
 import bigglue.computations.Computation
 import bigglue.curators._
 import bigglue.exceptions.NotInitializedException
+import org.apache.kafka.streams.kstream.Reducer
 
 /**
   * Created by edmundlam on 8/8/17.
@@ -113,7 +114,15 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   def getInputs(): Seq[Input] = getUpstreamConnector().retrieveUp()
 
   override def persist(): Unit = {
-    getUpstreamConnector().persist(getInputMap())
+    (getInputMap().all().length, getOutputMap().all().length) match{
+      case (0, 0) => getUpstreamConnector().persist(getInputMap())
+      case (0, _) => computationOpt match{
+        case Some(r: Reducer[Input, Output]) => outputMapOpt.get.extract()
+        case _ => getUpstreamConnector().persist(getInputMap())
+      }
+      case (_, 0) => getUpstreamConnector().sendDown(inputMapOpt.get.all())
+      case (_, _) => getUpstreamConnector().persist(getInputMap())
+    }
     /*val inputMap = getInputMap().all().map(input => input.identity()->input).toMap
     getOutputMap().all().foldRight((List[Input](), Map[Input, String]())){
       case (output, (doNotSendDown, sendDownModified)) => output.getEmbedded("provInfo") match{

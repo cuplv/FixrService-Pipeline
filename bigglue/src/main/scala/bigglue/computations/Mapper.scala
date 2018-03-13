@@ -42,12 +42,13 @@ class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
       val outputs = op(input).map(
         output => {
           val voutput = platform.getVersionCurator().stampVersion(output)
+          platform.getProvenanceCurator().reportProvenance(input, voutput)
           platform.getOutputMap().put(voutput)
           voutput
         }
       )
       platform.getUpstreamConnector().reportUp(Status.Done, input)
-      platform.getProvenanceCurator().reportProvenance(input, outputs)
+      //platform.getProvenanceCurator().reportProvenance(input, outputs)
       Some(outputs)
     } catch {
       case ex: Exception => {
