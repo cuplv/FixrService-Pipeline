@@ -117,7 +117,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     (getInputMap().all().length, getOutputMap().all().length) match{
       case (0, 0) => getUpstreamConnector().persist(getInputMap())
       case (0, _) => computationOpt match{
-        case Some(r: Reducer[Input, Output]) => outputMapOpt.get.extract()
+        case Some(r: Reducer[_]) => outputMapOpt.get.extract()
         case _ => getUpstreamConnector().persist(getInputMap())
       }
       case (_, 0) => getUpstreamConnector().sendDown(inputMapOpt.get.all())
