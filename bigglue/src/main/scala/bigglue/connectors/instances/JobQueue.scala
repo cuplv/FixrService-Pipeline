@@ -178,7 +178,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   }
 
   override def persist(dataStore: DataStore[Data]): Unit = {
-    super.persist(dataStore)
+    //super.persist(dataStore)
     iMapOpt = Some(dataStore)
     val ids = dataStore.all().foldRight(Map[String, (Boolean, Data)]()) {
       case (dat, lis) => dat.identity().getVersion() match {
