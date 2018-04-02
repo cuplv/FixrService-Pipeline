@@ -30,7 +30,7 @@ class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
 
   override def remove(keys: Seq[I[Int]]): Unit = ???
 
-  override def iterator(): Iterator[I[String]] = ???
+  override def iterator(): Iterator[I[String]] = new TextFileIterator(name)
 
   override def get(key: I[Int]): Option[I[String]] = {
     try{
@@ -48,8 +48,12 @@ class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
   }
 
   override def all(): Seq[I[String]] =
-    Source.fromFile(file).getLines().foldRight(List[I[String]]()){
-      case (str, list) => I(str) :: list
+    try {
+      Source.fromFile(file).getLines().foldRight(List[I[String]]()) {
+        case (str, list) => I(str) :: list
+      }
+    } catch{
+      case _: Exception => Seq()
     }
 
   override def contains(key: I[Int]): Boolean = {
@@ -78,4 +82,12 @@ class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
   override def size(): Int = Source.fromFile(file).getLines().foldLeft(0){
     case (num, _) => num+1
   }
+}
+
+class TextFileIterator(name: String) extends Iterator[I[String]]{
+  val file = new File(name)
+  val trueIterator = Source.fromFile(file).getLines()
+  override def hasNext: Boolean = trueIterator.hasNext
+
+  override def next(): I[String] = I(trueIterator.next())
 }

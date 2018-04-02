@@ -73,7 +73,7 @@ object GithubServiceFrontend {
           path("getFiles"){
             val nodeToPick = getNextNode
             nodes = nodes + (nodeToPick -> (nodes(nodeToPick) + 1))
-            println(Uri(s"http://$nodeToPick/getFiles"))
+            println(s"${Uri(s"http://$nodeToPick/getFiles")}, $queryStr")
             redirect(Uri(s"http://$nodeToPick/getFiles"), StatusCodes.TemporaryRedirect)
           } ~
           path("fileContents"){

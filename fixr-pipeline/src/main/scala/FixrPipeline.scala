@@ -6,11 +6,12 @@ import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
 import bigglue.data.serializers.JsonSerializer
 import bigglue.store.DataMap
 import bigglue.store.instances.InMemDataMap
-import bigglue.store.instances.file.TextFileDataMap
+import bigglue.store.instances.file.{FileSystemDataMap, TextFileDataMap}
 import bigglue.store.instances.solr.SolrDataMap
 import spray.json._
 
 import scalaj.http.{Http, HttpOptions}
+import scala.sys.process._
 
 /**
   * Created by chanceroberts on 11/1/17.
@@ -27,7 +28,7 @@ object Poster{
   }
 
   def post(url: String, postData: JsObject): Map[String, JsValue] = {
-    Http(url).timeout(1000, 3600000).postData(postData.prettyPrint)
+    Http(url).timeout(1000, 10000).postData(postData.prettyPrint)
       .header("Content-Type", "application/json").option(HttpOptions.followRedirects(true))
       .asString.body.parseJson.asJsObject.fields
   }
@@ -120,12 +121,29 @@ object GitFeatureExtractedSerializer extends JsonSerializer[GitFeatureExtracted]
 
 case class GitCloneAndGetCommits() extends Mapper[I[String], GitCommit] (
   input => {
-    println("!")
-    println(Poster.postList("http://localhost:8080/clone", JsObject(Map("repo" -> JsString(input.i)))))
+    val files = new FileSystemDataMap[I[String], I[String]]("repos")
+    val splitter = input.i.indexOf("/") match{
+      case -1 => throw new Exception(s"Invalid GitID ${input.i}!")
+      case x => x
+    }
+    files.get(I(s"${input.i}/")) match{
+      case None => files.put(I(s"repos/${input.i}/"))
+      case Some(_) => ()
+    }
+    files.get(I(s"${input.a}")) match{
+      case Some(I("")) => s"git -C repos/${input.a.substring(0, input.a.indexOf('/'))} clone https://github.com/${input.a}".!
+      case _ => s"git -C repos/${input.a} pull".!
+    }
+    val list = s"git -C repos/${input.a} log --all --pretty=format:%H -- *.java".!!.split("\n").toList
+
+    list.foldRight(List[GitCommit]()){
+      case (hash, lis) => GitCommit({input.a}, hash) :: lis
+    }
+    /*println(Poster.postList("http://localhost:8080/clone", JsObject(Map("repo" -> JsString(input.i)))))
     Poster.postList("http://localhost:8080/getCommits", JsObject(Map("repo" -> JsString(input.i)))).foldRight(List[GitCommit]()){
       case (JsString(hash), listOfCommits) => GitCommit(input.i, hash) :: listOfCommits
       case (_, listOfCommits) => listOfCommits
-    }
+    }*/
   }
 )
 
@@ -145,9 +163,15 @@ case class GitCommitInformation() extends Mapper[GitCommit, GitCommitInfo] (
 
 case class GitFilesFromCommits() extends Mapper[GitCommit, GitFiles](
   input => {
-    Poster.postList("http://localhost:8080/getFiles",
+    println(s"Starting reading from ${input.gitRepo}:${input.hash}!")
+    val listOfFiles = s"git -C repos/${input.gitRepo} show --oneline --name-only ${input.hash} -- *.java".!!
+    listOfFiles.split("\n").tail.foldRight(List[GitFiles]()){
+      case (str, lis)  if !str.equals("") => println(str); GitFiles(input.gitRepo, input.hash, str) :: lis
+      case (_, lis) => lis
+    }
+    /*Poster.postList("http://localhost:8080/getFiles",
       JsObject(Map("repo" -> JsString(input.gitRepo), "commit" -> JsString(input.hash), "pattern" -> JsString("*.java"))))
-      .map{case JsString(file) => GitFiles(input.gitRepo, input.hash, file)}
+      .map{case JsString(file) => println(file); GitFiles(input.gitRepo, input.hash, file)}*/
   }
 )
 
@@ -194,9 +218,10 @@ object FixrPipeline{
     val featureMap = new SolrDataMap[GitFeatureExtracted, GitFeatureExtracted](GitFeatureExtractedSerializer, "fP-featureExtr")
     import bigglue.pipes.Implicits._
     val fixrPipe = gitToClone:--GitCloneAndGetCommits()-->gitCommit:--GitFilesFromCommits()-->
-      gitFiles:--GitFeatures(fEErrorLog)-->featureMap
+      gitFiles
     fixrPipe.check(config)
     fixrPipe.init(config)
+    fixrPipe.run()
     textMap.all().foldLeft(0){
       case (num, input) =>
         gitToClone.put(I(num), input)

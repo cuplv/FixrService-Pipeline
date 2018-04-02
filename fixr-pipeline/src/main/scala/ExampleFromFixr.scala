@@ -4,6 +4,7 @@ import bigglue.computations.Mapper
 import bigglue.configurations.PipeConfig
 import bigglue.data.serializers.JsonSerializer
 import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
+import bigglue.store.DataMap
 import bigglue.store.instances.InMemDataMap
 import bigglue.store.instances.file.{FileSystemDataMap, TextFileDataMap}
 import bigglue.store.instances.solr.SolrDataMap
@@ -23,7 +24,7 @@ case class GitComm(gitID: String, hash: String) extends Identifiable[GitComm]{
   override def mkIdentity(): Identity[GitComm] = BasicIdentity(s"$gitID/$hash")
 }
 
-case class GitFile(gitID: String, hash: String, name: String, contents: String = "") extends Identifiable[GitFile]{
+case class GitFile(gitID: String, hash: String, name: String, contents: Option[String] = None) extends Identifiable[GitFile]{
   override def mkIdentity(): Identity[GitFile] = BasicIdentity(s"$gitID/$hash/$name")
 }
 
@@ -104,7 +105,8 @@ case class CheckCommits() extends Mapper[GitID, I[(GitID, GitComm)]](input => {
 case class CreateFiles() extends Mapper[GitComm, GitFile](input => {
   val listOfFiles = s"git -C repos/${input.gitID} show --oneline --name-only ${input.hash} -- *.java".!!
   listOfFiles.split("\n").foldRight(List[GitFile]()){
-    case (str, lis) => GitFile(input.gitID, input.hash, str) :: lis
+    case (str, lis)  if !str.equals("") => GitFile(input.gitID, input.hash, str) :: lis
+    case (_, lis) => lis
   }
 })
 
@@ -124,7 +126,7 @@ case class FeatureExtraction() extends Mapper[GitFile, GitFile](input => {
     case _ =>
       throw new Exception(s"An error occurred on the file ${input.getId()}")
   }
-  List(GitFile(input.gitID, input.name, input.hash, new String(decoded)))
+  List(GitFile(input.gitID, input.name, input.hash, Some(new String(decoded))))
 })
 
 object ExampleFromFixr {
@@ -140,14 +142,16 @@ object ExampleFromFixr {
     val files = new SolrDataMap[GitFile, GitFile](GFSerializer(), "file")
     val extrFeat = new SolrDataMap[GitFile, GitFile](GFSerializer(), "fileExtracted")
     val featExtrPipe = commits:--CreateFiles()-->files:--FeatureExtraction()-->extrFeat
-    val createCommsPipe = cloned:--CheckCommits()-->(pulled:--Pull()-->cloned, featExtrPipe)
+    val createCommsPipe = cloned:--CheckCommits()-->(DataNode(pulled), featExtrPipe)
     val pipe = gitToClone:--CreateDir()-->clone:--Clone()-->createCommsPipe
+    //:--Pull()-->cloned
     pipe.check(config)
     pipe.init(config)
-    toClone.all.foldLeft(0){
+    pipe.run()
+    /*toClone.all.foldLeft(0){
       case (num, str) =>
         gitToClone.put(I(num), str)
         num+1
-    }
+    }*/
   }
 }

@@ -29,7 +29,7 @@ object GitRepoSerializer extends JsonSerializer[GitRepo] {
       case ((str, value), newFields) => value match { // Yay, schemaless stuff! :\
         case JsArray(Vector(JsNumber(n))) => newFields + (str -> JsString(n.toString))
         case JsArray(Vector(j: JsValue)) => newFields + (str -> j)
-        case JsNumber(n) => newFields + (str -> JsString(n.toString))
+        case  JsNumber(n) => newFields + (str -> JsString(n.toString))
         case _ => newFields + (str -> value)
       }
     }).convertTo[GitRepo]
