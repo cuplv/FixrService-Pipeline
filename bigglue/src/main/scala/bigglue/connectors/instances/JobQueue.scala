@@ -92,6 +92,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
             val statusSplit = str.a.split(" -!- ")
             statusSplit.length match {
               case y if y == 2 =>
+
                 val (newID, realStr) = ids.foldLeft(x, str.a) {
                   case ((nIDs, st), id) => if (id.equals(statusSplit(0))) {
                     (trueStatus.indexOf("v."), statusSplit(1).indexOf("v.")) match {
@@ -104,8 +105,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
                   } else (nIDs, st)
 
                 }
-
-                (x, realStr :: curStrs)
+                (newID, realStr :: curStrs)
               case _ => (x, curStrs)
             }
         }
@@ -149,7 +149,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     platform match{
       case u: UnaryPlatform[Data, _] =>
         iMapOpt = Some(u.getInputMap())
-        textMapOpt = Some(new TextFileDataMap(s"${u.getInputMap()}-STATUS"))
+        textMapOpt = Some(new TextFileDataMap(s"${u.getInputMap().displayName()}-STATUS"))
         ver = (u.versionCuratorOpt match {
           case None => None
           case Some(version) => Some(version.thisVersion)
@@ -159,9 +159,9 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
         }
       case b: BinaryPlatform[_, _, _] =>
         val (textMapo, iMapo) = b.upstreamLConnectorOpt match {
-          case None => (Some(new TextFileDataMap(s"${b.inputLMapOpt}-STATUS")), b.inputLMapOpt.asInstanceOf[Option[DataStore[Data]]])
+          case None => (Some(new TextFileDataMap(s"${b.getInputLMap().displayName()}-STATUS")), b.inputLMapOpt.asInstanceOf[Option[DataStore[Data]]])
           case _ => b.upstreamRConnectorOpt match {
-            case None => (Some(new TextFileDataMap(s"${b.inputRMapOpt}-STATUS")), b.inputRMapOpt.asInstanceOf[Option[DataStore[Data]]])
+            case None => (Some(new TextFileDataMap(s"${b.getInputRMap().displayName()}-STATUS")), b.inputRMapOpt.asInstanceOf[Option[DataStore[Data]]])
             case _ => throw new ProtoPipeException(Some("Connector registered to full platform!"))
           }
         }
@@ -189,20 +189,18 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     val trueIds = textMap.iterator().foldRight(ids){
       case (str, oIDs) =>
         val statusSplit = str.a.split(" -!- ")
-        println(statusSplit(0))
         if (oIDs.contains(statusSplit(0))){
           (statusSplit(1).indexOf("v."), ver) match{
             case (-1, None) =>
-              print("!")
-              statusMap.put(Status.withName(statusSplit(1)), Set(ids(statusSplit(0))._2))
-              ids + (statusSplit(0)->(true, ids(statusSplit(0))._2))
+              statusMap.put(Status.withName(statusSplit(1)), Set(oIDs(statusSplit(0))._2))
+              oIDs + (statusSplit(0)->(true, oIDs(statusSplit(0))._2))
             case (x, Some(v)) => if (statusSplit(1).substring(x+2).equals(v)) {
-              statusMap.put(Status.withName(statusSplit(1).substring(0, x)), Set(ids(statusSplit(0))._2))
-              ids + (statusSplit(0) -> (true, ids(statusSplit(0))._2))
-            } else ids
-            case (x, None) => ids
+              statusMap.put(Status.withName(statusSplit(1).substring(0, x)), Set(oIDs(statusSplit(0))._2))
+              oIDs + (statusSplit(0) -> (true, oIDs(statusSplit(0))._2))
+            } else oIDs
+            case (x, None) => oIDs
           }
-        } else ids
+        } else oIDs
     }
     val toSend = trueIds.foldRight(List[Data]()){
       case ((_, (false, dat)), lis) =>
