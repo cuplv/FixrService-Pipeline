@@ -48,7 +48,7 @@ abstract class Connector[Input] {
      downstreamConnectorOpt = Some( PlatformStub(platform) )
   }
 
-  def persist(dataStore: DataStore[Input]): Unit = ()
+  def persist(dataStore: DataStore[Input]): Unit = sendDown(dataStore.all())
 
   def getUpstream(): Connector[Input] = upstreamConnectorOpt match {
     case Some(connector) => connector

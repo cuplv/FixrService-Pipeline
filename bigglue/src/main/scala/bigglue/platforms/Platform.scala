@@ -120,7 +120,6 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
         case Some(r: Reducer[_]) => outputMapOpt.get.extract()
         case _ => getUpstreamConnector().persist(getInputMap())
       }
-      case (_, 0) => getUpstreamConnector().sendDown(inputMapOpt.get.all())
       case (_, _) => getUpstreamConnector().persist(getInputMap())
     }
     /*val inputMap = getInputMap().all().map(input => input.identity()->input).toMap
