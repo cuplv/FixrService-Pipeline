@@ -78,7 +78,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     val ids = data.foldRight(List[String]()){
       case (dat, lis) => dat.identity().getVersion() match{
         case None => dat.identity().getId() :: lis
-        case Some(x) => s"${dat.identity().getId()}-#-${dat.identity().getVersion()}" :: lis
+        case Some(x) => s"${dat.identity().getId()}-#-$x" :: lis
       }
     }
     val trueStatus = ver match {
