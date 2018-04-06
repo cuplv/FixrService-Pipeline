@@ -11,7 +11,13 @@ import bigglue.data.{BasicIdentity, Identifiable, Identity}
   * Created by edmundlam on 8/8/17.
   */
 
-
+/**
+  * The Data Store is an abstraction for how you store your data in BigGlue.
+  * Within Data Stores, you have [[DataMap]], [[DataMultiMap]], and [[DataQueue]] from a list of most useful to least useful within BigGlue.
+  * Within the example, all of the data stores are [[bigglue.store.instances.solr.SolrDataMap]]s.
+  * @tparam Data The type of the data that is intended to be put into the data store. For a, b, and c, this is [[bigglue.data.I]][Int].
+  *              For d, this is [[bigglue.examples.Counter]].
+  */
 abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with ConfigBuildsDataStore  {
 
   //val serializerOpt: Option[BasicSerializer[Data]] = None
@@ -26,12 +32,21 @@ abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with Co
 
   def terminate(): Unit = { }
 
+  /**
+    * This actually puts the data into the data store.
+    * @param data The data to be put into the data store.
+    */
   def put_(data: Seq[Data]): Unit
 
   def all(): Seq[Data]
 
   def extract(): Seq[Data]
 
+  /**
+    * This puts the data into the data store using [[put_]], and then sends the data down the
+    * pipeline if the data store is connected to the pipeline.
+    * @param data The data that needs to be put into the data store.
+    */
   def put(data: Seq[Data]): Unit = {
      put_(data)
      transmitDownstream(data)

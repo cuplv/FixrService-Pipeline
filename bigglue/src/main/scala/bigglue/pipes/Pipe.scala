@@ -62,11 +62,34 @@ case class St[Data <: Identifiable[Data]](store: DataStore[Data]) extends Pipe[D
 }
 
 object Implicits {
+
+  /**
+    * This is a wrapper for data pipelines that make them act like pipes.
+    * In the example, a, b, c, and d are converted implicitly to DataNodes when calling a:--AA-->b:--BB-->c:-+CC+->d.
+    * @param map The Data Store that's being converted into a pipe.
+    * @tparam Data The Type of the Data Store; In this case, it's I[Int] for a, b, and c, and [[bigglue.examples.Counter]] for d.
+    */
   implicit class DataNode[Data <: Identifiable[Data]](map: DataStore[Data]) extends Pipe[Data,Data] {
     override def toString: String = map.displayName
     override def check(conf: PipeConfig): Unit = map.checkConfig(conf)
+
+    /**
+      * This initializes the DataStore [[map]] by calling [[map.init]](conf)
+      * In this example, we would call [[bigglue.store.instances.solr.SolrDataMap.init]](conf)
+      * @param conf The configuration file to initialize
+      */
     override def init(conf: PipeConfig): Unit = map.init(conf)
+
+    /**
+      * This returns the data store hidden in the pipeline
+      * @return [[map]] since this is both the head and end of this pipeline.
+      */
     override def head(): DataStore[Data] = map
+
+    /**
+      * This returns the data store hidden in the pipeline
+      * @return [[map]] since this is both the head and end of this pipeline.
+      */
     override def end(): DataStore[Data] = map
     override def terminate(): Unit = map.terminate()
   }
@@ -123,6 +146,20 @@ object Implicits {
   }
 }
 
+/**
+  * This is created with the call a:--AA-->b (and b:--BB-->c, but we'll focus on the former) within the example.
+  * In the case of a:--AA-->b, this is a pipeline that goes from Data Store a, computed by the mapper AA,
+  * and then goes down into Data Store b to be sent further down the pipeline.
+  * @param p1     An Input Data Pipe; [[bigglue.pipes.Implicits.DataNode]](a) in the example.
+  *               In the case of b:--BB-->c, it would be the [[MapperPipe]](a:--AA-->b)
+  * @param mapper The computation ([[Mapper]]) of which the inputs gets computed by. AA in the example.
+  * @param p2     An Output Data Pipe; [[bigglue.pipes.Implicits.DataNode]](b) in this example.
+  *               In the case of b:--BB-->c, it would be [[bigglue.pipes.Implicits.DataNode]](c).
+  * @tparam Head The type of the data store that begins the pipeline; [[I]][Int] in this case.
+  * @tparam Input The type of the data store that brings in input to this part of the pipeline; [[I]][Int] in this case.
+  * @tparam Output The type of the data store that brings in output to this part of the pipeline; [[I]][Int] in this case.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[I]][Int] in this case.
+  */
 case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], mapper: Mapper[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
 
@@ -138,28 +175,62 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
     }
   } */
 
+  /**
+    * This is called within the example with pipe.check(conf).
+    * In basic terms, this checks to see whether ...
+    * @param conf The configuration file that we are checking with.
+    */
   override def check(conf: PipeConfig): Unit = {
     p1.check(conf)
     mapper.check(conf, p1.end(), p2.head())
     p2.check(conf)
   }
 
+  /**
+    * This is called with the example with pipe.init(conf).
+    * This calls [[mapper.init]] with conf, and the data stores before and after the mapper computation.
+    * These are called by [[p1.end]] and [[p2.end]]
+    * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    */
   override def init(conf: PipeConfig): Unit = {
     p1.init(conf)
     mapper.init(conf, p1.end(), p2.head())
     p2.init(conf)
   }
 
+  /**
+    * This is called within the example pipe.run.
+    * This calls [[mapper.persist]], which will check to see what data to send down the pipeline (again?).
+    * Then, it will call [[p1.run]] and [[p2.run]], moving the run call along the pipeline.
+    */
   override def run(): Unit = {
     p1.run()
     mapper.persist()
     p2.run()
   }
 
+  /**
+    * This gives you the data store at the start of the pipeline.
+    * @return The Data Store inside the DataNode at the start of the pipeline.
+    *         This is the same as [[p1.head]], as that's the part of the pipeline before the Mapper section.
+    *         In this example, it would be a.
+    */
   override def head(): DataStore[Head] = p1.head()
 
+  /**
+    * This gives you the data store at the end of the pipeline.
+    * @return The Data Store inside the DataNode at the end of the pipeline.
+    *         This is the same as [[p2.end]], as that's the part of the pipeline after the Mapper section.
+    *         In this example, this would be b for a:--AA-->b. or c for a:--AA-->b:--BB-->c.
+    */
   override def end(): DataStore[End] = p2.end()
 
+  /**
+    * This ends the pipeline by terminating the mapper with [[mapper.terminate]]. Then, it moves the terminate
+    * call throughout the pipeline by calling [[Pipe.terminate]] on both [[p1]] and [[p2]].
+    */
   override def terminate(): Unit = {
     p1.terminate()
     mapper.terminate()
@@ -168,6 +239,20 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 
 }
 
+/**
+  * In the example, this is created with the call c:-+CC+->d within the val pipe = a:--AA-->b:--BB-->c:-+CC+->d line.
+  * With this example, this is a pipeline that goes from Data Store c, computed by the reducer CC,
+  * and then goes down into Data Store d to be sent further down the pipeline.
+  * @param p1 The part of the pipeline before the actual reducer section of the pipeline; In the example, it would be
+  *           the [[MapperPipe]](a:--AA-->b:--BB-->c)
+  * @param reducer The computation ([[Reducer]]) on which the inputs get computed by. CC in the example.
+  * @param p2 The part of the pipeline after the actual reducer section of the pipeline; In the example, it would be
+  *           [[bigglue.pipes.Implicits.DataNode]](d)
+  * @tparam Head The data store type at the very beginning of the pipeline. In the example, it would be [[I]][Int]
+  * @tparam Input The type of the Data Store that brings in input to this part of the pipeline. [[I]][Int] in this case.
+  * @tparam Output The type of the Data Store that this part of the pipeline outputs to. [[bigglue.examples.Counter]] in this case.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.Counter]] in this case.
+  */
 case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], reducer: Reducer[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
 
@@ -177,22 +262,51 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
     p2.check(conf)
   }
 
+  /**
+    * This is called with the example with pipe.init(conf).
+    * This calls [[reducer.init]] with conf, and the data stores before and after the mapper computation.
+    * These are called by [[p1.end]] and [[p2.end]]
+    * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    */
   override def init(conf: PipeConfig): Unit = {
     p1.init(conf)
     reducer.init(conf, p1.end(), p2.head())
     p2.init(conf)
   }
 
+  /**
+    * This is called within the example pipe.run.
+    * This calls [[reducer.persist]], which will check to see what data to send down the pipeline (again?).
+    * Then, it will call [[p1.run]] and [[p2.run]], moving the run call along the pipeline.
+    */
   override def run(): Unit = {
     p1.run()
     reducer.persist()
     p2.run()
   }
 
+  /**
+    * This gives you the data store at the start of the pipeline.
+    * @return The Data Store inside the DataNode at the start of the pipeline.
+    *         This is the same as [[p1.head]], as that's the part of the pipeline before the Reducer section.
+    *         In this example, it would be a.
+    */
   override def head(): DataStore[Head] = p1.head()
 
+  /**
+    * This gives you the data store at the end of the pipeline.
+    * @return The Data Store inside the DataNode at the end of the pipeline.
+    *         This is the same as [[p2.end]], as that's the part of the pipeline after the Reducer section.
+    *         In this example, this would be d.
+    */
   override def end(): DataStore[End] = p2.end()
 
+  /**
+    * This ends the pipeline by terminating the reducer with [[reducer.terminate]]. Then, it moves the terminate
+    * call throughout the pipeline by calling [[Pipe.terminate]] on both [[p1]] and [[p2]].
+    */
   override def terminate(): Unit = {
     p1.terminate()
     reducer.terminate()

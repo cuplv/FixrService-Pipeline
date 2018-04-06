@@ -22,6 +22,17 @@ object SolrInstances{
   }
 }
 
+/**
+  * This is the default data store that is used in the example.
+  * Without going too far into the Backend, this is an abstraction for a Solr Collection.
+  * @param serializer The serializer that needs to be used to serialize the objects into a flat Json file.
+  * @param coreName The name of the core/collection that is being used. If the core/collection doesn't exist, we just create a new core/collection.
+  * @param config The configuration file used for the Solr instance. If not specified, this will just be the default file.
+  * @tparam Key  The type of the key that's being used. Within the examples, in the cases of a, b, and c, this is [[bigglue.data.I]][Int].
+  *              In the cases of d, this is [[bigglue.examples,Counter]].
+  * @tparam Data The type of the data that's being used. Within the examples, in the cases of a, b, and c, this is [[bigglue.data.I]][Int].
+  *              In the cases of d, this is [[bigglue.examples.Counter]].
+  */
 class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, config: Config = ConfigFactory.load()) extends DataMap[Key, Data] {
   val solrBack: SolrBackend[Data] = new SolrBackend[Data](coreName, config)
   val url: String = solrBack.url

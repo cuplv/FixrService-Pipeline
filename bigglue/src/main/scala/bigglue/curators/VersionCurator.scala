@@ -10,6 +10,11 @@ abstract class VersionCurator[Output <: Identifiable[Output]](version: String) {
 
   def stampVersion(outputs: List[Output]): List[Output]
 
+  /**
+    * Given a version, this appends the version to an output file.
+    * @param output The output that needs to be versioned.
+    * @return A versioned version of the output.
+    */
   def stampVersion(output: Output): Output
 
   def stampVersion(id: Identity[Output]): Identity[Output]

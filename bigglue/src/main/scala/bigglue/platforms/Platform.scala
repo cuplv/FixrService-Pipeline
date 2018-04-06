@@ -12,14 +12,29 @@ import bigglue.exceptions.NotInitializedException
 import org.apache.kafka.streams.kstream.Reducer
 
 /**
-  * Created by edmundlam on 8/8/17.
+  * This is the place where we pass the data in through the computation engine.
+  * The actual computation engine used is defined in the subclasses of the platform.
+  * It has two connectors, upstream and downstream, which influence how the code ends up working.
+  * This is created as you call pipe.init() in the example code and can be found in a MapperPipe.mapper.platform,
+  * or in ReducerPipe.reducer.platform.
+  * More specifically, this is the abstraction above UnaryPlatforms and BinaryPlatforms. In the example code,
+  * only UnaryPlatforms have been used.
   */
 
 
 abstract class Platform {
-
+  /**
+  * What computation this platform ends up running. (Mapper, Reducer, PairwiseComposer)
+  * This ends up being set in init() by both UnaryPlatform and BinaryPlatform.
+  */
   var computationOpt: Option[Computation] = None
 
+  /**
+    * This ends up being called in the init step of the Mapper, Reducer, or PairwiseComposer
+    * This links the actual computation and platform together.
+    * @param computation The computation that is linked with the platform.
+    *                    (This is usually called through platform.setComputation(this))
+    */
   def setComputation(computation: Computation): Platform = {
     computationOpt = Some(computation)
     this
@@ -34,12 +49,26 @@ abstract class Platform {
     }
   }
 
+  /**
+    * This is called by the computation's persist step.
+    * In particular, this tends to see how much of the data set actually needs to be re-sent.
+    */
   def persist(): Unit
 
+  /**
+    * This function is called when the upstream connector lets the platform know that there's data to be computed.
+    */
   def wake(): Unit
 
 }
 
+/**
+  * This is a type of platform that only deals with one input. These have a computation of either Mapper or Reducer.
+  * Within the example, we use the default of [[bigglue.platforms.instances.bigactors.BigActorMapperPlatform]] and
+  * [[bigglue.platforms.instances.bigactors.BigActorReducerPlatform]].
+  * @tparam Input The type of the data that's being sent in.
+  * @tparam Output The type of the data that's being sent out.
+  */
 abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable[Output]] extends Platform with UnaryChecker[Input,Output] {
 
   var upstreamConnectorOpt: Option[Connector[Input]] = None
@@ -49,6 +78,16 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   var inputMapOpt: Option[DataStore[Input]]   = None
   var outputMapOpt: Option[DataStore[Output]] = None
 
+  /**
+    * This sets up the platform by connecting the Input Map and Output Map to the platform, as well as
+    * any other initialization that needs to be done.
+    * In the case of the example, we use [[bigglue.platforms.instances.bigactors.BigActorUnaryPlatform.init]]
+    * This calls [[initConnector]] as well.
+    * @param conf The configuration file needed to initialize.
+    * @param inputMap The Map that data gets sent in from.
+    * @param outputMap The Map that data gets sent out to.
+    * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
+    */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     inputMapOpt = Some(inputMap)
     outputMapOpt = Some(outputMap)
@@ -57,6 +96,14 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     errorCuratorOpt = Some(builder.errorCurator)
   }
 
+  /**
+    * This sets up the connector that sends data down the pipeline.
+    * This initializes the connector with [[Connector.init]], and then adds
+    * the platform to the connector with [[Connector.registerPlatform]].
+    * As a default, we use [[bigglue.connectors.instances.IncrTrackerJobQueue]].
+    * @param conf The configuration file needed to initialize.
+    * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
+    */
   def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     val upstreamConnector = builder.connector[Input]("unary-platform-connector")
     upstreamConnector.init(conf)
@@ -113,6 +160,15 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
 
   def getInputs(): Seq[Input] = getUpstreamConnector().retrieveUp()
 
+  /**
+    * This is called by the computation's persist step.
+    * In particular, this tends to see how much of the data set actually needs to be re-sent.
+    * As of right now, it sends the entirety of the input map to the upstream connector, which
+    * handles which things to send/re-send down the pipeline, unless there is a reducer with
+    * nothing in the input file, or if there is nothing in the output file.
+    * If there is nothing in the output file, the program assumes that a new data store has been created
+    * and sends down all data.
+    */
   override def persist(): Unit = {
     (getInputMap().all().length, getOutputMap().all().length) match{
       case (0, 0) => getUpstreamConnector().persist(getInputMap())

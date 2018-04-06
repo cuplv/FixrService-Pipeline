@@ -9,8 +9,22 @@ import bigglue.store.{DataMap, DataStore}
 
 import scala.util.Random
 
+/**
+  * This is the default platform for the mapper. It attempts to do the computations on the inputs asynchronously.
+  * This is a subclass of [[BigActorUnaryPlatform]].
+  * @param name The name of the platform. This is usually "platform-actor" followed by a random ID.
+  * @tparam Input The type of the data that needs to be computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  *               This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that ends up being computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  *                This also needs to be an [[Identifiable]] type.
+  */
 class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + Random.nextInt(99999)) extends BigActorUnaryPlatform[Input, Output] {
+  /**
+    * Given an input, it calls on the mapper to compute it and sent it down the pipeline.
+    * It calls [[Mapper.tryCompute]].
+    * @param job The input to be computed
+    */
   override def compute_(job: Input): Unit = {
     computationOpt match{
       case Some(computation: Mapper[Input, Output]) =>
@@ -21,6 +35,12 @@ class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiab
   }
 }
 
+/**
+  * This is the default platform for the reducer.
+  * @param name
+  * @tparam Input
+  * @tparam Output
+  */
 class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + Random.nextInt(99999)) extends BigActorUnaryPlatform[Input, Output] {
   var mergals = Map.empty[Identity[Output], Seq[Input]]

@@ -12,6 +12,14 @@ import bigglue.exceptions.CallNotAllowException
 /**
   * Created by edmundlam on 8/9/17.
   */
+
+/**
+  * This is a wrapper for the platform as a connector.
+  * This is only meant to be a downstream connector to the connectors in between the data store and the platform.
+  * In the terms of the example, this is
+  * @param platform The platform that is connected to the various connectors.
+  * @tparam Data The type of the data of the input that the
+  */
 case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
 
   override def init(conf: PipeConfig): Unit = { }

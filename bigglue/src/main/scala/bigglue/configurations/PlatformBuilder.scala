@@ -51,6 +51,15 @@ object PlatformBuilder {
          constructor.newInstance( args:_* ).asInstanceOf[UnaryPlatform[Input,Output]]
        }
 
+       /**
+         * This creates a Mapper Platform based on the configuration file.
+         * The default for this is [[bigglue.platforms.instances.bigactors.BigActorMapperPlatform]].
+         * @tparam Input The type of the data that needs to be computed. In both cases within the example, this is [[bigglue.data.I]][Int]
+         *               This needs to be an [[Identifiable]] type.
+         * @tparam Output The type of the data that ends up being computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+         *                This also needs to be an [[Identifiable]] type.
+         * @return
+         */
        override def mapperPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]](): UnaryPlatform[Input, Output] = {
          val constructor = Class.forName(protoConf.getConfig(Constant.PLATFORM).getString(Constant.MAPPER)).getConstructors()(0)
          val args = Array[AnyRef](s"mapper-platform-${Random.nextInt(99999)}")

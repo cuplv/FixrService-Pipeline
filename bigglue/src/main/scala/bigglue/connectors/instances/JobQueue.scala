@@ -43,6 +43,18 @@ class JobQueue[Data] extends Connector[Data] {
 
 }
 
+/**
+  * This is a [[Connector]] that has a status map attached to it.
+  * As of right now, the status map is [[InMemDataMultiMap]], along with a [[TextFileDataMap]] as a backup
+  * when the pipeline closes out since it is guaranteed that the file system is there on every system.
+  * However, eventually I would like to have this map be of the same medium as the
+  * Data Store chosen just in case that isn't actually a possibility and/or to save computation power if the
+  * status map is heavily used.
+  * @tparam Data The type of data that's being sent down the pipeline from this connector.
+  *              In the case of the example, it would be [[I]][Int], as we're bringing in
+  *              data from a in a:--AA-->b, b from b:--BB-->c, and c from c:-+CC+->d.
+  *              Needs to be of type [[Identifiable]]
+  */
 class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   // var currId: Id = 0L
@@ -74,6 +86,12 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   def getStatusMap(): DataMultiMap[Status, Data] = statusMap
 
+  /**
+    * This appends the status into the [[TextFileDataMap]] backup, after appending a version to the
+    * status given the version of the platform.
+    * @param data The data to add to the Status Map
+    * @param status The actual [[Status]]. Can be [[Status.NotDone]], [[Status.Done]], [[Status.Modified]], or [[Status.Error]]
+    */
   private def appendStatus(data: Seq[Data], status: Status): Unit = {
     val ids = data.foldRight(List[String]()){
       case (dat, lis) => dat.identity().getVersion() match{
@@ -144,6 +162,11 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     super.sendDown(data)
   }
 
+  /**
+    * This registers that platform used the by connector, and sets the version of this connector to the version of the
+    * platform.
+    * @param platform The platform to be registered by the connector.
+    */
   override def registerPlatform(platform: Platform): Unit = {
     super.registerPlatform(platform)
     platform match{
@@ -177,6 +200,14 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     }
   }
 
+  /**
+    * This is the section of the code that figures out what data from the Input Data Store to actually send down.
+    * To do this, it first reconstructs the status map from the [[TextFileDataMap]] backup of the status map and the
+    * version of the platform taken from [[registerPlatform]].
+    * After reconstructing the status map, it then takes the data from the data store that needs to be resent
+    * (due to a status of being Not Done or Modified or of Error, and resends that information.
+    * @param dataStore The input data store.
+    */
   override def persist(dataStore: DataStore[Data]): Unit = {
     //super.persist(dataStore)
     iMapOpt = Some(dataStore)

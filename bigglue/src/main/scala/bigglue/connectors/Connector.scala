@@ -32,6 +32,13 @@ object Connector {
   }
 }
 
+/**
+  * This is what connects the pipes together. Being more specific, the connectors are what connect the input data maps
+  * to [[Platform]]s. In the case of the example, this is what connects a together with AA, b together with BB, and c together with CC.
+  * @tparam Input The type of data that's being sent down the pipeline from this connector.
+  *              In the case of the example, it would be [[bigglue.data.I]][Int], as we're bringing in
+  *              data from a in a:--AA-->b, b from b:--BB-->c, and c from c:-+CC+->d.
+  */
 abstract class Connector[Input] {
 
   var upstreamConnectorOpt: Option[Connector[Input]] = None
@@ -43,6 +50,13 @@ abstract class Connector[Input] {
   // def registerStore(datastore: DataStore[Input]): Unit = datastoreOpt = Some(datastore)
   def registerUpstreamConnector(connector: Connector[Input]): Unit = upstreamConnectorOpt = Some(connector)
   def registerDownstreamConnector(connector: Connector[Input]): Unit = downstreamConnectorOpt = Some(connector)
+
+  /**
+    * This connects the platform to the connector so the connector sends stuff to the platform.
+    * As an implementation, this creates a dummy [[PlatformStub]] that's connected to the platform
+    * and makes that it's downstream connector.
+    * @param platform The platform that is being connected.
+    */
   def registerPlatform(platform: Platform): Unit = {
      // platformOpt = Some(platform)
      downstreamConnectorOpt = Some( PlatformStub(platform) )

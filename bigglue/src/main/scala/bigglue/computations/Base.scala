@@ -14,6 +14,10 @@ import scala.util.Random
   * Created by edmundlam on 8/14/17.
   */
 
+/**
+  * This is the superclass for [[Mapper]], [[Reducer]], and [[PairwiseComposer]].
+  * In short, computations take inputs in and then compute on them using some algorithm to create outputs.
+  */
 abstract class Computation extends ConfigBuildsPlatform {
 
   var platformOpt: Option[Platform] = None
@@ -39,6 +43,10 @@ abstract class Computation extends ConfigBuildsPlatform {
     }
   }
 
+  /**
+    * If the computation has been initialized, it calls [[Platform.persist]] on the platform.
+    * This gives the platform the responsibility of what data to send/resend down the pipeline.
+    */
   def persist(): Unit = platformOpt match{
     case Some(platform) =>
       platform.persist()
@@ -78,6 +86,14 @@ abstract class UnaryComputation[Input <: Identifiable[Input], Output <: Identifi
     }
   }
 
+  /**
+    * This connects the newly initialized platform to the Input Data Store by making it so the Input Data Store
+    * sends data down to the platform.
+    * @param conf The configuration file.
+    * @param inputMap The Input Data Store
+    * @param outputMap The Output Data Store
+    * @param platform The Platform added by the [[Mapper]] or [[Reducer]] computations.
+    */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], platform: UnaryPlatform[Input, Output]): Unit = {
     inputMap.registerConnector(platform.getUpstreamConnector())
     unaryPlatformOpt = Some(platform)

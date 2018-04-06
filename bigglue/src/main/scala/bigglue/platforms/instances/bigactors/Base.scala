@@ -236,6 +236,13 @@ class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output
   }
 }
 
+/**
+  * This is the default platform of computation. This attempts to compute through a list of inputs asynchronously.
+  * In more detail, Has a supervisor and a list of workers ...
+  * @param name The name of the platform. This is usually "platform-actor-unary-" followed by a random ID.
+  * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
+  */
 abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME+s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] with BigActor[Input] {
   var superActorOpt: Option[ActorRef] = None
@@ -244,10 +251,25 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
     case None => throw new Exception("The Supervisor Actor does not exist.")
   }
 
+  /**
+    * This gets the inputs that need to be computed with [[getInputs]].
+    * Then, it sends that to the supervisor to compute that asynchronously.
+    * All of the workers will end up calling [[BigActorMapperPlatform.compute_]] or [[BigActorReducerPlatform.compute_]]
+    * when they get a job to compute depending on the computation of the platform.
+    */
   override def run(): Unit = {
     supervisor ! AddedJobs(getInputs().toList)
   }
 
+  /**
+    * This sets up the platform by connecting the Input Map and Output Map to the platform, as well as
+    * any other initialization that needs to be done
+    * Along with that, it also sets up the actor system, and gets the list of all of the worker actors.
+    * @param conf The configuration file needed to initialize.
+    * @param inputMap The Map that data gets sent in from.
+    * @param outputMap The Map that data gets sent out to.
+    * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
+    */
   override def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
     val listOfActors = updateConfigAndGetActorNames(conf.typeSafeConfig, name)
     superActorOpt = Some(actorSystem.actorOf(Props(classOf[BigActorSupervisorActor[Input, Output]], this, listOfActors), "super"))
@@ -255,6 +277,11 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
     super.init(conf, inputMap, outputMap, builder)
   }
 
+  /**
+    * This just initializes the connectors and connects them to the platform.
+    * @param conf The configuration file needed to initialize.
+    * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
+    */
   override def initConnector(conf: PipeConfig, builder: PlatformBuilder): Unit = {
     val upstreamConnector = new ActorConnector[Input] {
       override val innerConnector: Connector[Input] = builder.connector[Input]("BigActorConnector")
@@ -264,8 +291,17 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
     upstreamConnectorOpt = Some(upstreamConnector)
   }
 
+  /**
+    * This function is called when the upstream connector lets the platform know that there's data to be computed.
+    * This allows the supervisor actor to start working on stuff.
+    * Without going into the messy details of the ActorSystem, this calls [[run]].
+    */
   override def wake(): Unit = supervisor ! Wake()
 
+  /**
+    * This function is called when closing down the pipeline.
+    * This sends a call to kill the actor system and the workers.
+    */
   override def terminate(): Unit = {
     supervisor ! Terminate()
     actorSystem.terminate
