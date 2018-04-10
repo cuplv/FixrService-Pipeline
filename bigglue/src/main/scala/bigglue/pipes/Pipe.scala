@@ -18,13 +18,32 @@ import com.typesafe.config.Config
   */
 
 
-
+/**
+  * This is the superclass to [[MapperPipe]] and [[ReducerPipe]].
+  * See either one of those for further details into what the pipelines end up doing.
+  * @tparam Head
+  * @tparam End
+  */
 abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
+  /**
+    * This is called within the example with pipe.check(conf).
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * @param conf The configuration file that we are checking with.
+    */
   def check(conf: PipeConfig): Unit
 
+  /**
+    * This is called with the example with pipe.init(conf).
+    * This initializes the pipeline and all of the parts within it.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    */
   def init(conf: PipeConfig): Unit
 
+  /**
+    * This starts/restarts the pipeline.
+    */
   def run(): Unit = ()
 
   def head(): DataStore[Head]
@@ -33,10 +52,28 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
   def terminate(): Unit
 
+  /**
+    * This connects the [[Mapper]] to the input store, connecting it completely.
+    * This is expected to be called after a [[bigglue.pipes.Implicits.DataNode]],
+    * and can be seen after a and b.
+    * @param headMapper The mapper to connect to the input store.
+    * @tparam Next The type at the end of the new pipeline.
+    * @tparam Mid The type that the mapper ends up outputting given the input [[End]].
+    * @return A connected [[MapperPipe]] that connects this pipeline to the mapper.
+    */
   def :--[Next <: Identifiable[Next], Mid <: Identifiable[Mid]](headMapper: PartialMapperPipe[End,Mid,Next]): Pipe[Head,Next] = {
     MapperPipe(this, headMapper.mapper, headMapper.p)
   }
 
+  /**
+    * This connects the [[Reducer]] to the input store, connecting it completely.
+    * This is expected to be called after a [[bigglue.pipes.Implicits.DataNode]],
+    * and can be seen after a and b.
+    * @param headReducer The reducer to connect to the input store.
+    * @tparam Next The type at the end of the new pipeline.
+    * @tparam Mid The type that the mapper ends up outputting given the input [[End]].
+    * @return A connected [[ReducerPipe]] that connects this pipeline to the reducer.
+    */
   def :-+[Next <: Identifiable[Next], Mid <: Identifiable[Mid]](headReducer: PartialReducerPipe[End,Mid,Next]): Pipe[Head,Next] = {
     ReducerPipe(this, headReducer.reducer, headReducer.p)
   }
@@ -177,7 +214,7 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 
   /**
     * This is called within the example with pipe.check(conf).
-    * In basic terms, this checks to see whether ...
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
     * @param conf The configuration file that we are checking with.
     */
   override def check(conf: PipeConfig): Unit = {
@@ -256,6 +293,11 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], reducer: Reducer[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
 
+  /**
+    * This is called within the example with pipe.check(conf).
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * @param conf The configuration file that we are checking with.
+    */
   override def check(conf: PipeConfig): Unit = {
     p1.check(conf)
     reducer.check(conf, p1.end(), p2.head())

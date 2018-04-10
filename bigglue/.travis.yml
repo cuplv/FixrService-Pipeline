@@ -1,0 +1,8 @@
+language: nix
+deploy:
+  provider: script
+  script: sbt ghpagesPushSite
+  skip_cleanup: true
+  on:
+    tags: true
+    condition: $TRAVIS_PULL_REQUEST = false

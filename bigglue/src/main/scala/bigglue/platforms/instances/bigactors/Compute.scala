@@ -37,9 +37,10 @@ class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiab
 
 /**
   * This is the default platform for the reducer.
-  * @param name
-  * @tparam Input
-  * @tparam Output
+  * @param name The name of the platform. This is usually "platform-actor" followed by a random ID.
+  * @tparam Input The type of the data that nneds to be computed. In the example, this would be the type of c, which is [[bigglue.data.I]][Int]
+  *               This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that the input ends up being reduced to. Within the example, this will be [[bigglue.examples.Counter]].
   */
 class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + Random.nextInt(99999)) extends BigActorUnaryPlatform[Input, Output] {
@@ -49,6 +50,10 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
     super.init(conf, inputMap, outputMap, builder)
   }
 
+  /**
+    * Given an input, it updates the outputs by computing a new output from a previous output,
+    * @param job The input that's updating the outputs,
+    */
   override def compute_(job: Input): Unit = {
     computationOpt match{
       case Some(computation: Reducer[Input, Output]) =>

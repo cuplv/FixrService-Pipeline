@@ -38,6 +38,10 @@ abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with Co
     */
   def put_(data: Seq[Data]): Unit
 
+  /**
+    * This gets everything from the data store.
+    * @return Every document that is stored in the data store.
+    */
   def all(): Seq[Data]
 
   def extract(): Seq[Data]
@@ -58,6 +62,10 @@ abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with Co
 
   def size(): Int
 
+  /**
+    * This returns an iterator that iterates over the data store.
+    * @return An iterator that iterates over the data store until all documents have been processed.
+    */
   def iterator(): Iterator[Data]
 
 

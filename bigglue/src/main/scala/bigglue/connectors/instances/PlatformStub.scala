@@ -18,13 +18,16 @@ import bigglue.exceptions.CallNotAllowException
   * This is only meant to be a downstream connector to the connectors in between the data store and the platform.
   * In the terms of the example, this is
   * @param platform The platform that is connected to the various connectors.
-  * @tparam Data The type of the data of the input that the
+  * @tparam Data The type of the data of the input that is sent into the platform.
   */
 case class PlatformStub[Data](platform: Platform) extends Connector[Data] {
 
   override def init(conf: PipeConfig): Unit = { }
   override def terminate(): Unit = { }
 
+  /**
+    * When data is being signaled down the pipeline, this simply just wakes up the platform.
+    */
   override def signalDown(): Unit = { platform.wake() }
   override def sendDown(data: Seq[Data]): Unit = {
     throw new CallNotAllowException("PlatformStub does not support \'sendDown\'", None)

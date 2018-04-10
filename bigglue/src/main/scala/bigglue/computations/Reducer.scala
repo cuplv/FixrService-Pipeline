@@ -79,6 +79,12 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 
   // def zero(): Output
 
+  /**
+    * Attempts to call [[groupBy]] to get an Identity to get stuff to group by.
+    * If that fails, then it just returns None.
+    * @param input The input document to find an output Identity for.
+    * @return The output identity to change; None if none.
+    */
   def tryGroupBy(input: Input): Option[Identity[Output]] = {
     val platform = getUnaryPlatform()
     try {
@@ -94,6 +100,13 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     }
   }
 
+  /**
+    * Attempts to call [[fold]] to get a new output for the Output Data Store
+    * If it fails, just returns None.
+    * @param input The input document to update the output.
+    * @param output The output document that needs to be updated.
+    * @return A new output document based on input and output. Returns None if failed.
+    */
   def tryFold(input: Input, output: Output): Option[Output] = {
     val platform = getUnaryPlatform()
     try {
@@ -110,6 +123,10 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     }
   }
 
+  /**
+    * Attempts to call [[zero]] to get a starting output set.
+    * @return The default output. In the case of the example, this would be Some(Counter(0)). Returns None if failed to get a default output.
+    */
   def tryZero(): Option[Output] = {
     val platform = getUnaryPlatform()
     try {

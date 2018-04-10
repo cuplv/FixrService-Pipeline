@@ -131,6 +131,12 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
   }
 }
 
+/**
+  * The actors that actually do the work of computing the tasks.
+  * @param platform The platform that will compute the data.
+  * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
+  */
 class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: Platform with BigActor[Input]) extends Actor{
   var alertSupervisor: Boolean = true
   var currInput: Option[Input] = None
@@ -238,7 +244,8 @@ class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output
 
 /**
   * This is the default platform of computation. This attempts to compute through a list of inputs asynchronously.
-  * In more detail, Has a supervisor and a list of workers ...
+  * In more detail, Has a supervisor [[BigActorSupervisorActor]] and a list of workers, [[BigActorWorker]].
+  * However, these are not necessary to understand the example, and is just an implementation detail.
   * @param name The name of the platform. This is usually "platform-actor-unary-" followed by a random ID.
   * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.

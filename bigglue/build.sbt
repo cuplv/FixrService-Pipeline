@@ -1,3 +1,8 @@
+enablePlugins(GhpagesPlugin)
+
+scmInfo := Some(ScmInfo(url("https://github.com/cuplv/FixrService-Pipeline"), "git@github.com/cuplv/FixrService-Pipeline.git"))
+git.remoteRepo := scmInfo.value.get.connection
+
 organization := "edu.colorado.plv.fixr"
 
 name := "bigglue"

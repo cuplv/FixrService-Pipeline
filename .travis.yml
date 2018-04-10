@@ -1,5 +1,15 @@
 language: scala
 
+deploy:
+  provider: script
+  script:
+   - cd bigglue
+   - sbt ghpagesPushSite
+  skip_cleanup: true
+  on:
+    tags: true
+    condition: $TRAVIS_PULL_REQUEST = false
+
 scala:
    - 2.10.4
    - 2.12.1
