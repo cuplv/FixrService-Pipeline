@@ -4,7 +4,7 @@ import java.io.File
 import java.util.Base64
 
 import scala.sys.process._
-import bigglue.computations.Mapper
+import bigglue.computations.{Mapper, Reducer}
 import bigglue.configurations.{DataStoreBuilder, PipeConfig}
 import bigglue.data.serializers.JsonSerializer
 import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
@@ -18,17 +18,33 @@ import scalaj.http.Http
 /**
   * Created by chanceroberts on 8/31/17.
   */
+
+/**
+  * Created by chanceroberts on 4/2/18.
+  * This is an example that was created to get a glimpse of BigGlue.
+  * In practice, this is kind of simple, being something that clones a repo, takes the commits, and finds which author
+  * created the most commits.
+  */
 object MockProtocol2 extends DefaultJsonProtocol {
   implicit val gitID: JsonFormat[GitID] = jsonFormat2(GitID)
   implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
-  implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat10(GitCommitInfo)
-  implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat4(GitFeatures)
+  implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat3(GitCommitInfo)
+  //implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat4(GitFeatures)
+  implicit val gitCommitGroup: JsonFormat[GitCommitGroups] = jsonFormat2(GitCommitGroups)
 }
 
+/**
+  * This is an [[Identifiable]] that represents a Github ID for a repo.
+  * @param user The user that the repo belongs to.
+  * @param repo The repo name.
+  */
 case class GitID(user: String, repo: String) extends Identifiable[GitID]{
   override def mkIdentity(): Identity[GitID] = BasicIdentity(s"$user/$repo")
 }
 
+/**
+  * The [[JsonSerializer]] for GitIDs.
+  */
 object GitIDSerializer extends JsonSerializer[GitID] {
   import MockProtocol2._
   override def serializeToJson_(d: GitID): JsObject = d.toJson.asJsObject
@@ -36,10 +52,18 @@ object GitIDSerializer extends JsonSerializer[GitID] {
   override def deserialize_(json: JsObject): GitID = json.convertTo[GitID]
 }
 
+/**
+  * An [[Identifiable]] that represents a Git Repo.
+  * @param gitID The [[GitID]] for the repo.
+  * @param repoPath Where the repo actually lives.
+  */
 case class GitRepo(gitID: GitID, repoPath: String) extends Identifiable[GitRepo]{
   override def mkIdentity(): Identity[GitRepo] = BasicIdentity(s"${gitID.identity().getId()}:$repoPath")
 }
 
+/**
+  * A [[JsonSerializer]] for [[GitRepo]]s.
+  */
 object GitRepoSerializer extends JsonSerializer[GitRepo]{
   import MockProtocol2._
   override def serializeToJson_(d: GitRepo): JsObject = {
@@ -71,6 +95,10 @@ object GitRepoSerializer extends JsonSerializer[GitRepo]{
   })
 }
 
+/**
+  * For Solr, we have to make sure that the JSON is completely flat.
+  * This is kind of a weird workaround to that, making it so nested repos are merged back and forth.
+  */
 object NestedWithGitRepo{
   def flatten(jsObj: JsObject): JsObject =
     JsObject(jsObj.fields.toList.foldRight(Map[String, JsValue]()){
@@ -89,18 +117,26 @@ object NestedWithGitRepo{
           case _ => (newFields + (key -> jsValue), gRepo)
         }
       }
-      a ++ GitRepoSerializer.deflatten(b).fields
+      a + ("gitRepo" -> GitRepoSerializer.deflatten(b)) //GitRepoSerializer.deflatten(b).fields
     })
 }
 
+/**
+  * An [[Identifiable]] for a Commit of a GitRepo, with the hash and the person that created it.
+  *
+  * @param gitRepo The [[GitRepo]]
+  * @param hash The hash of the commit
+  * @param author The author that made the commit.
+  */
 case class GitCommitInfo(gitRepo: GitRepo, hash: String,
-                        author: String, authorEmail: String, authorDate: String,
-                        committer: String, committerEmail: String, title: String, message: String,
-                        files: List[String]) extends Identifiable[GitCommitInfo]{ //I need to find a much better way of doing this. :|
+                        author: String) extends Identifiable[GitCommitInfo]{ //I need to find a much better way of doing this. :|
   override def mkIdentity(): Identity[GitCommitInfo] =
     BasicIdentity(s"${gitRepo.gitID.user}/${gitRepo.gitID.repo}/$hash:${gitRepo.repoPath}")
 }
 
+/**
+  * A [[JsonSerializer]] for a [[GitCommitInfo]].
+  */
 object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
   import MockProtocol2._
   override def serializeToJson_(d: GitCommitInfo): JsObject = NestedWithGitRepo.flatten(d.toJson.asJsObject)
@@ -111,11 +147,34 @@ object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
   }
 }
 
+
+/**
+  * The [[Identifiable]] of which author created how many commits.
+  * @param author The author that we're tracking.
+  * @param gitCommitInfos The amount of git commits the author has made.
+  */
+case class GitCommitGroups(author: String, gitCommitInfos: Int) extends Identifiable[GitCommitGroups]{
+  override def mkIdentity(): Identity[GitCommitGroups] = BasicIdentity(author)
+}
+
+/**
+  * A [[JsonSerializer]] for [[GitCommitGroups]]
+  */
+object GitCommitGroupSerializer extends JsonSerializer[GitCommitGroups]{
+  import MockProtocol2._
+
+  override def serializeToJson_(d: GitCommitGroups): JsObject = d.toJson.asJsObject
+
+  override def deserialize_(json: JsObject): GitCommitGroups = json.convertTo[GitCommitGroups]
+}
+
+
+
 case class GitFeatures(gitRepo: GitRepo, hash: String, file: String, protobuf: String)
   extends Identifiable[GitFeatures]{
   override def mkIdentity(): Identity[GitFeatures] = BasicIdentity(s"${gitRepo.gitID.user}/${gitRepo.gitID.repo}/$hash:${gitRepo.repoPath}:$file")
 }
-
+/*
 object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
   import MockProtocol2._
   override def serializeToJson_(d: GitFeatures): JsObject = NestedWithGitRepo.flatten(d.toJson.asJsObject)
@@ -125,7 +184,11 @@ object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
     newJson.convertTo[GitFeatures]
   }
 }
+*/
 
+/**
+  * This is a simple [[Mapper]] step that clones a [[GitID]] and gives back the [[GitRepo]].
+  */
 case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends Mapper[GitID, GitRepo](
   input => {
     try {
@@ -148,8 +211,12 @@ case class Clone(repoFolderLocation: String = "mockfixrexample/repos") extends M
   }
 )
 
+/**
+  * This is a simple [[Mapper]] step that takes a [[GitRepo]] and gives back the GitCommits and the [[GitCommitInfo]]s that we need.
+  */
 case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
   input => {
+    s"git pull".!
     val lisCommits = s"git -C ${input.repoPath} log --pretty=format:%H".!!
     lisCommits.split("\n").toList.foldRight(List.empty[GitCommitInfo]) {
       case (commit, listOfCommits) =>
@@ -167,14 +234,6 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
             case x => (s.substring(0, x - 1), s.substring(x))
           }
         }
-        val authorDate = commitInfo(2 + checkForMerges).substring("AuthorDate: ".length)
-        val (blame, blameEmail) = commitInfo(3 + checkForMerges).substring("Commit:     ".length) match {
-          case s => s.indexOf('<') match {
-            case -1 => (s, "")
-            case x => (s.substring(0, x - 1), s.substring(x))
-          }
-        }
-        val commitDate = commitInfo(4 + checkForMerges).substring("CommitDate: ".length)
 
         def findCommitMessage(message: Array[String], line: Int, currString: String = ""): (String, Int) = if (message.length > line) message(line) match {
           case s if s.length > 4 && s.substring(0, 4).equals("    ") => currString match {
@@ -184,21 +243,27 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
           case _ => (currString, line)
         } else (currString, line)
 
-        def findFiles(message: Array[String], line: Int, files: List[String] = List()): List[String] = if (message.length > line) message(line) match{
-          case s if s.length > 4 && s.substring(0, 4).equals("    ") => findFiles(message, line+2) //Should never happen, but just in case...
-          case "" => findFiles(message, line+1, files)
-          case x => findFiles(message, line + 1, x :: files)
-        } else files
-
         val (title, nextLine) = findCommitMessage(commitInfo, 6 + checkForMerges)
         val (message, lineAfter) = findCommitMessage(commitInfo, nextLine + 1)
-        val gCI = GitCommitInfo(input, comm, author, authorEmail, authorDate, blame, blameEmail,
-          title, message, findFiles(commitInfo, lineAfter))
+        val gCI = GitCommitInfo(input, comm, author)
         gCI :: listOfCommits
     }
   }
 )
 
+
+/**
+  * This is a simple [[Reducer]] step that takes the GitCommitInfo, finds the author, and increments their commit value.
+  */
+case class FindAuthor() extends Reducer[GitCommitInfo, GitCommitGroups](
+  i => BasicIdentity(i.author),
+  i => o => {
+    println(o.gitCommitInfos); GitCommitGroups(i.author, o.gitCommitInfos+1)
+  },
+  GitCommitGroups("", 0)
+)
+
+/*
 case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
   input => {
     /*var numberOfFailures = 0
@@ -255,8 +320,19 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
     }
   }
 )
+*/
 
 
+/**
+  * This is the actual code for the simple example.
+  * It first gets the configuration file with [[PipeConfig.newConfig]]
+  * Then, it creates a few [[SolrDataMap]]s to put the data in within each step.
+  * To start, it also puts in a Git ID into gitID for the sake of having a starting point for the example.
+  * Then, with gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap, it creates this:
+  * [[bigglue.pipes.ReducerPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.Implicits.DataNode]](gitID), Clone(), [[bigglue.pipes.Implicits.DataNode]](clonedMap)), CommitExtraction(), [[bigglue.pipes.Implicits.DataNode]](commitInfoMap)), FindAuthor(), [[bigglue.pipes.Implicits.DataNode]](authorMap))
+  * Then, with a pipe, we run [[bigglue.pipes.Pipe.check]] and [[bigglue.pipes.Pipe.init]] to initialize the pipeline.
+  * Finally, we run [[bigglue.pipes.Pipe.run]] to start/resume the pipeline.
+  */
 object mockfixrexample {
   def IStringToGitID(i: I[String]): GitID = {
     val slash = i.a.indexOf('/')
@@ -268,16 +344,18 @@ object mockfixrexample {
     val textMap = new TextFileDataMap("src/main/mockfixrexample/firstOne.txt")
     val storeBuilder = DataStoreBuilder.load(config)
     val gitID = new SolrDataMap[GitID, GitID](GitIDSerializer, "GitIDs")
-    val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
-    val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
-    val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
-    import bigglue.pipes.Implicits._
-    val pipe = gitID :--Clone()-->clonedMap :--CommitExtraction()-->commitInfoMap :--FeatureExtraction()-->featureMap
-    pipe.check(config)
-    pipe.init(config)
     textMap.all().foreach{
       input => val gID = IStringToGitID(input)
-        gitID.put(gID, gID)
+        gitID.put_(gID, gID)
     }
+    val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
+    val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
+    val authorMap = new SolrDataMap[Identity[GitCommitGroups], GitCommitGroups](GitCommitGroupSerializer, "GitAuthors")
+    //val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
+    import bigglue.pipes.Implicits._
+    val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap //:--FeatureExtraction()-->featureMap
+    pipe.check(config)
+    pipe.init(config)
+    pipe.run()
   }
 }

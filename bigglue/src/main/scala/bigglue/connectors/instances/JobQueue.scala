@@ -16,6 +16,13 @@ import com.typesafe.config.Config
 /**
   * Created by edmundlam on 8/8/17.
   */
+
+/**
+  * This is a [[Connector]] that's the superclass to [[IncrTrackerJobQueue]].
+  * It acts exactly the same, with the exception that there's no status map attached to it.
+  * @tparam Data The type of data that's being sent down the pipeline from this connector.
+  *              In the case of the example, it's [[bigglue.examples.GitRepo]] for clonedMap.
+  */
 class JobQueue[Data] extends Connector[Data] {
 
   var queue: DataQueue[Data] = new InMemDataQueue[Data]
@@ -51,8 +58,7 @@ class JobQueue[Data] extends Connector[Data] {
   * Data Store chosen just in case that isn't actually a possibility and/or to save computation power if the
   * status map is heavily used.
   * @tparam Data The type of data that's being sent down the pipeline from this connector.
-  *              In the case of the example, it would be [[I]][Int], as we're bringing in
-  *              data from a in a:--AA-->b, b from b:--BB-->c, and c from c:-+CC+->d.
+  *              In the case of the example, it's [[bigglue.examples.GitID]] for gitID, and [[bigglue.examples.GitCommitInfo]] for commitInfoMap.
   *              Needs to be of type [[Identifiable]]
   */
 class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
@@ -217,7 +223,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
         case Some(x) => lis+(s"${dat.identity().getId()}-#-$x"->(false, dat))
       }
     }
-    val trueIds = textMap.iterator().foldRight(ids){
+    val trueIds = textMap.all().foldRight(ids){
       case (str, oIDs) =>
         val statusSplit = str.a.split(" -!- ")
         if (oIDs.contains(statusSplit(0))){

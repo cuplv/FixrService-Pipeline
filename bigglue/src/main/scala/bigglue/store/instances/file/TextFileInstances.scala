@@ -10,6 +10,12 @@ import bigglue.store.DataMap
 /**
   * Created by chanceroberts on 9/5/17.
   */
+
+/**
+  * A Simple Data Map that takes the form of a Text File
+  * It's Line Number to String, so it the key is [[I]][Int], and the value is [[I]][String]
+  * @param name The name of the text file to open.
+  */
 class TextFileDataMap(name: String) extends DataMap[I[Int], I[String]]{
   //override val serializerOpt: Option[BasicSerializer[I[String]]] = Some(IStringBasicSerializer)
   val file = new File(name)

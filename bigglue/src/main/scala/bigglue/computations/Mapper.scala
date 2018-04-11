@@ -16,11 +16,13 @@ import bigglue.store.DataStore
 /**
   * The Mapper Computation, which is a subclass of [[UnaryComputation]].
   * In short, this takes a input, the computation turns that into a list of outputs.
-  * In the example, this would be either AA or BB.
-  * @param op The computation to be run by the computation. For AA, this is this section: input => { List(I(input.a+2))}
-  * @tparam Input The type of the data that needs to be computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  * In the example, this would be either Clone() or CommitExtraction().
+  * @param op The computation to be run by the computation. For both, this is this section that's in between the parentheses.
+  * @tparam Input The type of the data that needs to be computed.
+  *               Within the example, this is [[bigglue.examples.GitID]] for GitClone(), and [[bigglue.examples.GitRepo]] for GitCommitExtraction().
   *               This needs to be an [[Identifiable]] type.
-  * @tparam Output The type of the data that ends up being computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  * @tparam Output The type of the data that ends up being computed.
+  *                Within the example, this is [[bigglue.examples.GitRepo]] for GitClone(), and [[bigglue.examples.GitCommitInfo]] for GitCommitExtraction().
   *                This also needs to be an [[Identifiable]] type.
   */
 class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
@@ -38,13 +40,14 @@ class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     * It creates a [[UnaryPlatform]] with [[PlatformBuilder.mapperPlatform]], then sets itself as the platform's computation,
     * and then initializes the platform with [[UnaryPlatform.init]].
     * @param conf The configuration file to build from.
-    *             Note: If there is a a-->b section or a b-->c section in the bigglue section of the configuration file,
+    *             Note: If there is a GitIDs-->GitRepos section or GitRepos-->GitCommitInfo section in the bigglue section of the configuration file,
     *             it will overwrite part of the configuration file with the values within the step's section.
+    *             You can see this in effect with GitIDs-->GitRepos, which changes the connector from an [[bigglue.connectors.instances.IncrTrackerJobQueue]] to a [[bigglue.connectors.instances.JobQueue]].
     * @param inputMap The [[DataStore]] that data is being sent in from.
-    *                 Within the example, for a:--AA-->b, this would be a. Likewise, for b:--BB-->c, this would be c.
+    *                 Within the example, for gitID:--Clone()-->clonedMap, this would be gitID. Likewise, for clonedMap:--CommitExtraction()-->commitInfoMap, this would be clonedMap.
     *                 Both of these Data Stores are [[bigglue.store.instances.solr.SolrDataMap]] within the example.
     * @param outputMap The [[DataStore]] that data is being sent to after computation.
-    *                  Within the example, for a:--AA-->b, this would be b. Likewise, for b:--BB-->c, this would be c.
+    *                  Within the example, for gitID:--Clone()-->clonedMap, this would be clonedMap. Likewise, for clonedMap:--CommitExtraction()-->commitInfoMap, this would be commitInfoMap.
     *                  Both of these Data Stores are [[bigglue.store.instances.solr.SolrDataMap]] within the example.
     */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
@@ -99,12 +102,12 @@ class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
   }
 
   /**
-    * This is part of the series of function calls that make the pipeline. In the example, this is called when stating (AA-->b) or (BB-->c).
+    * This is part of the series of function calls that make the pipeline. In the example, this is called when stating (Clone()-->clonedMap) or (CommitExtraction()-->commitInfoMap).
     * Simply put, this creates a part of the pipeline that connects the mapper to the output data store and the rest of the
     * pipeline after that.
-    * @param p The part of the pipe that follows the mapper computation. In the example, for AA it's b:-->BB-->c:-+CC+->d,
-    *          and for BB it's c:-+CC+->d.
-    * @tparam End The type of data store that is at the end of the pipeline. In the example, this would be [[bigglue.examples.Counter]]
+    * @param p The part of the pipe that follows the mapper computation. In the example, for Clone() it's clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap,
+    *          and for BB it's commitInfoMap:-+FindAuthor()+->authorMap.
+    * @tparam End The type of data store that is at the end of the pipeline. In the example, this would be [[bigglue.examples.GitCommitGroups]]
     * @return A [[PartialMapperPipe]] which links the mapper together with the pipe that starts with the output data store.
     */
   def -->[End <: Identifiable[End]](p: Pipe[Output,End]): PartialMapperPipe[Input,Output,End] = PartialMapperPipe(this, p)

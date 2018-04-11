@@ -20,7 +20,7 @@ abstract class Identifiable[A] {
 
   /**
     * When creating an Identifiable, you will have to specify an [[Identity]] for that Identifiable.
-    * This can be seen in the example with [[bigglue.examples.Counter]], whose Identity is simply a [[BasicIdentity]]
+    * This can be seen in the example within all of the data types, whose Identity is simply a [[BasicIdentity]]
     * that consists of the word sum.
     * @return The Identity of the Identifiable.
     */
@@ -64,11 +64,11 @@ case class Pair[L <: Identifiable[L],R <: Identifiable[R]](left: L, right: R) ex
 /**
   * A wrapper class for types that are not [[Identifiable]].
   * This is mainly meant for basic types like Int, String, and Boolean, but can easily work for other types of classes.
-  * In the case of the sample, you will have to wrap Integers into the Identifiable class to work for BigGlue, so
-  * we use [[I]][Int]s for a, b, and c.
+  * For example, you may need to wrap Integers into the Identifiable class to work for BigGlue, so
+  * we use [[I]][Int]s.
   * With this class, the [[Identity]] of the class is simply what the string representation of that object is.
   * @param a The actual value wrapped within the identifiable.
-  * @tparam A The type of the value wrapped within the identifiable. For a, b, and c, we used Int.
+  * @tparam A The type of the value wrapped within the identifiable.
   */
 case class I[A](a: A) extends Identifiable[I[A]] {
   def i(): A = a

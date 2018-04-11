@@ -13,9 +13,11 @@ import scala.util.Random
   * This is the default platform for the mapper. It attempts to do the computations on the inputs asynchronously.
   * This is a subclass of [[BigActorUnaryPlatform]].
   * @param name The name of the platform. This is usually "platform-actor" followed by a random ID.
-  * @tparam Input The type of the data that needs to be computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  * @tparam Input The type of the data that needs to be computed.
+  *               In the case of gitID:--Clone()-->clonedMap and [[bigglue.examples.GitRepo]] for clonedMap:--CommitExtraction()-->commitInfoMap.
   *               This needs to be an [[Identifiable]] type.
-  * @tparam Output The type of the data that ends up being computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+  * @tparam Output The type of the data that ends up being computed.
+  *                [[bigglue.examples.GitRepo]] for gitID:--Clone()-->clonedMap, and [[bigglue.examples.GitCommitInfo]] for clonedMap:--CommitExtraction()-->commitInfoMap
   *                This also needs to be an [[Identifiable]] type.
   */
 class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiable[Output]]
@@ -38,9 +40,9 @@ class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiab
 /**
   * This is the default platform for the reducer.
   * @param name The name of the platform. This is usually "platform-actor" followed by a random ID.
-  * @tparam Input The type of the data that nneds to be computed. In the example, this would be the type of c, which is [[bigglue.data.I]][Int]
+  * @tparam Input The type of the data that needs to be computed. [[bigglue.examples.GitCommitInfo]] in this case, which is the type of commitInfoMap.
   *               This needs to be an [[Identifiable]] type.
-  * @tparam Output The type of the data that the input ends up being reduced to. Within the example, this will be [[bigglue.examples.Counter]].
+  * @tparam Output The type of the data that the input ends up being reduced to. Within the example, this will be [[bigglue.examples.GitCommitGroups]].
   */
 class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + Random.nextInt(99999)) extends BigActorUnaryPlatform[Input, Output] {

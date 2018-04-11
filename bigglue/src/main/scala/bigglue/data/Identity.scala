@@ -32,8 +32,8 @@ object Identity {
   * These usually consist of two things:
   *   ID: A simple string that acts as an Identifier
   *   Version: An optional string that shows which version of a step in a pipeline the Identifiable originated from.
-  * @tparam A The type of the Identifiable that this came from. In the example, for data that comes from a, b, or c, this would be
-  *           Identity[I[Int]\] For data that comes from d, this would be Identity[Counter].
+  * @tparam A The type of the Identifiable that this came from. In the example, this would be Identity[GitID],
+  *           Identity[GitRepo], Identity[GitCommitInfo], and Identity[GitCommitGroups] for their respective data maps.
   */
 abstract class Identity[A] { // extends Identifiable[A] {
 
@@ -63,8 +63,7 @@ import IdentityToJson._
 /**
   * This is an Identity that does not have a version.
   * @param id The Identity String
-  * @tparam A The type of the Identifiable that this came from. In the example, for data that comes from a, b, or c, this would be
-  *           Identity[I[Int]\] For data that comes from d, this would be Identity[Counter].
+  * @tparam A The type of the Identifiable that this came from.
   */
 case class BasicIdentity[A](id: String) extends Identity[A] {
 
@@ -88,8 +87,8 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
   * An [[Identifiable]] with a version. Note that when serializing this, you will end up with an id of [[id]]-#-[[version]]
   * @param id
   * @param version The string that shows that shows which version of a step in a pipeline the Identifiable originated from. (NOT OPTIONAL)
-  * @tparam A The type of the Identifiable that this came from. In the example, for data that comes from a, b, or c, this would be
-  *           Identity[I[Int]\] For data that comes from d, this would be Identity[Counter].
+  * @tparam A The type of the Identifiable that this came from. In the example, this would be Identity[GitID],
+  *           Identity[GitRepo], Identity[GitCommitInfo], and Identity[GitCommitGroups] for their respective data maps.
   */
 case class VersionedIdentity[A](id: String, version: String) extends Identity[A] {
 

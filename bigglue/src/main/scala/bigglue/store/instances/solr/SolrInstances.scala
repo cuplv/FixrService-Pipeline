@@ -28,10 +28,12 @@ object SolrInstances{
   * @param serializer The serializer that needs to be used to serialize the objects into a flat Json file.
   * @param coreName The name of the core/collection that is being used. If the core/collection doesn't exist, we just create a new core/collection.
   * @param config The configuration file used for the Solr instance. If not specified, this will just be the default file.
-  * @tparam Key  The type of the key that's being used. Within the examples, in the cases of a, b, and c, this is [[bigglue.data.I]][Int].
-  *              In the cases of d, this is [[bigglue.examples,Counter]].
-  * @tparam Data The type of the data that's being used. Within the examples, in the cases of a, b, and c, this is [[bigglue.data.I]][Int].
-  *              In the cases of d, this is [[bigglue.examples.Counter]].
+  * @tparam Key  The type of the key that's being used.
+  *              Within the example, it's [[bigglue.examples.GitID]] for gitID, [[bigglue.examples.GitRepo]] for clonedMap,
+  *              [[bigglue.examples.GitCommitInfo]] for commitInfoMap, and [[bigglue.examples.GitCommitGroups]] for authorMap.
+  * @tparam Data The type of the data that's being used.
+  *              Within the example, it's [[bigglue.examples.GitID]] for gitID, [[bigglue.examples.GitRepo]] for clonedMap,
+  *              [[bigglue.examples.GitCommitInfo]] for commitInfoMap, and [[bigglue.examples.GitCommitGroups]] for authorMap.
   */
 class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Data], coreName: String, config: Config = ConfigFactory.load()) extends DataMap[Key, Data] {
   val solrBack: SolrBackend[Data] = new SolrBackend[Data](coreName, config)

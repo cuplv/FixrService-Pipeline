@@ -4,7 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 import com.typesafe.config.{Config, ConfigFactory}
 import bigglue.configurations.{ConfOpt, Constant, PipeConfig}
-import bigglue.data.Identifiable
+import bigglue.data.{Identifiable, Identity}
 import bigglue.exceptions.{NotInitializedException, NotSupportedPipelineConfigException, ProtoPipeException}
 import spray.json._
 
@@ -58,7 +58,14 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
 
   def keyToString(key: Any): String = {
     key match {
-      case i: Identifiable[_] => i.getId().toString
+      case i: Identifiable[_] => i.getVersion() match{
+        case None => i.getId().toString
+        case Some(x) => s"${i.getId().toString}${Identity.VERSION_DELIMITER}$x"
+      }
+      case i: Identity[_] => i.getVersion() match{
+        case None => i.getId().toString
+        case Some(x) => s"${i.getId().toString}${Identity.VERSION_DELIMITER}$x"
+      }
       case _ => key.toString
     }
   }
