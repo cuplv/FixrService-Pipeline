@@ -19,6 +19,7 @@ import spray.json._
 case object AA extends Mapper[I[Int], I[Int]](input => { List(I(input.a+2))}){
 }
 
+
 /** This is a simple [[Mapper]] step that multiplies the input by 3. */
 case object BB extends Mapper[I[Int], I[Int]](input => { List(I(input.a*3))}){
   override val versionOpt = Some("0.1")

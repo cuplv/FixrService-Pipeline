@@ -15,8 +15,9 @@ import bigglue.data.{BasicIdentity, Identifiable, Identity}
   * The Data Store is an abstraction for how you store your data in BigGlue.
   * Within Data Stores, you have [[DataMap]], [[DataMultiMap]], and [[DataQueue]] from a list of most useful to least useful within BigGlue.
   * Within the example, all of the data stores are [[bigglue.store.instances.solr.SolrDataMap]]s.
-  * @tparam Data The type of the data that is intended to be put into the data store. For a, b, and c, this is [[bigglue.data.I]][Int].
-  *              For d, this is [[bigglue.examples.Counter]].
+  * @tparam Data The type of the data that is intended to be put into the data store.
+  *              In this case, it's [[bigglue.examples.GitID]] for gitID, [[bigglue.examples.GitRepo]] for clonedMap,
+  *              [[bigglue.examples.GitCommitInfo]] for commitInfoMap, and [[bigglue.examples.GitCommitGroups]] for authorMap.
   */
 abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with ConfigBuildsDataStore  {
 
@@ -105,11 +106,11 @@ abstract class DataMap[Key,Data] extends DataStore[Data] {
     if (!existed) transmitDownstream(data) else transmitDownstreamModified(data)
   }
 
-  def getOrElse(key: Key, default: Data): Data = get(key) match {
-    case Some(data) => data
-    case None => default
-  }
-
+  def getOrElse(key: Key, default: Data): Data =
+    get(key) match {
+      case Some(data) => data
+      case None => default
+    }
 }
 
 abstract class DataMultiMap[Key,Data] extends DataStore[Set[Data]] {

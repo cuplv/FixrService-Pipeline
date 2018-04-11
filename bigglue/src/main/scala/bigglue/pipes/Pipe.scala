@@ -55,7 +55,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
   /**
     * This connects the [[Mapper]] to the input store, connecting it completely.
     * This is expected to be called after a [[bigglue.pipes.Implicits.DataNode]],
-    * and can be seen after a and b.
+    * and can be seen after gitID and clonedMap.
     * @param headMapper The mapper to connect to the input store.
     * @tparam Next The type at the end of the new pipeline.
     * @tparam Mid The type that the mapper ends up outputting given the input [[End]].
@@ -68,7 +68,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
   /**
     * This connects the [[Reducer]] to the input store, connecting it completely.
     * This is expected to be called after a [[bigglue.pipes.Implicits.DataNode]],
-    * and can be seen after a and b.
+    * and can be seen after gitID and clonedMap.
     * @param headReducer The reducer to connect to the input store.
     * @tparam Next The type at the end of the new pipeline.
     * @tparam Mid The type that the mapper ends up outputting given the input [[End]].
@@ -102,9 +102,11 @@ object Implicits {
 
   /**
     * This is a wrapper for data pipelines that make them act like pipes.
-    * In the example, a, b, c, and d are converted implicitly to DataNodes when calling a:--AA-->b:--BB-->c:-+CC+->d.
+    * In the example, gitID, clonedMap, c, and d are converted implicitly to DataNodes when calling
+    * gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap.
     * @param map The Data Store that's being converted into a pipe.
-    * @tparam Data The Type of the Data Store; In this case, it's I[Int] for a, b, and c, and [[bigglue.examples.Counter]] for d.
+    * @tparam Data The Type of the Data Store; In this case, it's [[bigglue.examples.GitID]] for gitID, [[bigglue.examples.GitRepo]] for clonedMap,
+    *              [[bigglue.examples.GitCommitInfo]] for commitInfoMap, and [[bigglue.examples.GitCommitGroups]] for authorMap.
     */
   implicit class DataNode[Data <: Identifiable[Data]](map: DataStore[Data]) extends Pipe[Data,Data] {
     override def toString: String = map.displayName
@@ -184,18 +186,20 @@ object Implicits {
 }
 
 /**
-  * This is created with the call a:--AA-->b (and b:--BB-->c, but we'll focus on the former) within the example.
-  * In the case of a:--AA-->b, this is a pipeline that goes from Data Store a, computed by the mapper AA,
+  * This is created with the call gitID:--Clone()-->clonedMap (and clonedMap:--CommitExtraction()-->commitInfoMap, but we'll focus on the former) within the example.
+  * In the case of gitID:--Clone()-->clonedMap, this is a pipeline that goes from Data Store gitID, computed by the mapper Clone(),
   * and then goes down into Data Store b to be sent further down the pipeline.
-  * @param p1     An Input Data Pipe; [[bigglue.pipes.Implicits.DataNode]](a) in the example.
-  *               In the case of b:--BB-->c, it would be the [[MapperPipe]](a:--AA-->b)
-  * @param mapper The computation ([[Mapper]]) of which the inputs gets computed by. AA in the example.
-  * @param p2     An Output Data Pipe; [[bigglue.pipes.Implicits.DataNode]](b) in this example.
-  *               In the case of b:--BB-->c, it would be [[bigglue.pipes.Implicits.DataNode]](c).
-  * @tparam Head The type of the data store that begins the pipeline; [[I]][Int] in this case.
-  * @tparam Input The type of the data store that brings in input to this part of the pipeline; [[I]][Int] in this case.
-  * @tparam Output The type of the data store that brings in output to this part of the pipeline; [[I]][Int] in this case.
-  * @tparam End The type of the data store that shows up at the end of the pipeline; [[I]][Int] in this case.
+  * @param p1     An Input Data Pipe; [[bigglue.pipes.Implicits.DataNode]](gitID) in the example.
+  *               In the case of clonedMap:--CommitExtraction()-->commitInfoMap, it would be the [[MapperPipe]](gitID:--Clone()-->clonedMap)
+  * @param mapper The computation ([[Mapper]]) of which the inputs gets computed by. Clone() in the example.
+  * @param p2     An Output Data Pipe; [[bigglue.pipes.Implicits.DataNode]](clonedMap) in this example.
+  *               In the case of clonedMap:--CommitExtraction()-->commitInfoMap, it would be [[bigglue.pipes.Implicits.DataNode]](commitInfoMap).
+  * @tparam Head The type of the data store that begins the pipeline; [[bigglue.examples.GitID]] in this case.
+  * @tparam Input The type of the data store that brings in input to this part of the pipeline; [[bigglue.examples.GitID]]
+  *               In the case of gitID:--Clone()-->clonedMap and [[bigglue.examples.GitRepo]] for clonedMap:--CommitExtraction()-->commitInfoMap.
+  * @tparam Output The type of the data store that brings in output to this part of the pipeline;
+  *                [[bigglue.examples.GitRepo]] for gitID:--Clone()-->clonedMap, and [[bigglue.examples.GitCommitInfo]] for clonedMap:--CommitExtraction()-->commitInfoMap
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.GitCommitGroups]] in this case.
   */
 case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], mapper: Mapper[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
@@ -252,7 +256,7 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
     * This gives you the data store at the start of the pipeline.
     * @return The Data Store inside the DataNode at the start of the pipeline.
     *         This is the same as [[p1.head]], as that's the part of the pipeline before the Mapper section.
-    *         In this example, it would be a.
+    *         In this example, it would be gitID.
     */
   override def head(): DataStore[Head] = p1.head()
 
@@ -260,7 +264,8 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
     * This gives you the data store at the end of the pipeline.
     * @return The Data Store inside the DataNode at the end of the pipeline.
     *         This is the same as [[p2.end]], as that's the part of the pipeline after the Mapper section.
-    *         In this example, this would be b for a:--AA-->b. or c for a:--AA-->b:--BB-->c.
+    *         In this example, this would be clonedMap for gitID:--Clone()-->clonedMap.
+    *         Or c for gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap.
     */
   override def end(): DataStore[End] = p2.end()
 
@@ -277,18 +282,19 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
 }
 
 /**
-  * In the example, this is created with the call c:-+CC+->d within the val pipe = a:--AA-->b:--BB-->c:-+CC+->d line.
-  * With this example, this is a pipeline that goes from Data Store c, computed by the reducer CC,
+  * In the example, this is created with the call commitInfoMap:-+FindAuthor()+->authorMap within the
+  * val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap line.
+  * With this example, this is a pipeline that goes from Data Store c, computed by the reducer FindAuthor(),
   * and then goes down into Data Store d to be sent further down the pipeline.
   * @param p1 The part of the pipeline before the actual reducer section of the pipeline; In the example, it would be
-  *           the [[MapperPipe]](a:--AA-->b:--BB-->c)
-  * @param reducer The computation ([[Reducer]]) on which the inputs get computed by. CC in the example.
+  *           the [[MapperPipe]](gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap)
+  * @param reducer The computation ([[Reducer]]) on which the inputs get computed by. FindAuthor() in the example.
   * @param p2 The part of the pipeline after the actual reducer section of the pipeline; In the example, it would be
-  *           [[bigglue.pipes.Implicits.DataNode]](d)
-  * @tparam Head The data store type at the very beginning of the pipeline. In the example, it would be [[I]][Int]
-  * @tparam Input The type of the Data Store that brings in input to this part of the pipeline. [[I]][Int] in this case.
-  * @tparam Output The type of the Data Store that this part of the pipeline outputs to. [[bigglue.examples.Counter]] in this case.
-  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.Counter]] in this case.
+  *           [[bigglue.pipes.Implicits.DataNode]](authorMap)
+  * @tparam Head The data store type at the very beginning of the pipeline. In the example, it would be [[bigglue.examples.GitID]]
+  * @tparam Input The type of the Data Store that brings in input to this part of the pipeline. [[bigglue.examples.GitCommitInfo]] in this case.
+  * @tparam Output The type of the Data Store that this part of the pipeline outputs to. [[bigglue.examples.GitCommitGroups]] in this case.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.GitCommitGroups]] in this case.
   */
 case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[Head,Input], reducer: Reducer[Input,Output], p2: Pipe[Output,End]) extends Pipe[Head,End] {
@@ -333,7 +339,7 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
     * This gives you the data store at the start of the pipeline.
     * @return The Data Store inside the DataNode at the start of the pipeline.
     *         This is the same as [[p1.head]], as that's the part of the pipeline before the Reducer section.
-    *         In this example, it would be a.
+    *         In this example, it would be gitID.
     */
   override def head(): DataStore[Head] = p1.head()
 

@@ -18,14 +18,14 @@ import bigglue.store.{DataMap, DataStore}
   * The Reducer Computation, which is a subclass of [[UnaryComputation]]
   * In short, this takes an input, groups it together with an output, and then updates the output with the input.
   * @param groupBy This is the function that has you group an input with an output. You choose the output in this case
-  *                by it's [[Identity]]. In the case of the example, this would be the i => BasicIdentity("sum") function.
+  *                by it's [[Identity]]. In the case of the example, this would be the i => BasicIdentity(i.author) function.
   * @param fold This is the function that has you update the output with the new input. In the case of the example, this would
-  *             be the i => curSum => Counter(i.a+curSum.sum) function, where i is the new input and curSum is the current output.
+  *             be the i => o => GitCommitGroups(i.author, o.gitCommitInfos+1) function, where i is the new input and o is the current output.
   * @param zero This is the default output. This is given when the groupBy function doesn't lead to an actual output, making this
-  *             the output that all outputs began as. Within the example, this would be Counter(0).
-  * @tparam Input The type of the data that needs to be computed. In this case, this is [[bigglue.data.I]][Int]
+  *             the output that all outputs began as. Within the example, this would be GitCommitGroups("", 0).
+  * @tparam Input The type of the data that needs to be computed. In this case, this is [[bigglue.examples.GitCommitInfo]]
   *               This needs to be an [[Identifiable]] type.
-  * @tparam Output The type of the data that needs to be computed. In this case, this is [[bigglue.examples.Counter]]
+  * @tparam Output The type of the data that needs to be computed. In this case, this is [[bigglue.examples.GitCommitGroups]]
   *               This needs to be an [[Identifiable]] type.
   */
 class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
@@ -55,12 +55,12 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     * It creates a [[UnaryPlatform]] with [[PlatformBuilder.reducerPlatform]], then sets itself as the platform's computation,
     * and then initializes the platform with [[UnaryPlatform.init]].
     * @param conf The configuration file to build from.
-    *             Note: If there is a c+->d section in the bigglue section of the configuration file,
+    *             Note: If there is a GitCommitInfo+->GitAuthors section in the bigglue section of the configuration file,
     *             it will overwrite part of the configuration file with the values within the step's section.
     * @param inputMap The [[DataStore]] that data is being sent in from.
-    *                 In the example, this would be c, which is implemented with a [[bigglue.store.instances.solr.SolrDataMap]].
+    *                 In the example, this would be commitInfoMap, which is implemented with a [[bigglue.store.instances.solr.SolrDataMap]].
     * @param outputMap The [[DataStore]] that data is being sent to and updated from.
-    *                  In the example, this would be d, which is implemented with a [[bigglue.store.instances.solr.SolrDataMap]].
+    *                  In the example, this would be authorMap, which is implemented with a [[bigglue.store.instances.solr.SolrDataMap]].
     */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output]): Unit = {
     val stepNm = s"${inputMap.displayName()}+->${outputMap.displayName()}"
@@ -179,11 +179,11 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
   }
 
   /**
-    * This is part of the series of calls that make the pipeline. This is called within the CC+->d step.
-    * This links the reducer to the rest of the pipeline, which in this case is [[bigglue.pipes.Implicits.DataNode]](d).
-    * @param p The part of the pipeline that follows the reducer computation. In the example, this is simply d.
+    * This is part of the series of calls that make the pipeline. This is called within the FindAuthor()+->authorMap step.
+    * This links the reducer to the rest of the pipeline, which in this case is [[bigglue.pipes.Implicits.DataNode]](authorMap).
+    * @param p The part of the pipeline that follows the reducer computation. In the example, this is simply authorMap.
     * @tparam End The type of the final data store within the pipeline. Within the example, this would be
-    *             [[bigglue.examples.Counter]].
+    *             [[bigglue.examples.GitCommitGroups]].
     * @return This returns a section of the pipe where the reducer is linked together with the pipe that starts with the
     *         output data store.
     */

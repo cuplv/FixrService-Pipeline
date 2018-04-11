@@ -54,9 +54,9 @@ object PlatformBuilder {
        /**
          * This creates a Mapper Platform based on the configuration file.
          * The default for this is [[bigglue.platforms.instances.bigactors.BigActorMapperPlatform]].
-         * @tparam Input The type of the data that needs to be computed. In both cases within the example, this is [[bigglue.data.I]][Int]
+         * @tparam Input The type of the data that needs to be computed. Within the example, this is [[bigglue.examples.GitID]] for GitClone(), and [[bigglue.examples.GitRepo]] for GitCommitExtraction().
          *               This needs to be an [[Identifiable]] type.
-         * @tparam Output The type of the data that ends up being computed. In both cases, within the example this is [[bigglue.data.I]][Int]
+         * @tparam Output The type of the data that ends up being computed. Within the example, this is [[bigglue.examples.GitRepo]] for GitClone(), and [[bigglue.examples.GitCommitInfo]] for GitCommitExtraction().
          *                This also needs to be an [[Identifiable]] type.
          * @return
          */
