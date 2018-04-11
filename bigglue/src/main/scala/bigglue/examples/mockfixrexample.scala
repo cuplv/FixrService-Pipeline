@@ -30,7 +30,7 @@ object MockProtocol2 extends DefaultJsonProtocol {
   implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
   implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat3(GitCommitInfo)
   //implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat4(GitFeatures)
-  //implicit val gitCommitGroup: JsonFormat[GitCommitGroups] = jsonFormat2(GitCommitGroups)
+  implicit val gitCommitGroup: JsonFormat[GitCommitGroups] = jsonFormat2(GitCommitGroups)
 }
 
 /**
@@ -147,7 +147,7 @@ object GitCommitInfoSerializer extends JsonSerializer[GitCommitInfo]{
   }
 }
 
-/*
+
 /**
   * The [[Identifiable]] of which author created how many commits.
   * @param author The author that we're tracking.
@@ -167,14 +167,14 @@ object GitCommitGroupSerializer extends JsonSerializer[GitCommitGroups]{
 
   override def deserialize_(json: JsObject): GitCommitGroups = json.convertTo[GitCommitGroups]
 }
-*/
 
-/*
+
+
 case class GitFeatures(gitRepo: GitRepo, hash: String, file: String, protobuf: String)
   extends Identifiable[GitFeatures]{
   override def mkIdentity(): Identity[GitFeatures] = BasicIdentity(s"${gitRepo.gitID.user}/${gitRepo.gitID.repo}/$hash:${gitRepo.repoPath}:$file")
 }
-
+/*
 object GitFeatureSerializer extends JsonSerializer[GitFeatures]{
   import MockProtocol2._
   override def serializeToJson_(d: GitFeatures): JsObject = NestedWithGitRepo.flatten(d.toJson.asJsObject)
@@ -251,7 +251,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
   }
 )
 
-/*
+
 /**
   * This is a simple [[Reducer]] step that takes the GitCommitInfo, finds the author, and increments their commit value.
   */
@@ -262,7 +262,7 @@ case class FindAuthor() extends Reducer[GitCommitInfo, GitCommitGroups](
   },
   GitCommitGroups("", 0)
 )
-*/
+
 /*
 case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
   input => {
@@ -344,18 +344,18 @@ object mockfixrexample {
     val textMap = new TextFileDataMap("src/main/mockfixrexample/firstOne.txt")
     val storeBuilder = DataStoreBuilder.load(config)
     val gitID = new SolrDataMap[GitID, GitID](GitIDSerializer, "GitIDs")
-    val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
-    val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
-    //val authorMap = new SolrDataMap[Identity[GitCommitGroups], GitCommitGroups](GitCommitGroupSerializer, "GitAuthors")
-    //val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
-    import bigglue.pipes.Implicits._
-    val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap/*:-+FindAuthor()+->authorMap*/ //:--FeatureExtraction()-->featureMap
-    pipe.check(config)
-    pipe.init(config)
     textMap.all().foreach{
       input => val gID = IStringToGitID(input)
-        gitID.put(gID, gID)
+        gitID.put_(gID, gID)
     }
+    val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
+    val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
+    val authorMap = new SolrDataMap[Identity[GitCommitGroups], GitCommitGroups](GitCommitGroupSerializer, "GitAuthors")
+    //val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
+    import bigglue.pipes.Implicits._
+    val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap //:--FeatureExtraction()-->featureMap
+    pipe.check(config)
+    pipe.init(config)
     pipe.run()
   }
 }
