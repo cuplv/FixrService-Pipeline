@@ -30,7 +30,7 @@ object MockProtocol2 extends DefaultJsonProtocol {
   implicit val gitRepo: JsonFormat[GitRepo] = jsonFormat2(GitRepo)
   implicit val gitCommitInfo: JsonFormat[GitCommitInfo] = jsonFormat3(GitCommitInfo)
   //implicit val gitFeatures: JsonFormat[GitFeatures] = jsonFormat4(GitFeatures)
-  implicit val gitCommitGroup: JsonFormat[GitCommitGroups] = jsonFormat2(GitCommitGroups)
+  //implicit val gitCommitGroup: JsonFormat[GitCommitGroups] = jsonFormat2(GitCommitGroups)
 }
 
 /**
