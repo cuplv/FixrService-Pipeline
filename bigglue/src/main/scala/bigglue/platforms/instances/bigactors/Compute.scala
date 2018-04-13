@@ -61,7 +61,7 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
       case Some(computation: Reducer[Input, Output]) =>
         computation.tryGroupBy(job) match{
           case Some(outputId) =>
-            val outputVal = mergals.getOrElse (outputId, Seq.empty[Input]) :+ job
+            val outputVal = List(job) // mergals.getOrElse (outputId, Seq.empty[Input]) :+ job
             mergals = mergals + (outputId -> outputVal )
             mergals.get(outputId) match{
               case Some(x) =>
@@ -69,7 +69,7 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
                   case Some(zero) =>
                     val outputMap = getOutputMap().asInstanceOf[DataMap[Identity[Output],Output]]
                     val output = outputMap.getOrElse(outputId, zero)
-                    outputMap.put(outputVal.foldRight(output){ (i,o) => computation.tryFold(i,o) match{
+                    outputMap.put(outputVal.foldRight(output){ (i,o) =>  computation.tryFold(i,o) match{
                       case Some(no) => no
                       case None => o
                     }})

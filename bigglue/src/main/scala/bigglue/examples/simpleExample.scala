@@ -1,9 +1,10 @@
 package bigglue.examples
 
 import bigglue.computations.{Mapper, Reducer}
-import bigglue.configurations.PipeConfig
+import bigglue.configurations.{DataStoreBuilder, PipeConfig}
 import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
 import bigglue.data.serializers.JsonSerializer
+import bigglue.store.instances.InMemDataMap
 import bigglue.store.instances.solr.SolrDataMap
 import spray.json._
 
@@ -66,15 +67,16 @@ object simpleExample {
   def main(args: Array[String]): Unit ={
     val conf = PipeConfig.newConfig()
     import bigglue.pipes.Implicits._
+    val storeBuilder = DataStoreBuilder.load(conf)
     val a = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "a")
-    a.put(List(I(1), I(2), I(3), I(4)))
     val b = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "b")
     val c = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "c")
     val d = new SolrDataMap[Counter, Counter](CounterSerializer(), "d")
     val pipe = a:--AA-->b:--BB-->c:-+CC+->d
     pipe.check(conf)
     pipe.init(conf)
-    pipe.run()
+    a.put(List(I(1), I(2), I(3), I(4)))
+    // pipe.run()
     Thread.sleep(10000)
     println(d.all())
   }
