@@ -5,7 +5,7 @@ inThisBuild(List(
   autoAPIMappings := true
 ))
 
-organization := "edu.colorado.plv.fixr"
+organization := "edu.colorado.plv"
 
 name := "bigglue"
 
