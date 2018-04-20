@@ -44,7 +44,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
   /**
     * This starts/restarts the pipeline.
     */
-  def run(): Unit = ()
+  def persist(): Unit = ()
 
   def head(): DataStore[Head]
 
@@ -170,9 +170,9 @@ object Implicits {
       pipes._1.init(conf)
       pipes._2.init(conf)
     }
-    override def run(): Unit = {
-      pipes._1.run()
-      pipes._2.run()
+    override def persist(): Unit = {
+      pipes._1.persist()
+      pipes._2.persist()
     }
     override def check(conf: PipeConfig): Unit = {
       pipes._1.check(conf)
@@ -242,14 +242,14 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
   }
 
   /**
-    * This is called within the example pipe.run.
+    * This is called within the example pipe.persist.
     * This calls [[mapper.persist]], which will check to see what data to send down the pipeline (again?).
-    * Then, it will call [[p1.run]] and [[p2.run]], moving the run call along the pipeline.
+    * Then, it will call [[p1.persist]] and [[p2.persist]], moving the run call along the pipeline.
     */
-  override def run(): Unit = {
-    p1.run()
+  override def persist(): Unit = {
+    p1.persist()
     mapper.persist()
-    p2.run()
+    p2.persist()
   }
 
   /**
@@ -325,14 +325,14 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
   }
 
   /**
-    * This is called within the example pipe.run.
+    * This is called within the example pipe.persist.
     * This calls [[reducer.persist]], which will check to see what data to send down the pipeline (again?).
-    * Then, it will call [[p1.run]] and [[p2.run]], moving the run call along the pipeline.
+    * Then, it will call [[p1.persist]] and [[p2.persist]], moving the run call along the pipeline.
     */
-  override def run(): Unit = {
-    p1.run()
+  override def persist(): Unit = {
+    p1.persist()
     reducer.persist()
-    p2.run()
+    p2.persist()
   }
 
   /**
@@ -381,11 +381,11 @@ case class CompositionPipe[HeadL <: Identifiable[HeadL], HeadR <: Identifiable[H
     o.init(conf)
   }
 
-  override def run(): Unit = {
-    p1.run()
-    p2.run()
+  override def persist(): Unit = {
+    p1.persist()
+    p2.persist()
     composer.persist()
-    o.run()
+    o.persist()
   }
 
   override def head(): DataStore[bigglue.data.Either[HeadL,HeadR]] = BothDataStore(p1.head(),p2.head())
@@ -420,9 +420,9 @@ case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], En
     p2.init(conf, p1.end())
   }
 
-  override def run(): Unit = {
-    p1.run()
-    p2.run()
+  override def persist(): Unit = {
+    p1.persist()
+    p2.persist()
   }
 
   override def head(): DataStore[Head] = p1.head()
@@ -442,7 +442,7 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
 
   def init(conf: PipeConfig, input: DataStore[Input]): Unit
 
-  def run(): Unit = ()
+  def persist(): Unit = ()
 
   def end(): DataStore[End]
 
@@ -487,9 +487,9 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
     p.init(conf)
   }
 
-  override def run(): Unit = {
+  override def persist(): Unit = {
     mapper.persist()
-    p.run()
+    p.persist()
   }
 
   override def end(): DataStore[End] = p.end()
@@ -514,9 +514,9 @@ case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiab
     p.init(conf)
   }
 
-  override def run(): Unit = {
-    reducer.run()
-    p.run()
+  override def persist(): Unit = {
+    reducer.persist()
+    p.persist()
   }
 
   override def end(): DataStore[End] = p.end()
@@ -541,9 +541,9 @@ case class SequencedPartialPipes[Input <: Identifiable[Input], Mid <: Identifiab
     po.init(conf, pi.end())
   }
 
-  override def run(): Unit = {
-    pi.run()
-    po.run()
+  override def persist(): Unit = {
+    pi.persist()
+    po.persist()
   }
 
   override def end(): DataStore[Output] = po.end()
@@ -568,9 +568,9 @@ case class ParallelPartialPipes[Input <: Identifiable[Input], LEnd <: Identifiab
     p2.init(conf, input)
   }
 
-  override def run(): Unit = {
-    p1.run()
-    p2.run()
+  override def persist(): Unit = {
+    p1.persist()
+    p2.persist()
   }
 
   override def end(): DataStore[bigglue.data.Either[LEnd,REnd]] = {

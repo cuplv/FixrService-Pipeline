@@ -37,8 +37,17 @@ object Identity {
   */
 abstract class Identity[A] { // extends Identifiable[A] {
 
+  /**
+    * Creates a Basic Identity
+    * @return A [[BasicIdentity]]
+    */
   def dropVersion(): BasicIdentity[A]
 
+  /**
+    * Creates a Versioned Identity
+    * @param v The version that we want to add.
+    * @return A [[VersionedIdentity]] with version v.
+    */
   def withVersion(v: String): VersionedIdentity[A]
 
   /** @return An optional string that shows which version of a step the Identifiable originated from.*/
@@ -67,16 +76,28 @@ import IdentityToJson._
   */
 case class BasicIdentity[A](id: String) extends Identity[A] {
 
+  /**
+    * Creates a Basic Identity
+    * @return A [[BasicIdentity]] (This)
+    */
   override def dropVersion(): BasicIdentity[A] = this
 
+  /**
+    * Creates a versioned Identity
+    * @param v The version that we want to add.
+    * @return A [[VersionedIdentity]] with version v.
+    */
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
 
+  /** @return An optional string that shows which version of a step the Identifiable originated from. (None)*/
   override def getVersion(): Option[String] = None
 
+  /** @return A simple string that acts as an Identifier for the Identifiable. */
   override def getId(): String = id
 
   override def toJsonFormat(): JsValue = this.toJson
 
+  /** @return The serialized version of the Identity (just the [[id]].)*/
   override def serialize(): String = id
 
   override def toString: String = s"BasicIdentity(${id})"
@@ -84,24 +105,36 @@ case class BasicIdentity[A](id: String) extends Identity[A] {
 }
 
 /**
-  * An [[Identifiable]] with a version. Note that when serializing this, you will end up with an id of [[id]]-#-[[version]]
-  * @param id
+  * An [[Identity]] with a version. Note that when serializing this, you will end up with an id of [[id]]-#-[[version]]
+  * @param id A simple string that acts as an Identifier
   * @param version The string that shows that shows which version of a step in a pipeline the Identifiable originated from. (NOT OPTIONAL)
   * @tparam A The type of the Identifiable that this came from. In the example, this would be Identity[GitID],
   *           Identity[GitRepo], Identity[GitCommitInfo], and Identity[GitCommitGroups] for their respective data maps.
   */
 case class VersionedIdentity[A](id: String, version: String) extends Identity[A] {
 
+  /**
+    * Creates a Basic Identity
+    * @return A [[BasicIdentity]]
+    */
   override def dropVersion(): BasicIdentity[A] = BasicIdentity[A](id)
 
+  /**
+    * Creates a versioned Identity
+    * @param v The version that we want to add.
+    * @return A [[VersionedIdentity]] with version v.
+    */
   override def withVersion(v: String) = VersionedIdentity[A](id, v)
 
+  /** @return An optional string that shows which version of a step the Identifiable originated from. (Some([[version]]))*/
   override def getVersion(): Option[String] = Some(version)
 
+  /** @return A simple string that acts as an Identifier for the Identifiable. */
   override def getId(): String = id
 
   override def toJsonFormat(): JsValue = this.toJson
 
+  /** @return The serialized version of the Identity ([[id]]-#-[[version]].)*/
   override def serialize(): String = s"${id}${Identity.VERSION_DELIMITER}${version}"
 
   override def toString: String = s"VersionedIdentity($id, $version)"

@@ -20,7 +20,7 @@ scalacOptions in (Compile, doc) ++= Seq(
 
 siteSubdirName in SiteScaladoc := "api/latest"
 
-scmInfo := Some(ScmInfo(url("https://github.com/cuplv/FixrService-Pipeline"), "git@github.com/cuplv/FixrService-Pipeline.git"))
+scmInfo := Some(ScmInfo(url("https://github.com/cuplv/FixrService-Pipeline"), "https://github.com/cuplv/FixrService-Pipeline.git"))
 git.remoteRepo := scmInfo.value.get.connection
 
 libraryDependencies ++=  Seq(

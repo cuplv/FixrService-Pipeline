@@ -1,6 +1,6 @@
 package bigglue.data
 
-import bigglue.curators.VersionCurator
+import bigglue.curators.{Provenance, VersionCurator}
 import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, JsonFormat, RootJsonFormat}
 
 /**
@@ -11,12 +11,14 @@ import spray.json.{DefaultJsonProtocol, JsArray, JsObject, JsString, JsValue, Js
   * An Identifiable is a simple data type in BigGlue.
   * Within this type, you have an [[Identity]], which is similar to the name of the data type.
   *
-  * @tparam A
+  * @tparam A The type of the Identifiable. Within the example, this would be [[bigglue.examples.GitID]], [[bigglue.examples.GitRepo]], [[bigglue.examples.GitCommitInfo]], or [[bigglue.examples.GitCommitGroups]].
   */
 abstract class Identifiable[A] {
   var identityOpt: Option[Identity[A]] = None
   // TODO: Fix so this isn't a var?
-  var embedded: Map[String, String] = Map[String, String]()
+  var provenanceOpt: Option[Provenance] = None
+  /* /** The meta-data. On list of things to fix.*/
+  var embedded: Map[String, String] = Map[String, String]() */
 
   /**
     * When creating an Identifiable, you will have to specify an [[Identity]] for that Identifiable.
@@ -26,6 +28,10 @@ abstract class Identifiable[A] {
     */
   protected[this] def mkIdentity(): Identity[A]
 
+  /**
+    * Gets the [[Identity]]/name of the object.
+    * @return The [[Identity]] of the object/
+    */
   def identity(): Identity[A] = identityOpt match {
     case Some(id) => id
     case None => {
@@ -34,11 +40,51 @@ abstract class Identifiable[A] {
       id
     }
   }
+
+  /**
+    * Gets the Id from the identity.
+    * @return The Identifiable's name.
+    */
   def getId(): String = identity().getId()
+
+  /**
+    * Gets the Version from the identity
+    * @return The Identifiable's version.
+    */
   def getVersion(): Option[String] = identity().getVersion()
+
+  /**
+    * Creates a new Identity from the version and then sets that identity as it's identity.
+    * @param version The version that we are appending.
+    */
   def setVersion(version: String): Unit = identityOpt = Some(identity().withVersion(version))
+
+  /**
+    * @return Get the Provenance information. If there is no provenance, we return nothing.
+    */
+  def getProvenance(): Option[Provenance] = provenanceOpt
+
+  /**
+    * Creates a new Provenance information.
+    * @param prov The provenance that we are adding to the Identifiable.
+    */
+  def setProvenance(prov: Provenance): Unit = provenanceOpt = Some(prov)
+
+  /*
+  /**
+    * Add stuff to the other metadata of the Identifiable
+    * @param key The thing to add to the metadata.
+    * @param value The value of the thing to add to the metadata.
+    */
   def addEmbedded(key: String, value: String): Unit = embedded = embedded + (key->value)
+
+  /**
+    * Get something from the metadata.
+    * @param key The thing we want to get from the metadata.
+    * @return The value of that thing, if it exists; if not, then we return None.
+    */
   def getEmbedded(key: String): Option[String] = embedded.get(key)
+  */
 }
 
 abstract class Either[L <: Identifiable[L], R <: Identifiable[R]] extends Identifiable[Either[L,R]]

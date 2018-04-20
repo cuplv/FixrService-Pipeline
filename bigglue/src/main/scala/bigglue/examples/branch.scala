@@ -44,7 +44,7 @@ object branch {
     val pipe = aStore:--Simple()--> (bStore:--BHeavyComputation()-->bCompute, DataNode(cStore))
     pipe.check(conf)
     pipe.init(conf)
-    pipe.run()
+    pipe.persist()
     Thread.sleep(10000)
     println(aStore)
     println(bStore)

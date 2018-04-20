@@ -38,6 +38,13 @@ class IdleProvenanceCurator[Input,Output] extends ProvenanceCurator[Input,Output
 }
 
 /**
+  * The Provenance Information
+  * @param id The id of the input (and the version. Built from [[Identity.serialize()]].
+  * @param time The time we created the Provenance Information.
+  */
+case class Provenance(id: String, time: String)
+
+/**
   * The default provenance tracker; This is in charge of keeping track of the inputs that let to each output,
   * and at what time the provenance had been computed.
   * @tparam Input The type of the input that was computed to get the output.
@@ -58,8 +65,9 @@ class StandardProvenanceCurator[Input <: Identifiable[Input],Output <: Identifia
   override def reportProvenance(src: Input, targets: List[Output]): Unit = {
     targets foreach {
       target =>
-        target.addEmbedded("provInfo", src.identity().getId())
-        target.addEmbedded("provTime", Calendar.getInstance().getTime.toString)
+        target.setProvenance(Provenance(src.identity().serialize(), Calendar.getInstance().getTime.toString))
+        //target.addEmbedded("provInfo", src.identity().getId())
+        //target.addEmbedded("provTime", Calendar.getInstance().getTime.toString)
         provMap.put(target.identity(), provenance(src, target))
     }
   }

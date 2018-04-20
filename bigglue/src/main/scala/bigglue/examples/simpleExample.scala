@@ -61,7 +61,7 @@ case class Counter(sum: Int) extends Identifiable[Counter]{
   * Then, with a:--AA-->b:--BB-->c:-+CC+->d, it creates this:
   * [[bigglue.pipes.ReducerPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.Implicits.DataNode]](a), AA, [[bigglue.pipes.Implicits.DataNode]](b)), BB, [[bigglue.pipes.Implicits.DataNode]](c)), CC, [[bigglue.pipes.Implicits.DataNode]](d))
   * Then, with a pipe, we run [[bigglue.pipes.Pipe.check]] and [[bigglue.pipes.Pipe.init]] to initialize the pipeline.
-  * Finally, we run [[bigglue.pipes.Pipe.run]] to start/resume the pipeline.
+  * Finally, we run [[bigglue.pipes.Pipe.persist]] to start/resume the pipeline.
   */
 object simpleExample {
   def main(args: Array[String]): Unit ={
@@ -75,8 +75,8 @@ object simpleExample {
     val pipe = a:--AA-->b:--BB-->c:-+CC+->d
     pipe.check(conf)
     pipe.init(conf)
-    a.put(List(I(1), I(2), I(3), I(4)))
-    // pipe.run()
+    // a.put(List(I(1), I(2), I(3), I(4)))
+    pipe.persist()
     Thread.sleep(10000)
     println(d.all())
   }

@@ -331,18 +331,46 @@ case class FeatureExtraction() extends Mapper[GitCommitInfo, GitFeatures](
   * Then, with gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap, it creates this:
   * [[bigglue.pipes.ReducerPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.MapperPipe]]([[bigglue.pipes.Implicits.DataNode]](gitID), Clone(), [[bigglue.pipes.Implicits.DataNode]](clonedMap)), CommitExtraction(), [[bigglue.pipes.Implicits.DataNode]](commitInfoMap)), FindAuthor(), [[bigglue.pipes.Implicits.DataNode]](authorMap))
   * Then, with a pipe, we run [[bigglue.pipes.Pipe.check]] and [[bigglue.pipes.Pipe.init]] to initialize the pipeline.
-  * Finally, we run [[bigglue.pipes.Pipe.run]] to start/resume the pipeline.
+  * Finally, we run [[bigglue.pipes.Pipe.persist]] to start/resume the pipeline.
   */
 object mockfixrexample {
+  /**
+    * def IStringToGitID(i: I[String]): GitID = {
+    *    val slash = i.a.indexOf('/')
+    *    GitID(i.a.substring(0, slash), i.a.substring(slash+1))
+    *  }
+    *
+    * This is literally just a serialization thing done here just so we have some sort of data to work with.
+    * @param i The string of the User and Github Repo
+    * @return A [[GitID]] from i.
+    */
   def IStringToGitID(i: I[String]): GitID = {
     val slash = i.a.indexOf('/')
     GitID(i.a.substring(0, slash), i.a.substring(slash+1))
   }
 
+  /**
+    * val config = [[PipeConfig.newConfig()]]
+    * val textMap = new [[TextFileDataMap]]("src/main/mockfixrexample/firstOne.txt")
+    * val gitID = new [[SolrDataMap]][GitID, GitID](GitIDSerializer, "GitIDs")
+    * textMap.all().foreach{
+    *   input => val gID = [[IStringToGitID]](input)
+    *     gitID.put_(gID, gID)
+    * }
+    * val clonedMap = new SolrDataMap[GitRepo, GitRepo](GitRepoSerializer, "GitRepos")
+    * val commitInfoMap = new SolrDataMap[GitCommitInfo, GitCommitInfo](GitCommitInfoSerializer, "GitCommitInfo")
+    * val authorMap = new SolrDataMap[Identity[GitCommitGroups], GitCommitGroups](GitCommitGroupSerializer, "GitAuthors")
+    * //val featureMap = new SolrDataMap[GitFeatures, GitFeatures](GitFeatureSerializer, "GitFeatures")
+    * import bigglue.pipes.Implicits._
+    * val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap //:--FeatureExtraction()-->featureMap
+    * pipe.check(config)
+    * pipe.init(config)
+    * pipe.persist()
+    * @param args
+    */
   def main(args: Array[String]): Unit = {
     val config = PipeConfig.newConfig()
     val textMap = new TextFileDataMap("src/main/mockfixrexample/firstOne.txt")
-    val storeBuilder = DataStoreBuilder.load(config)
     val gitID = new SolrDataMap[GitID, GitID](GitIDSerializer, "GitIDs")
     textMap.all().foreach{
       input => val gID = IStringToGitID(input)
@@ -356,6 +384,6 @@ object mockfixrexample {
     val pipe = gitID:--Clone()-->clonedMap:--CommitExtraction()-->commitInfoMap:-+FindAuthor()+->authorMap //:--FeatureExtraction()-->featureMap
     pipe.check(config)
     pipe.init(config)
-    pipe.run()
+    pipe.persist()
   }
 }

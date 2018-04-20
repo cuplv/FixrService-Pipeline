@@ -71,7 +71,7 @@ object sample {
 
     pipe.init(config)
     //pipe2.init(config)
-    pipe.run()
+    pipe.persist()
 
     Thread.sleep(2000)
     d0.put(Seq(4,5,6).toIds)
