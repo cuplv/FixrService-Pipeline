@@ -46,8 +46,16 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
     */
   def persist(): Unit = ()
 
+  /**
+    * This is the data store at the start of the pipeline.
+    * @return The data store at the start of the pipeline.
+    */
   def head(): DataStore[Head]
 
+  /**
+    * This is the data store at the end of the pipeline.
+    * @return The data store at the end of the pipeline. In all cases, this is authorMap in the example.
+    */
   def end(): DataStore[End]
 
   def terminate(): Unit
@@ -230,7 +238,7 @@ case class MapperPipe[Head <: Identifiable[Head], Input <: Identifiable[Input], 
   /**
     * This is called with the example with pipe.init(conf).
     * This calls [[mapper.init]] with conf, and the data stores before and after the mapper computation.
-    * These are called by [[p1.end]] and [[p2.end]]
+    * This calls [[p1.end]] and [[p2.end]] for the mapper.init call, [[p1.init]], and [[p2.init]]
     * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
     * @param conf The configuration file that we are initializing with. This ideally is the configuration file
     *             that is being used to check the pipeline.
@@ -313,7 +321,7 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
   /**
     * This is called with the example with pipe.init(conf).
     * This calls [[reducer.init]] with conf, and the data stores before and after the mapper computation.
-    * These are called by [[p1.end]] and [[p2.end]]
+    * This calls [[p1.end]] and [[p2.end]] for the reducer.init call, [[p1.init]], and [[p2.init]]
     * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
     * @param conf The configuration file that we are initializing with. This ideally is the configuration file
     *             that is being used to check the pipeline.
@@ -363,6 +371,19 @@ case class ReducerPipe[Head <: Identifiable[Head], Input <: Identifiable[Input],
 
 }
 
+/**
+  * This is a type of pipe that takes two input data stores and combines them into an output data store.
+  * @param p1 The pipeline that feeds into the left side of the pipeline.
+  * @param composer The [[PairwiseComposer]] that composes the two data stores.
+  * @param p2 The pipeline that feeds into the right side of the pipeline.
+  * @param o The pipeline that is being outputted into.
+  * @tparam HeadL The type of the data store at the beginning of the left pipeline.
+  * @tparam HeadR The type of the data store at the beginning of the right pipeline.
+  * @tparam InputL The type of the data store that's feeding in on the left side.
+  * @tparam InputR The type of the data store that's feeding in on the right side.
+  * @tparam Output The type of the data store that's the output data store is going to.
+  * @tparam End The type of the data store that's at the end of the output pipeline.
+  */
 case class CompositionPipe[HeadL <: Identifiable[HeadL], HeadR <: Identifiable[HeadR], InputL <: Identifiable[InputL], InputR <: Identifiable[InputR]
                           ,Output <: Identifiable[Output], End <: Identifiable[End]]
 (p1: Pipe[HeadL,InputL], composer: PairwiseComposer[InputL,InputR,Output], p2: Pipe[HeadR,InputR], o: Pipe[Output,End]) extends Pipe[bigglue.data.Either[HeadL,HeadR],End] {
@@ -436,14 +457,42 @@ case class JunctionPipe[Head <: Identifiable[Head], Mid <: Identifiable[Mid], En
 
 }
 
+/**
+  * This is a pipe that has no input data store, but has a computation and an ending pipeline.
+  * This is generated with the --> or +-> calls in the pipeline.
+  * You can run this in the case of ParallelPipes, and created a sequence of pipes, but that's out of scope for this example.
+  * Within the example, we just use this as a stepping point before [[MapperPipe]] and [[ReducerPipe]]
+  * @tparam Input The data type that the computation puts in. [[bigglue.examples.GitID]]
+  *               In the case of Clone()-->clonedMap and [[bigglue.examples.GitRepo]] for CommitExtraction()-->commitInfoMap,
+  *               and [[bigglue.examples.GitCommitInfo]] for FindAuthor()+->authorMap.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.GitCommitGroups]] in this case.
+  */
 abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End]] {
 
+  /**
+    * This is called within the example with pipe.check(conf).
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * @param conf The configuration file that we are checking with.
+    */
   def check(conf: PipeConfig, input: DataStore[Input]): Unit
 
+  /**
+    * This is called with the example with pipe.init(conf).
+    * This initializes the pipeline and all of the parts within it.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    */
   def init(conf: PipeConfig, input: DataStore[Input]): Unit
 
+  /**
+    * This starts/restarts the pipeline.
+    */
   def persist(): Unit = ()
 
+  /**
+    * This is the data store at the end of the pipeline.
+    * @return The data store at the end of the pipeline.
+    */
   def end(): DataStore[End]
 
   def terminate(): Unit
@@ -462,6 +511,15 @@ abstract class PartialPipe[Input <: Identifiable[Input], End <: Identifiable[End
 
 }
 
+/**
+  * This is a pipe that has no input data store, but has a computation and an ending pipeline.
+  * This is generated with the --> calls in the pipeline.
+  * You can run this in the case of ParallelPipes, and created a sequence of pipes, but that's out of scope for this example.
+  * Within the example, we just use this as a stepping point before [[MapperPipe]]
+  * @tparam Input The data type that the computation puts in. [[bigglue.examples.GitID]]
+  *               In the case of Clone()-->clonedMap and [[bigglue.examples.GitRepo]] for CommitExtraction()-->commitInfoMap.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.GitCommitGroups]] in this case.
+  */
 case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (mapper: Mapper[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
 
@@ -477,16 +535,34 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
     }
   } */
 
+  /**
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * @param conf The configuration file that we are checking with.
+    * @param input The input data store to use.
+    */
   override def check(conf: PipeConfig, input: DataStore[Input]): Unit = {
     mapper.check(conf, input, p.head())
     p.check(conf)
   }
 
+  /**
+    *
+    * Probably called with input.init.
+    * This calls [[mapper.init]] with conf, and the data stores before and after the mapper computation.
+    * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    * @param input The input pipeline used to call the pipeline.
+    */
   override def init(conf: PipeConfig, input: DataStore[Input]): Unit = {
     mapper.init(conf, input, p.head())
     p.init(conf)
   }
 
+  /**
+    * This calls [[mapper.persist]], which will check to see what data to send down the pipeline (again?).
+    * Then, it will call [[p.persist]], moving the run call along the pipeline.
+    */
   override def persist(): Unit = {
     mapper.persist()
     p.persist()
@@ -501,19 +577,44 @@ case class PartialMapperPipe[Input <: Identifiable[Input], Output <: Identifiabl
 
 }
 
+/**
+  * This is a pipe that has no input data store, but has a computation and an ending pipeline.
+  * This is generated with the +-> call in the pipeline.
+  * You can run this in the case of ParallelPipes, and created a sequence of pipes, but that's out of scope for this example.
+  * Within the example, we just use this as a stepping point before [[MapperPipe]] and [[ReducerPipe]]
+  * @tparam Input The data type that the computation puts in. [[bigglue.examples.GitCommitInfo]] in the case of FindAuthor()+->authorMap.
+  * @tparam End The type of the data store that shows up at the end of the pipeline; [[bigglue.examples.GitCommitGroups]] in this case.
+  */
 case class PartialReducerPipe[Input <: Identifiable[Input], Output <: Identifiable[Output], End <: Identifiable[End]]
 (reducer: Reducer[Input,Output], p: Pipe[Output,End]) extends PartialPipe[Input,End] {
 
+  /**
+    * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * @param conf The configuration file that we are checking with.
+    * @param input The input data store to use.
+    */
   override def check(conf: PipeConfig, input: DataStore[Input]): Unit = {
     reducer.check(conf, input, p.head())
     p.check(conf)
   }
 
+  /**
+    * Probably called with input.init.
+    * This calls [[reducer.init]] with conf, and the data stores before and after the mapper computation.
+    * This also moves the init call along the pipeline, sending it to the parts of the pipeline its connected to.
+    * @param conf The configuration file that we are initializing with. This ideally is the configuration file
+    *             that is being used to check the pipeline.
+    * @param input The input pipeline used to call the pipeline.
+    */
   override def init(conf: PipeConfig, input: DataStore[Input]): Unit = {
     reducer.init(conf, input, p.head())
     p.init(conf)
   }
 
+  /**
+    * This calls [[reducer.persist]], which will check to see what data to send down the pipeline (again?).
+    * Then, it will call [[p.persist]], moving the run call along the pipeline.
+    */
   override def persist(): Unit = {
     reducer.persist()
     p.persist()

@@ -41,6 +41,11 @@ class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Da
   //override val serializerOpt = Some(serializer)
   name = coreName
 
+  /**
+    * Serializes the data under the key, and then puts that in Solr.
+    * @param key The key in which the data should be filed under.
+    * @param data The data in which we are putting into Solr.
+    */
   override def put_(key: Key, data: Data): Unit = {
     val kToString = solrBack.keyToString(key)
     val document = serializer.serializeToJson(data)
@@ -48,6 +53,10 @@ class SolrDataMap[Key, Data <: Identifiable[Data]](serializer: JsonSerializer[Da
     solrBack.addDocument(doc, kToString)
   }
 
+  /**
+    * Serializes everything, and then creates the key as the object itself.
+    * @param data The data to be put into the data store.
+    */
   override def put_(data: Seq[Data]): Unit = {
     data.foreach{
       dta =>

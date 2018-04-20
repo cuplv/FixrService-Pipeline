@@ -57,6 +57,12 @@ object BigActorPlatform{
 
 }
 
+/**
+  * The actor on top of everything that
+  * @param platform The platform that will compute the data.
+  * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
+  */
 class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Platform with BigActor[Input],
                                                                     actorNames: List[String] = List()) extends Actor{
   import context._
@@ -133,6 +139,7 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
 
 /**
   * The actors that actually do the work of computing the tasks.
+  * It sends stuff to the [[BigActorWorker]]s to be computed, keeping track of time.
   * @param platform The platform that will compute the data.
   * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
@@ -186,12 +193,14 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
   }
 }
 
+/**How stuff gets computed with BigActorPlatforms*/
 trait BigActor[Input]{
   var infoConfig: Config = ConfigFactory.parseMap(Map[String, Any]
     ("numberOfWorkers" -> 4, "maxSecondsOnInput"-> 0, "maxMinutesOnInput" -> 0,
       "maxHoursOnInput" -> 0).asJava)
   implicit var actorSystemOpt: Option[ActorSystem] = None//ActorSystem(name)
   var computerOpt: Option[ActorRef] = None
+  /** This gets the [[BigActorWorker]].*/
   def computer: ActorRef = computerOpt match{
     case Some(actorRef) => actorRef
     case None => throw new NotInitializedException("computer", "Computing", None)
@@ -234,9 +243,18 @@ trait BigActor[Input]{
   }
 }
 
+/**
+  * This is the worker that actually does the jobs of the platform.
+  * @param platform The platform that asked the worker to work. Needs to have some sort of BigActor quality.
+  * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
+  * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
+  */
 class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output]]
 (platform: Platform with BigActor[Input]) extends Actor{
-
+  /**
+    * When the worker recieves a job, it should run [[platform.compute_]] on it.
+    * @return
+    */
   def receive: Receive = {
     case job: Input @ unchecked => platform.compute_(job)
   }

@@ -15,6 +15,12 @@ import scalaj.http.Http
 /**
   * Created by chanceroberts on 8/25/17.
   */
+/**
+  * The SolrBackend keeps track of an evolving Solr database.
+  * @param nam The name of the collection.
+  * @param config The configuration file for the Solr DataStore.
+  * @tparam Data The type of the data.
+  */
 class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
   val solrFallbackConf: Config = ConfigFactory.parseMap(
     Map[String, Any]("solrLocation" -> "localhost:8983", "solrServerLocation" -> "~/solr/server",
@@ -56,6 +62,12 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     }
   }
 
+  /**
+    * Serializes a key into a string.
+    * With [[Identifiable]] and [[Identity]] types, this keeps in mind that there could be a version attached.
+    * @param key The data to look for.
+    * @return The stringified version of the data.
+    */
   def keyToString(key: Any): String = {
     key match {
       case i: Identifiable[_] => i.getVersion() match{
@@ -70,6 +82,11 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     }
   }
 
+  /**
+    * Searches Solr for documents via an HTTP Get Request, which is parsed into JsObjects.
+    * @param query The query to use for the Get Request.
+    * @return
+    */
   def getDocumentsFromQuery(query: String): List[JsObject] = {
     val queryURL = url+query
     val json = Http(queryURL).asString.body
@@ -120,6 +137,11 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     }
   }
 
+  /**
+    * Gives an HTTP Post Request to put a document in with a key.
+    * @param doc The document to put in Solr
+    * @param key The key of the document.
+    */
   def addDocument(doc: JsObject, key: String): Unit = {
     val solrDoc = mkJsObjectsSolrable(doc)
 
@@ -234,6 +256,11 @@ class SolrBackend[Data <: Identifiable[Data]](nam: String, config: Config){
     doc
   }
 
+  /**
+    * Flattens the JsObject.
+    * @param doc
+    * @return
+    */
   private def mkJsObjectsSolrable(doc: JsObject): JsObject = {
     val newDocFields = doc.fields.foldRight(Map[String, JsValue]()) {
       case ((str, jsValue), newDoc) => jsValue match {
