@@ -94,6 +94,19 @@ class Mapper[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     }
   }
 
+  def finishComputation(input: Input, outputs: List[Output]): List[Output] = {
+    val platform = getUnaryPlatform()
+    val outputz = outputs.map(
+      output => {
+        val voutput = platform.getVersionCurator().stampVersion(output)
+        platform.getProvenanceCurator().reportProvenance(input, voutput)
+        platform.getOutputMap().put(voutput)
+        voutput
+      }
+    )
+    outputz
+  }
+
   override def run(): Unit = {
     val platform = getUnaryPlatform()
     platform.getInputs() foreach {

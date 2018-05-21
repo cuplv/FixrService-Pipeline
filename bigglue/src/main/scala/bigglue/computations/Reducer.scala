@@ -67,9 +67,9 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     val rconf = toStep(PipeConfig.resolveOptions(conf, configOption), stepNm)
     val builder = constructBuilder(rconf) // PlatformBuilder.load(rconf)
     val platform: UnaryPlatform[Input, Output] = builder.reducerPlatform[Input,Output]()
+    platform.setComputation(this)
     platform.init(rconf, inputMap, outputMap, builder)
     // platform.setReducer(this)
-    platform.setComputation(this)
     init(rconf, inputMap, outputMap, platform)
   }
 

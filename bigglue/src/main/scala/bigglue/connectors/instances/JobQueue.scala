@@ -5,7 +5,7 @@ import bigglue.connectors.{Connector, Status}
 import bigglue.connectors.Connector.Id
 import bigglue.connectors.Status.Status
 import bigglue.curators.{StandardVersionCurator, VersionCurator}
-import bigglue.data.{BasicIdentity, I, Identifiable}
+import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
 import bigglue.exceptions.{NotInitializedException, ProtoPipeException}
 import bigglue.platforms.{BinaryPlatform, Platform, UnaryPlatform}
 import bigglue.store.instances.file.TextFileDataMap
@@ -91,6 +91,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   } */
 
   def getStatusMap(): DataMultiMap[Status, Data] = statusMap
+  // def getStatusMap(): DataMultiMap[Status, Identity[Data]] = statusMap
 
   /**
     * This appends the status into the [[TextFileDataMap]] backup, after appending a version to the
@@ -106,7 +107,7 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
       }
     }
     val trueStatus = ver match {
-      case Some(v) => s"${status.toString} v.$v}"
+      case Some(v) => s"${status.toString} v.$v"
       case None => status.toString
     }
     textMapOpt match{

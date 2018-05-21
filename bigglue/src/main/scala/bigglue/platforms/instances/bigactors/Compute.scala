@@ -3,6 +3,7 @@ package bigglue.platforms.instances.bigactors
 import akka.actor.{Actor, ActorRef, Props}
 import bigglue.computations.{Mapper, PairwiseComposer, Reducer}
 import bigglue.configurations.{PipeConfig, PlatformBuilder}
+import bigglue.data
 import bigglue.data.{BasicIdentity, Identifiable, Identity}
 import bigglue.exceptions.NotInitializedException
 import bigglue.store.{DataMap, DataStore}
@@ -25,12 +26,23 @@ class BigActorMapperPlatform [Input <: Identifiable[Input], Output <: Identifiab
   /**
     * Given an input, it calls on the mapper to compute it and sent it down the pipeline.
     * It calls [[Mapper.tryCompute]].
+    *
     * @param job The input to be computed
     */
-  override def compute_(job: Input): Unit = {
+  override def compute_(job: Input): List[Output] = {
     computationOpt match{
       case Some(computation: Mapper[Input, Output]) =>
-        computation.tryCompute(job)
+        computation.getOp(job)
+      case _ =>
+        getErrorCurator().reportError(job, new Exception("Found unexpected computation. Expected: Mapper"))
+        List()
+    }
+  }
+
+  override def finishComputation(job: Input, comps: List[Output]): Unit = {
+    computationOpt match{
+      case Some(computation: Mapper[Input, Output]) =>
+        computation.finishComputation(job, comps)
       case _ =>
         getErrorCurator().reportError(job, new Exception("Found unexpected computation. Expected: Mapper"))
     }
@@ -54,9 +66,10 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
 
   /**
     * Given an input, it updates the outputs by computing a new output from a previous output,
+    *
     * @param job The input that's updating the outputs,
     */
-  override def compute_(job: Input): Unit = {
+  override def finishComputation(job: Input, comps: List[Output]): Unit = {
     computationOpt match{
       case Some(computation: Reducer[Input, Output]) =>
         computation.tryGroupBy(job) match{
@@ -89,7 +102,7 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
 
 class BigActorPairwiseComposerPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR],Output <: Identifiable[Output]]
 (name: String = BigActorPlatform.NAME + Random.nextInt(99999)) extends BigActorBinaryPlatform[InputL,InputR,Output] {
-  override def compute_(input: bigglue.data.Pair[InputL, InputR]): Unit = {
+  override def finishComputation(input: data.Pair[InputL, InputR], comps: List[Output]): Unit = {
     computationOpt match{
       case Some(computation: PairwiseComposer[InputL, InputR, Output]) =>
         computation.tryFilterAndCompose(input)

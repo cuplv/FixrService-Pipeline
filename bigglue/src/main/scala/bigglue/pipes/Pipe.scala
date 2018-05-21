@@ -29,6 +29,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
   /**
     * This is called within the example with pipe.check(conf).
     * In basic terms, this checks to see whether the pipeline that we have created is valid.
+    * See [[MapperPipe.check()]] or [[ReducerPipe.check()]]
     * @param conf The configuration file that we are checking with.
     */
   def check(conf: PipeConfig): Unit
@@ -36,6 +37,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
   /**
     * This is called with the example with pipe.init(conf).
     * This initializes the pipeline and all of the parts within it.
+    * See [[MapperPipe.init()]] or [[ReducerPipe.init()]]
     * @param conf The configuration file that we are initializing with. This ideally is the configuration file
     *             that is being used to check the pipeline.
     */
@@ -43,6 +45,7 @@ abstract class Pipe[Head <: Identifiable[Head], End <: Identifiable[End]] {
 
   /**
     * This starts/restarts the pipeline.
+    * See [[MapperPipe.persist()]] or [[ReducerPipe.persist()]]
     */
   def persist(): Unit = ()
 

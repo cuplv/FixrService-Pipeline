@@ -31,7 +31,7 @@ object Demo {
     List(B(generateNumber(input.location.length), r.nextInt(10000)))
   })
 
-  case object ListTheBs extends Reducer[B, ListedB](input => input.getEmbedded("provInfo") match{
+  case object ListTheBs extends Reducer[B, ListedB](input => input.getProvenance match{
     case Some(x: String) => BasicIdentity(x)
     case _ => BasicIdentity("")
   },

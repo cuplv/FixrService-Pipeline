@@ -7,6 +7,7 @@ import bigglue.configurations.{ConfOpt, Constant, PipeConfig, PlatformBuilder}
 import bigglue.connectors.{Connector, Status}
 import bigglue.connectors.instances.{ActorConnector, WaitingConnector}
 import bigglue.curators.ErrorCurator
+import bigglue.data
 import bigglue.data.Identifiable
 import bigglue.exceptions.NotInitializedException
 import bigglue.platforms.{BinaryPlatform, Platform, UnaryPlatform}
@@ -63,7 +64,7 @@ object BigActorPlatform{
   * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
   */
-class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Platform with BigActor[Input],
+class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Platform with BigActor[Input, Output],
                                                                     actorNames: List[String] = List()) extends Actor{
   import context._
   become(state(Nil, Nil))
@@ -144,7 +145,7 @@ class BigActorSupervisorActor[Input <: Identifiable[Input], Output](platform: Pl
   * @tparam Input The type of the data that's being sent in. This needs to be an [[Identifiable]] type.
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
   */
-class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: Platform with BigActor[Input]) extends Actor{
+class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[Output]](platform: Platform with BigActor[Input, Output]) extends Actor{
   var alertSupervisor: Boolean = true
   var currInput: Option[Input] = None
   val longestTimeWaiting: Duration = platform.infoConfig.getInt("maxHoursOnInput") match{
@@ -194,7 +195,7 @@ class BigActorWorkerActor[Input <: Identifiable[Input], Output <: Identifiable[O
 }
 
 /**How stuff gets computed with BigActorPlatforms*/
-trait BigActor[Input]{
+trait BigActor[Input, Output]{
   var infoConfig: Config = ConfigFactory.parseMap(Map[String, Any]
     ("numberOfWorkers" -> 4, "maxSecondsOnInput"-> 0, "maxMinutesOnInput" -> 0,
       "maxHoursOnInput" -> 0).asJava)
@@ -205,8 +206,12 @@ trait BigActor[Input]{
     case Some(actorRef) => actorRef
     case None => throw new NotInitializedException("computer", "Computing", None)
   }
-  def compute(job: Input): Unit = computer ! job
-  def compute_(input: Input): Unit = ()
+  def compute(job: Input): Unit = {
+    val outputs = compute_(job)
+    computer ! (job, outputs)
+  }
+  def compute_(input: Input): List[Output] = List()
+  def finishComputation(job: Input, comps: List[Output])
   def getErrorCurator(): ErrorCurator[Input]
   implicit def actorSystem: ActorSystem = actorSystemOpt match{
     case Some(sys: ActorSystem) => sys
@@ -250,13 +255,13 @@ trait BigActor[Input]{
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
   */
 class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output]]
-(platform: Platform with BigActor[Input]) extends Actor{
+(platform: Platform with BigActor[Input, Output]) extends Actor{
   /**
     * When the worker recieves a job, it should run [[platform.compute_]] on it.
     * @return
     */
   def receive: Receive = {
-    case job: Input @ unchecked => platform.compute_(job)
+    case (job: Input @ unchecked, outputs: List[Output @ unchecked]) => platform.finishComputation(job, outputs) // platform.compute_(job)
   }
 }
 
@@ -269,7 +274,7 @@ class BigActorWorker[Input <: Identifiable[Input], Output <: Identifiable[Output
   * @tparam Output The type of the data that's being sent out. This needs to be an [[Identifiable]] type.
   */
 abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Identifiable[Output]]
-(name: String = BigActorPlatform.NAME+s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] with BigActor[Input] {
+(name: String = BigActorPlatform.NAME+s"-unary-${Random.nextInt(99999)}") extends UnaryPlatform[Input, Output] with BigActor[Input, Output] {
   var superActorOpt: Option[ActorRef] = None
   def supervisor: ActorRef = superActorOpt match{
     case Some(superActor) => superActor
@@ -334,7 +339,7 @@ abstract class BigActorUnaryPlatform[Input <: Identifiable[Input], Output <: Ide
 }
 
 abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: Identifiable[InputR], Output <: Identifiable[Output]]
-(name: String = BigActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL, InputR, Output] with BigActor[bigglue.data.Pair[InputL, InputR]] {
+(name: String = BigActorPlatform.NAME + s"-binary-${Random.nextInt(99999)}") extends BinaryPlatform[InputL, InputR, Output] with BigActor[bigglue.data.Pair[InputL, InputR], Output] {
   var inputLOccurrences: Map[InputL, Integer] = Map()
   var inputROccurrences: Map[InputR, Integer] = Map()
   var superActorOpt: Option[ActorRef] = None
@@ -350,7 +355,7 @@ abstract class BigActorBinaryPlatform[InputL <: Identifiable[InputL], InputR <: 
     super.init(conf, inputLMap, inputRMap, outputMap, builder)
   }
 
-  override def compute_(input: bigglue.data.Pair[InputL, InputR]): Unit = {
+  override def finishComputation(input: data.Pair[InputL, InputR], comps: List[Output]): Unit = {
     inputLOccurrences.get(input.left) match{
       case Some(x) if x > 1 => inputLOccurrences += (input.left -> (x-1))
       case Some(_) =>

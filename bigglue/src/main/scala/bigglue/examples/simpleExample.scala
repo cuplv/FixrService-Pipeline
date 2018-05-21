@@ -26,6 +26,10 @@ case object BB extends Mapper[I[Int], I[Int]](input => { List(I(input.a*3))}){
   override val versionOpt = Some("0.1")
 }
 
+/*case object BB extends Mapper[I[Int], I[Int]](input => { List(I(input.a*10))}){
+  override val versionOpt = Some("0.2")
+}*/
+
 /** This is a simple [[Reducer]] step that sums up all of the inputs. */
 case object CC extends Reducer[I[Int], Counter](i => BasicIdentity("sum"), i => curSum => Counter(i.a+curSum.sum), Counter(0))
 
@@ -69,13 +73,14 @@ object simpleExample {
     import bigglue.pipes.Implicits._
     val storeBuilder = DataStoreBuilder.load(conf)
     val a = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "a")
+    a.put_(List(I(1), I(2), I(3), I(4)))
     val b = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "b")
     val c = new SolrDataMap[I[Int], I[Int]](IIntSerializer(), "c")
     val d = new SolrDataMap[Counter, Counter](CounterSerializer(), "d")
     val pipe = a:--AA-->b:--BB-->c:-+CC+->d
     pipe.check(conf)
     pipe.init(conf)
-    // a.put(List(I(1), I(2), I(3), I(4)))
+    //a.put(List(I(1), I(2), I(3), I(4)))
     pipe.persist()
     Thread.sleep(10000)
     println(d.all())

@@ -89,6 +89,7 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
     */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
+    getVersionCurator()
     inputMapOpt = Some(inputMap)
     outputMapOpt = Some(outputMap)
     initConnector(conf, builder)
