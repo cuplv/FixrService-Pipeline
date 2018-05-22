@@ -33,13 +33,13 @@ case class AddI() extends Mapper[I[String], I[String]](i =>{
 })
 
 case class CountOccurrence() extends
-  Reducer[I[String],Count](i => BasicIdentity(i.a), i => o => Count(i.a, o.count + 1), Count("",0)) {
+  Reducer[I[String],Count](i => List(BasicIdentity(i.a)), i => o => Count(i.a, o.count + 1), Count("",0)) {
   override val versionOpt = Some("v0.12")
 }
 
 case class MergeToOneWord() extends Reducer[Count, Count](input => {
   println(s"${input.word}, ${input.count} was sent!")
-  BasicIdentity("word")
+  List(BasicIdentity("word"))
 },
     i => o => {
       println(s"${i.count} added to ${o.count}!")

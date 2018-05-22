@@ -211,6 +211,14 @@ trait BigActor[Input, Output]{
     computer ! (job, outputs)
   }
   def compute_(input: Input): List[Output] = List()
+
+  /**
+    * Takes place after the [[compute_]]; This is the part of the computation that can't be parallelizable.
+    * For mappers, this is simply just the curation stage and the putting in the data.
+    * For reducers, this is the entire computation.
+    * @param job The input that has been computed.
+    * @param comps The list of outputs; If there is none at this point, this is an empty list.
+    */
   def finishComputation(job: Input, comps: List[Output])
   def getErrorCurator(): ErrorCurator[Input]
   implicit def actorSystem: ActorSystem = actorSystemOpt match{

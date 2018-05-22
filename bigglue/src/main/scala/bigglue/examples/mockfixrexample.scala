@@ -256,7 +256,7 @@ case class CommitExtraction() extends Mapper[GitRepo, GitCommitInfo](
   * This is a simple [[Reducer]] step that takes the GitCommitInfo, finds the author, and increments their commit value.
   */
 case class FindAuthor() extends Reducer[GitCommitInfo, GitCommitGroups](
-  i => BasicIdentity(i.author),
+  i => List(BasicIdentity(i.author)),
   i => o => {
     println(o.gitCommitInfos); GitCommitGroups(i.author, o.gitCommitInfos+1)
   },

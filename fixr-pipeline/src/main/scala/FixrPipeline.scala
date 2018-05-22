@@ -221,7 +221,7 @@ object FixrPipeline{
       gitFiles
     fixrPipe.check(config)
     fixrPipe.init(config)
-    fixrPipe.run()
+    fixrPipe.persist()
     textMap.all().foldLeft(0){
       case (num, input) =>
         gitToClone.put(I(num), input)

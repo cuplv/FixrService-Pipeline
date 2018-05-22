@@ -72,8 +72,8 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
   override def finishComputation(job: Input, comps: List[Output]): Unit = {
     computationOpt match{
       case Some(computation: Reducer[Input, Output]) =>
-        computation.tryGroupBy(job) match{
-          case Some(outputId) =>
+        computation.tryGroupBy(job) foreach{
+          outputId =>
             val outputVal = List(job) // mergals.getOrElse (outputId, Seq.empty[Input]) :+ job
             mergals = mergals + (outputId -> outputVal )
             mergals.get(outputId) match{
@@ -91,7 +91,6 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
               case None =>
                 getErrorCurator().reportError(job, new Exception("Literally impossible to get to this point."))
             }
-          case None => ()
         }
       case _ =>
         getErrorCurator().reportError(job, new Exception("Found unexpected computation. Expected: Reducer"))

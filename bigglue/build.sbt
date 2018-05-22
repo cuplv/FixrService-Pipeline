@@ -11,7 +11,7 @@ name := "bigglue"
 
 version := "1.0-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.4"
 
 scalacOptions in (Compile, doc) ++= Seq(
   "-groups", // Group similar functions together (based on the @group annotation)

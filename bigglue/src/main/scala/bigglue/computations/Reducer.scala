@@ -29,7 +29,8 @@ import bigglue.store.{DataMap, DataStore}
   *               This needs to be an [[Identifiable]] type.
   */
 class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
-   ( groupBy: Input => Identity[Output]
+   (groupBy: Input => List[Identity[Output]]
+   // ( groupBy: Input => Identity[Output]
    , fold: Input => Output => Output
    , zero: Output) extends UnaryComputation[Input,Output] {
 
@@ -85,17 +86,17 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     * @param input The input document to find an output Identity for.
     * @return The output identity to change; None if none.
     */
-  def tryGroupBy(input: Input): Option[Identity[Output]] = {
+  def tryGroupBy(input: Input): List[Identity[Output]] = {
     val platform = getUnaryPlatform()
     try {
       val outputId = groupBy(input)
       platform.getUpstreamConnector().reportUp(Status.Done, input)
-      Some(outputId)
+      outputId
     } catch {
       case ex: Exception => {
         val pex = new UserComputationException(s"Reducer \'groupBy\'", Some(ex))
         platform.getErrorCurator().reportError(input, pex, Some(s"Reducer \'groupBy\' operation failed on input $input."))
-        None
+        List()
       }
     }
   }
@@ -146,9 +147,10 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
     var mergals = Map.empty[Identity[Output],Seq[Input]]
     platform.getInputs() foreach {
       input => {
-        tryGroupBy(input) match {
-          case Some(outputId) => mergals = mergals + (outputId -> (mergals.getOrElse (outputId, Seq.empty[Input]) :+ input) )
-          case None => // error already logged by tryGroupBy. Ignoring here.
+        tryGroupBy(input) foreach {
+          outputId => mergals = mergals + (outputId -> (mergals.getOrElse (outputId, Seq.empty[Input]) :+ input) )
+          /*case Some(outputId) => mergals = mergals + (outputId -> (mergals.getOrElse (outputId, Seq.empty[Input]) :+ input) )
+          case None => // error already logged by tryGroupBy. Ignoring here.*/
         }
       }
     }

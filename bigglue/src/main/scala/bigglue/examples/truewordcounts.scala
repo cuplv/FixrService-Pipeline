@@ -50,7 +50,7 @@ case object ChangeThree extends Mapper[Word, Word](a => a.word match{
   override val versionOpt: Option[String] = Some("SomeSwapped")
 }
 
-case object WordCount extends Reducer[Word, Count](i => BasicIdentity(i.word),
+case object WordCount extends Reducer[Word, Count](i => List(BasicIdentity(i.word)),
   i => o => Count(i.word, o.count+1),
   Count("", 0))
 

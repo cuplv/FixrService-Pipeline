@@ -3,28 +3,84 @@ import java.io.File
 
 import bigglue.computations.Mapper
 import bigglue.configurations.PipeConfig
-import bigglue.data.{I, Identifiable, Identity}
+import bigglue.data.serializers.JsonSerializer
+import bigglue.data.{BasicIdentity, I, Identifiable, Identity}
+import bigglue.pipes.Pipe
 import bigglue.store.instances.InMemDataMap
 import bigglue.store.instances.file.FileSystemDataMap
+import bigglue.store.instances.solr.SolrDataMap
 import com.typesafe.config.Config
-import spray.json.{JsArray, JsObject, JsString}
+import spray.json._
 
 import scala.sys.process._
 import scala.xml.XML
+import scalaj.http.{Http, HttpOptions}
 
 
 /**
   * Created by chanceroberts on 11/14/17.
   */
 
-case class ACDFG() extends Identifiable[ACDFG]{
-  override def mkIdentity(): Identity[ACDFG] = ???
+case class APK(user: String, repo: String, hash: String, file: String) extends Identifiable[APK]{
+  override def mkIdentity(): Identity[APK] = BasicIdentity(s"$user/$repo:$hash")
 }
 
-case class FileLocation(subdir: String) extends Identifiable[FileLocation]{
-  override def mkIdentity(): Identity[FileLocation] = ???
+case object ACDFGProtocols extends DefaultJsonProtocol{
+  implicit val apkProt = jsonFormat4(APK)
+  implicit val acdfgProt = jsonFormat2(ACDFG)
 }
 
+case class APKSerializer() extends JsonSerializer[APK]{
+  import ACDFGProtocols.apkProt
+  override def serializeToJson_(d: APK): JsObject = d.toJson.asJsObject
+  override def deserialize_(json: JsObject): APK = json.convertTo[APK]
+}
+
+case class ACDFG(location: String, contents: String) extends Identifiable[ACDFG]{
+  override def mkIdentity(): Identity[ACDFG] = BasicIdentity(location)
+}
+
+case class ACDFGSerializer() extends JsonSerializer[ACDFG]{
+  import ACDFGProtocols.acdfgProt
+  override def serializeToJson_(d: ACDFG): JsObject = d.toJson.asJsObject
+  override def deserialize_(json: JsObject): ACDFG = json.convertTo[ACDFG]
+}
+
+case class GraphExtraction(config: Config) extends Mapper[APK, ACDFG](
+  apk => {
+    println("Running Extractor")
+    println(config.getObject("acdfg"))
+    val serviceLocation = config.getObject("acdfg").toConfig.getString("serviceLocation")
+    println(s"$serviceLocation/extract")
+    val ml = Http(s"$serviceLocation/extract").timeout(1000, 3600000).postData(
+      JsObject("apk" -> JsString(apk.file), "user" -> JsString(apk.user), "repo" -> JsString(apk.repo),
+        "hash" -> JsString(apk.hash)).prettyPrint).header("Content-Type", "application/json")
+      .option(HttpOptions.followRedirects(true)).asString.body.parseJson.asJsObject
+    ml.fields.get("status") match{
+      case Some(JsString("ok")) => ()
+      case Some(_) => throw new Exception("FixrGraphExtractor ran into an error: " + ml.fields("results").prettyPrint)
+      case _ => throw new Exception("FixrGraphExtractor not returning correct values. " +
+        "Make sure you're running the correct service?")
+    }
+    ml.fields.get("results") match{
+      case Some(JsArray(a)) => a.foldRight(List[ACDFG]()){
+        case (j: JsObject, acdfgs) =>
+          (j.fields.get("file"), j.fields.get("contents")) match{
+            case (Some(JsString(file)), Some(JsString(contents))) => ACDFG(file, contents) :: acdfgs
+            case _ => acdfgs
+          }
+        case (_, acdfgs) => acdfgs
+      }
+      case _ => throw new Exception("This did not extract properly... Expected an array of values. :(")
+    }
+  }
+)
+
+/*case class FileLocation(subdir: String) extends Identifiable[FileLocation]{
+  override def mkIdentity(): Identity[FileLocation] =
+}*/
+
+/*
 object CopyFiles extends Mapper[GitCommit, GitCommit](
   input => {
     // Copy
@@ -71,90 +127,29 @@ case class BuildFiles(config: Config) extends Mapper[GitCommit, GitCommit](
     List(input)
   }
 )
-
-case class GraphExtraction(config: Config) extends Mapper[GitCommit, ACDFG](
-  input => {
-    val acdfg = config.getObject("acdfg").toConfig
-    val androidHome: String = acdfg.getString("ANDROID_HOME")
-
-    def getJarPath = {
-      val androidLocation = s"$androidHome/platforms"
-      val jarPath = s"android-${???}/android.jar"
-      val jPath = s"$androidLocation/$jarPath"
-      new FileSystemDataMap[I[String], I[String]](androidLocation).get(I(jarPath)) match {
-        case None => throw new Exception(s"Cannot find the jar $jPath")
-        case _ => jPath
-      }
-    }
-
-    def getClassPath(repoLocation: String): String = {
-      val repoMap = new FileSystemDataMap[I[String], I[String]](repoLocation)
-      val manifestLists = repoMap.get(I("")) match{
-        case Some(I(i)) => i.split("\n").foldRight(List[String]()) {
-          case (str, lis) if str.contains("AndroidManifest.xml") =>
-            s"$repoLocation/$str" :: lis
-          case (_, lis) => lis
-        }
-        case _ => List[String]()
-      }
-      manifestLists.foldRight(""){
-        case (pathOne, str) =>
-          val xml = XML.loadFile(pathOne)
-          val manifest = xml \\ "manifest"
-          val pack = if ((manifest \ "@package" ).nonEmpty){
-            (manifest \ "@package").toString
-          }.replace(".", "/")
-          println(pack)
-
-          //val version = xml \\ "manifest" \ "@version"
-          ???
-      }
-      println(manifestLists)
-      ???
-    }
-
-    val subdir: String = acdfg.getString("extractorRepos")
-    val repoLocation = s"$subdir/${input.gitRepo}"
-    val extractorJar = acdfg.getString("extractorJar")
-    val jre = acdfg.getString("jre")
-    val user = input.gitRepo.substring(0, input.gitRepo.indexOf('/'))
-    val repo = input.gitRepo.substring(input.gitRepo.indexOf('/')+1)
-    val minHeapSize = "1024m"
-    val maxHeapSize = "4096m"
-    //val classPath = getClassPath(repoLocation)
-    val graphPath = s"graph/${input.gitRepo}"
-    //val classPath = getClassPath(repoLocation)
-    // s"runlim --time-limit=1200 "
-    println(s"java -Xms$minHeapSize -Xmx$maxHeapSize -jar $extractorJar -l ")
-    /*
-    println(s"java -Xms$minHeapSize -Xmx$maxHeapSize -jar $extractorJar -s false " +
-      s"-o $graphPath -j true -z $subdir/${input.gitRepo} -t 60 -n " +
-      // s"-l $classPath -o $graphPath -d $provenancePath -j true -z $subdir/${input.gitRepo} -t 60 -n " +
-      s"$user -r $repo -h ${input.hash} -u https://github.com/${input.gitRepo}")
-    ???
-    s"java -Xms$minHeapSize -Xmx$maxHeapSize -jar $extractorJar -s false " +
-      s"-o $graphPath -j true -z $subdir/${input.gitRepo} -t 60 -n " +
-      //s"-l $classPath -o $graphPath -d $provenancePath -j true -z $subdir/${input.gitRepo} -t 60 -n " +
-      s"$user -r $repo -h ${input.hash} -u https://github.com/${input.gitRepo}".!
-    */
-    ???
-  }
-)
+*/
 
 object ACDFGPipeline {
   def main(args: Array[String]): Unit = {
     import bigglue.pipes.Implicits._
     val config = PipeConfig.newConfig()
     val tsConf = config.typeSafeConfig
-    val toBeBuilt = new InMemDataMap[GitCommit, GitCommit]()
+    /*val toBeBuilt = new InMemDataMap[GitCommit, GitCommit]()
     val isBuilt = new InMemDataMap[GitCommit, GitCommit]()
-    val isExtracted = new InMemDataMap[ACDFG, ACDFG]()
-    val pipe = toBeBuilt :--BuildFiles(tsConf)-->isBuilt // :--GraphExtraction(tsConf)--> isExtracted
-    //
+    val isExtracted = new InMemDataMap[ACDFG, ACDFG]()*/
+    val apks = new SolrDataMap[APK, APK](APKSerializer(), "APKs")
+    apks.put_(List(APK("jcarolus", "android-chess",
+      "4d83409b4c66e0ee750433f9902f591692a302b3", "../../buildableRepos/android-chess/app/build/outputs/apk/app-release-unsigned.apk")))
+    val graphs = new SolrDataMap[ACDFG, ACDFG](ACDFGSerializer(), "ACDFGs")
+    val pipe = apks:--GraphExtraction(tsConf)-->graphs
     pipe.check(config)
     pipe.init(config)
-    toBeBuilt.put(GitCommit("0legg/BezierClock", "a067ec6207246aaf8be94a7cdb59c9adb5c80b23"),
-      GitCommit("0legg/BezierClock", "a067ec6207246aaf8be94a7cdb59c9adb5c80b23"))
+    pipe.persist()
+    // pipe.check(config)
+    // pipe.init(config)
+    /*toBeBuilt.put_(GitCommit("0legg/BezierClock", "a067ec6207246aaf8be94a7cdb59c9adb5c80b23"),
+      GitCommit("0legg/BezierClock", "a067ec6207246aaf8be94a7cdb59c9adb5c80b23"))*/
     Thread.sleep(10000)
   }
 }
+

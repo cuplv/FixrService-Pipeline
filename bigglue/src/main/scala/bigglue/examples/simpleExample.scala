@@ -31,7 +31,7 @@ case object BB extends Mapper[I[Int], I[Int]](input => { List(I(input.a*3))}){
 }*/
 
 /** This is a simple [[Reducer]] step that sums up all of the inputs. */
-case object CC extends Reducer[I[Int], Counter](i => BasicIdentity("sum"), i => curSum => Counter(i.a+curSum.sum), Counter(0))
+case object CC extends Reducer[I[Int], Counter](i => List(BasicIdentity("sum")), i => curSum => Counter(i.a+curSum.sum), Counter(0))
 
 case object IntProtocols extends DefaultJsonProtocol{
   implicit val iSerial = jsonFormat1(I[Int])

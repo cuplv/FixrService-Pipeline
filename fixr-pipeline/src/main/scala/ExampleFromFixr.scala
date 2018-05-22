@@ -147,7 +147,7 @@ object ExampleFromFixr {
     //:--Pull()-->cloned
     pipe.check(config)
     pipe.init(config)
-    pipe.run()
+    pipe.persist()
     /*toClone.all.foldLeft(0){
       case (num, str) =>
         gitToClone.put(I(num), str)

@@ -22,6 +22,7 @@ abstract class Computation extends ConfigBuildsPlatform {
 
   var platformOpt: Option[Platform] = None
   var configOption: ConfOpt = DefaultOpt
+  var trueVersionOpt: Option[String] = None
 
   val versionOpt: Option[String] = None
 
