@@ -32,7 +32,10 @@ case class CountSerializer() extends JsonSerializer[Count]{
   override def deserialize_(json: JsObject): Count = json.convertTo[Count]
 }
 
-case object IDFunc extends Mapper[Word, Word](a => List(a))
+case class IDFunc() extends Mapper[Word, Word](a => {
+  println(a)
+  List(a)
+})
 
 case object ChangeOne extends Mapper[Word, Word](a => List(Word(a.num, s"${a.word}_"))){
   override val versionOpt: Option[String] = Some("Underscores")
@@ -50,14 +53,14 @@ case object ChangeThree extends Mapper[Word, Word](a => a.word match{
   override val versionOpt: Option[String] = Some("SomeSwapped")
 }
 
-case object WordCount extends Reducer[Word, Count](i => List(BasicIdentity(i.word)),
+case object WordCounts extends Reducer[Word, Count](i => List(BasicIdentity(i.word)),
   i => o => Count(i.word, o.count+1),
   Count("", 0))
 
 object truewordcounts {
   def main(args: Array[String]): Unit = {
     def addToDataMap(datMap: SolrDataMap[Word, Word], listOfWords: Array[String], numberToAdd: Int = 0): Unit = numberToAdd match{
-      case 200000 => ()
+      case 2000 => ()
       case x =>
         datMap.put_(Seq(Word(numberToAdd, listOfWords(numberToAdd%10))))
         addToDataMap(datMap, listOfWords, numberToAdd+1)
@@ -71,7 +74,7 @@ object truewordcounts {
     val thirdData = new SolrDataMap[Word, Word](WordSerializer(), "c")
     val fourData = new SolrDataMap[Word, Word](WordSerializer(), "d")
     val finalData = new SolrDataMap[Count, Count](CountSerializer(), "e")
-    val pipe = startData:--IDFunc-->secondData:--IDFunc-->thirdData:--IDFunc-->fourData:-+WordCount+->finalData
+    val pipe = startData:--IDFunc()-->secondData:--IDFunc()-->thirdData:--IDFunc()-->fourData:-+WordCounts+->finalData
     pipe.check(config)
     pipe.init(config)
     pipe.persist()

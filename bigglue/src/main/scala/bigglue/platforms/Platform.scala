@@ -10,6 +10,8 @@ import bigglue.computations.Computation
 import bigglue.curators._
 import bigglue.exceptions.NotInitializedException
 import org.apache.kafka.streams.kstream.Reducer
+import java.security.MessageDigest
+import java.util.Base64
 
 /**
   * This is the place where we pass the data in through the computation engine.
@@ -38,6 +40,17 @@ abstract class Platform {
   def setComputation(computation: Computation): Platform = {
     computationOpt = Some(computation)
     this
+  }
+
+  def trueVersion(string: String): String = computationOpt match{
+    case Some(comp) =>
+      val toAdd = comp.versionOpt match{
+        case None => "<None>"
+        case Some(x) => s"[$x]"
+      }
+      val encStr = Base64.getDecoder.decode(string)
+      new String(Base64.getEncoder.encode(MessageDigest.getInstance("SHA-256").digest(s"$encStr|$toAdd".getBytes)))
+    case None => throw new Exception("Expected a Computation")
   }
 
   def terminate(): Unit
@@ -89,12 +102,21 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     * @param builder The builder that created the platform. This was called with [[bigglue.computations.Mapper.init]] or [[bigglue.computations.Reducer.init]]
     */
   def init(conf: PipeConfig, inputMap: DataStore[Input], outputMap: DataStore[Output], builder: PlatformBuilder): Unit = {
-    getVersionCurator()
     inputMapOpt = Some(inputMap)
     outputMapOpt = Some(outputMap)
+    val thisVer = trueVersion(inputMap.sha)
+    outputMap.setSha(thisVer)
+    computationOpt match{
+      case Some(comp) => comp.shaVersionOpt = Some(thisVer)
+      case None => throw new Exception("Expected a Computation")
+    }
+    getVersionCurator()
     initConnector(conf, builder)
     provenanceCuratorOpt = Some(builder.provenanceCurator)
     errorCuratorOpt = Some(builder.errorCurator)
+    println("INIT")
+    println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
+    println(getInputMap().all().length, getOutputMap().all().length)
   }
 
   /**
@@ -136,7 +158,9 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
   def getVersionCurator(): VersionCurator[Output] = versionCuratorOpt match {
     case Some(versionCurator) => versionCurator
     case None => {
-      val versionCurator = computationOpt.get.versionOpt match {
+      val comp = computationOpt.get
+      val myVersion = if (comp.useFullVersion) comp.shaVersionOpt else comp.versionOpt
+      val versionCurator = myVersion match {
         case None => new IdleVersionCurator[Output]
         case Some(version) => new StandardVersionCurator[Output](version)
       }
@@ -171,6 +195,9 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     * and sends down all data.
     */
   override def persist(): Unit = {
+    println("PERSIST")
+    println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
+    println(getInputMap().all().length, getOutputMap().all().length)
     (getInputMap().all().length, getOutputMap().all().length) match{
       case (0, 0) => getUpstreamConnector().persist(getInputMap())
       case (0, _) => computationOpt match{
@@ -245,6 +272,13 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
     inputLMapOpt = Some(inputLMap)
     inputRMapOpt = Some(inputRMap)
     outputMapOpt = Some(outputMap)
+    val thisVer = trueVersion(s"${inputLMap.sha}|${inputRMap.sha}")
+    outputMap.setSha(thisVer)
+    computationOpt match{
+      case Some(comp) => comp.shaVersionOpt = Some(thisVer)
+      case None => throw new Exception("Expected a Computation")
+    }
+    getVersionCurator()
     initConnectors(conf, builder)
     provenanceCuratorOpt = Some(builder.provenanceCurator)
     errorLeftCuratorOpt  = Some(builder.errorCurator)
@@ -295,7 +329,7 @@ abstract class BinaryPlatform[InputL <: Identifiable[InputL],InputR <: Identifia
   def getVersionCurator(): VersionCurator[Output] = versionCuratorOpt match {
     case Some(versionCurator) => versionCurator
     case None => {
-      val versionCurator = computationOpt.get.versionOpt match {
+      val versionCurator = computationOpt.get.shaVersionOpt match {
         case None => new IdleVersionCurator[Output]
         case Some(version) => new StandardVersionCurator[Output](version)
       }

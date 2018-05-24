@@ -34,6 +34,8 @@ class Reducer[Input <: Identifiable[Input], Output <: Identifiable[Output]]
    , fold: Input => Output => Output
    , zero: Output) extends UnaryComputation[Input,Output] {
 
+  override val useFullVersion: Boolean = true
+
   def withConfig(newConfigOption: ConfOpt): Reducer[Input,Output] = {
     configOption = newConfigOption
     this

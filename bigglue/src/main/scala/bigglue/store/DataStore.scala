@@ -25,6 +25,8 @@ abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with Co
 
   var name = "DataStore"
 
+  var sha: String = ""
+
   def displayName(): String = name
 
   def setName(newName: String) : Unit = name = newName
@@ -68,6 +70,8 @@ abstract class DataStore[Data] extends Upstream[Data] with ConfigChecker with Co
     * @return An iterator that iterates over the data store until all documents have been processed.
     */
   def iterator(): Iterator[Data]
+
+  def setSha(newSha: String): Unit = sha = newSha
 
 
   /*

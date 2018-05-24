@@ -22,9 +22,10 @@ abstract class Computation extends ConfigBuildsPlatform {
 
   var platformOpt: Option[Platform] = None
   var configOption: ConfOpt = DefaultOpt
-  var trueVersionOpt: Option[String] = None
+  var shaVersionOpt: Option[String] = None
 
   val versionOpt: Option[String] = None
+  val useFullVersion: Boolean = true
 
   def toStep(conf: PipeConfig, step: String): PipeConfig = {
     try {

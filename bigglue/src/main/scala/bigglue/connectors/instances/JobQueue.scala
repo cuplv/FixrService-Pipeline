@@ -112,18 +112,17 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
     }
     textMapOpt match{
       case Some(textMap) =>
-        val (noNeedToAppend, strs) = textMap.extract().foldRight((List[String](), List[String]())){
+        val (noNeedToAppend, strs) = textMap.extract().foldRight((List[String](), List[String]())) {
           case (str, (x, curStrs)) =>
             val statusSplit = str.a.split(" -!- ")
             statusSplit.length match {
               case y if y == 2 =>
-
                 val (newID, realStr) = ids.foldLeft(x, str.a) {
                   case ((nIDs, st), id) => if (id.equals(statusSplit(0))) {
                     (trueStatus.indexOf("v."), statusSplit(1).indexOf("v.")) match {
                       case (-1, -1) =>
                         (id :: nIDs, s"${statusSplit(0)} -!- $trueStatus")
-                      case (xx, yy) if trueStatus.substring(xx+2).equals(statusSplit(1).substring(yy+2)) =>
+                      case (xx, yy) if trueStatus.substring(xx + 2).equals(statusSplit(1).substring(yy + 2)) =>
                         (id :: nIDs, s"${statusSplit(0)} -!- $trueStatus")
                       case _ => (nIDs, str.a)
                     }
@@ -218,10 +217,12 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
   override def persist(dataStore: DataStore[Data]): Unit = {
     //super.persist(dataStore)
     iMapOpt = Some(dataStore)
+    val version = dataStore.sha
     val ids = dataStore.all().foldRight(Map[String, (Boolean, Data)]()) {
-      case (dat, lis) => dat.identity().getVersion() match {
-        case None => lis+(dat.identity().getId()->(false, dat))
-        case Some(x) => lis+(s"${dat.identity().getId()}-#-$x"->(false, dat))
+      case (dat, lis) => (dat.identity().getVersion(), version) match {
+        case (None, "") => lis+(dat.identity().getId()->(false, dat))
+        case (Some(x), y) if x == y => lis+(s"${dat.identity().getId()}-#-$x"->(false, dat))
+        case _ => lis
       }
     }
     val trueIds = textMap.all().foldRight(ids){
