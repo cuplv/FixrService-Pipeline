@@ -48,8 +48,9 @@ abstract class Platform {
         case None => "<None>"
         case Some(x) => s"[$x]"
       }
-      val encStr = Base64.getDecoder.decode(string)
-      new String(Base64.getEncoder.encode(MessageDigest.getInstance("SHA-256").digest(s"$encStr|$toAdd".getBytes)))
+      // val encStr = Base64.getDecoder.decode(string)
+      // new String(Base64.getEncoder.encode(MessageDigest.getInstance("SHA-256").digest(s"$encStr|$toAdd".getBytes)))
+      s"$string|$toAdd"
     case None => throw new Exception("Expected a Computation")
   }
 
