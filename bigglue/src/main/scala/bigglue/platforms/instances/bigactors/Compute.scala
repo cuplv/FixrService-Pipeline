@@ -82,10 +82,11 @@ class BigActorReducerPlatform[Input <: Identifiable[Input], Output <: Identifiab
                   case Some(zero) =>
                     val outputMap = getOutputMap().asInstanceOf[DataMap[Identity[Output],Output]]
                     val output = outputMap.getOrElse(outputId, zero)
-                    outputMap.put(outputVal.foldRight(output){ (i,o) =>  computation.tryFold(i,o) match{
+                    val trueOutput = outputVal.foldRight(output){ (i,o) =>  computation.tryFold(i,o) match{
                       case Some(no) => no
                       case None => o
-                    }})
+                    }}
+                    outputMap.put(outputId, trueOutput)
                   case None => ()
                 }
               case None =>

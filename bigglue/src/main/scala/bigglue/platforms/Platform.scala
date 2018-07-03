@@ -115,9 +115,9 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     initConnector(conf, builder)
     provenanceCuratorOpt = Some(builder.provenanceCurator)
     errorCuratorOpt = Some(builder.errorCurator)
-    println("INIT")
-    println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
-    println(getInputMap().all().length, getOutputMap().all().length)
+    //println("INIT")
+    //println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
+    //println(getInputMap().all().length, getOutputMap().all().length)
   }
 
   /**
@@ -196,9 +196,9 @@ abstract class UnaryPlatform[Input <: Identifiable[Input],Output <: Identifiable
     * and sends down all data.
     */
   override def persist(): Unit = {
-    println("PERSIST")
-    println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
-    println(getInputMap().all().length, getOutputMap().all().length)
+    //println("PERSIST")
+    //println(getInputMap().name, getOutputMap().name, getVersionCurator().thisVersion)
+    //println(getInputMap().all().length, getOutputMap().all().length)
     (getInputMap().all().length, getOutputMap().all().length) match{
       case (0, 0) => getUpstreamConnector().persist(getInputMap())
       case (0, _) => computationOpt match{

@@ -286,7 +286,10 @@ class IncrTrackerJobQueue[Data <: Identifiable[Data]] extends JobQueue[Data] {
 
   override def retrieveUp(): Seq[Data] = {
     // val unique = queue.extract().distinct
-    queue.extract() ++ (statusMap.get(Status.Error) ++ statusMap.get(Status.Modified))
+    queue.enqueue(statusMap.get(Status.Error).toSeq)
+    statusMap.put(Status.NotDone, statusMap.get(Status.Error))
+    statusMap.remove(Status.Error)
+    queue.extract() //++ (statusMap.get(Status.Error) ++ statusMap.get(Status.Modified))
      /*
      (previous ++ queue.extract()) foreach {
        d => {
